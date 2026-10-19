@@ -4,7 +4,7 @@ export default () => ({
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5432', 10),
     user: process.env.DB_USER || 'diachinhso_user',
-    password: process.env.DB_PASSWORD || 'diachinhso_secret_2026',
+    password: process.env.DB_PASSWORD || 'diachinhso_password_2026',
     name: process.env.DB_NAME || 'diachinhso_db',
   },
   redis: {
