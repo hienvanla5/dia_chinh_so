@@ -9,6 +9,20 @@ export const CitizenAuthSchema = z.object({
   otpCode: z.string().length(6, 'Mã OTP gồm 6 chữ số').optional(),
 });
 
+// Schema yêu cầu gửi mã OTP công dân (DCS-01-CN-001)
+export const CitizenSendOtpSchema = z.object({
+  citizenId: z.string().length(12, 'Số CCCD phải gồm đúng 12 chữ số').regex(/^\d{12}$/, 'CCCD chỉ chứa ký tự số'),
+  phoneNumber: z.string().regex(/^(0|\+84)\d{9,10}$/, 'Số điện thoại không hợp lệ (10 chữ số bắt đầu bằng 0 hoặc +84)'),
+  fullName: z.string().min(2, 'Họ tên tối thiểu 2 ký tự').optional(),
+});
+
+// Schema xác thực mã OTP đăng nhập công dân (DCS-01-CN-001)
+export const CitizenVerifyOtpSchema = z.object({
+  citizenId: z.string().length(12, 'Số CCCD phải gồm đúng 12 chữ số').regex(/^\d{12}$/, 'CCCD chỉ chứa ký tự số'),
+  phoneNumber: z.string().regex(/^(0|\+84)\d{9,10}$/, 'Số điện thoại không hợp lệ'),
+  otpCode: z.string().length(6, 'Mã OTP phải gồm đúng 6 chữ số').regex(/^\d{6}$/, 'Mã OTP chỉ chứa ký tự số'),
+});
+
 // Schema đăng nhập Cán bộ nghiệp vụ (Email / Password hoặc CCCD)
 export const OfficerLoginSchema = z.object({
   username: z.string().min(3, 'Tên đăng nhập tối thiểu 3 ký tự'),
@@ -61,6 +75,8 @@ export const ReviewDossierSchema = z.object({
 });
 
 export type CitizenAuthInput = z.infer<typeof CitizenAuthSchema>;
+export type CitizenSendOtpInput = z.infer<typeof CitizenSendOtpSchema>;
+export type CitizenVerifyOtpInput = z.infer<typeof CitizenVerifyOtpSchema>;
 export type OfficerLoginInput = z.infer<typeof OfficerLoginSchema>;
 export type CreateParcelInput = z.infer<typeof CreateParcelSchema>;
 export type CreateTransactionLockInput = z.infer<typeof CreateTransactionLockSchema>;

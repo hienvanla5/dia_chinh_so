@@ -130,3 +130,39 @@ export interface TransactionLock {
   expiresAt: string;           // Thời điểm hết hạn (mặc định +90 phút)
   durationMinutes: number;
 }
+
+// Định danh công dân & Xác thực OTP (DCS-01-CN-001)
+export interface CitizenSendOtpRequest {
+  citizenId: string;
+  phoneNumber: string;
+  fullName?: string;
+}
+
+export interface CitizenSendOtpResponse {
+  success: boolean;
+  message: string;
+  expiresInSeconds: number;
+  mockOtp?: string; // Môi trường Mock Sandbox Dev/Staging
+}
+
+export interface CitizenVerifyOtpRequest {
+  citizenId: string;
+  phoneNumber: string;
+  otpCode: string;
+}
+
+export interface CitizenAuthResponse {
+  accessToken: string;
+  user: {
+    id: string;
+    citizenId: string;
+    fullName: string;
+    phoneNumber?: string;
+    role: UserRole;
+  };
+  auditHash: string; // Mã băm SHA-256 nhật ký kiểm toán bất biến
+  walletSummary?: {
+    parcelCount: number;
+    certificateCount: number;
+  };
+}
