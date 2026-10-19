@@ -32,16 +32,39 @@
 
 ## 2. Nhóm API Xác Thực & Định Danh (Auth & Citizen IdP)
 **Prefix**: `/api/v1/auth` | **Tags**: `Xác thực & Danh tính (Auth & IdP)`
-
-### 2.1. Đăng nhập Công dân qua CCCD Sandbox (Thay thế VNeID trong môi trường dev)
+### [DCS-01-CN-001] Gửi mã xác thực OTP SMS đến số điện thoại công dân (Sandbox & Prod)
 - **Method**: `POST`
-- **Path**: `/api/v1/auth/citizen-login`
-- **Quyền truy cập**: Public (Chủ sử dụng đất)
+- **Path**: `/api/v1/auth/citizen/send-otp`
+- **Quyền hạn vai trò**: Public (Chủ sử dụng đất / Người dân)
 - **Request Body**:
   ```json
   {
     "citizenId": "001090012345",
-    "fullName": "Nguyễn Văn An",
+    "phoneNumber": "0912345678",
+    "fullName": "Nguyễn Văn An"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "message": "Mã xác thực OTP gồm 6 chữ số đã được gửi thành công đến số điện thoại 091****678.",
+    "expiresInSeconds": 300,
+    "mockOtp": "123456"
+  }
+  ```
+- **Mã lỗi đặc thù**:
+  - `400 Bad Request`: Số CCCD không đúng 12 chữ số hoặc số điện thoại không hợp lệ.
+  - `403 Forbidden`: Tài khoản công dân đang bị tạm khóa hoặc vi phạm quy tắc thẩm quyền địa giới theo QTD-07.
+
+### [DCS-01-CN-001] Xác thực OTP SMS và đăng nhập Cổng Định danh Số Công dân
+- **Method**: `POST`
+- **Path**: `/api/v1/auth/citizen/verify-otp`
+- **Quyền hạn vai trò**: Public (Chủ sử dụng đất)
+- **Request Body**:
+  ```json
+  {
+    "citizenId": "001090012345",
     "phoneNumber": "0912345678",
     "otpCode": "123456"
   }
@@ -49,12 +72,51 @@
 - **Response `200 OK`**:
   ```json
   {
-    "accessToken": "eyJhbGciOiJIUzI1NiIsIn...",
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "user": {
       "id": "b3e0c0a1-4321-4f9a-8b1e-7f6a5b4c3d2e",
       "citizenId": "001090012345",
       "fullName": "Nguyễn Văn An",
+      "phoneNumber": "0912345678",
       "role": "LAND_USER"
+    },
+    "auditHash": "a8f9c0e2b1d345f67890abcdef1234567890abcdef1234567890abcdef123456",
+    "walletSummary": {
+      "parcelCount": 1,
+      "certificateCount": 1
+    }
+  }
+  ```
+- **Mã lỗi đặc thù**:
+  - `400 Bad Request`: Mã OTP sai, mã OTP đã hết hạn hoặc chưa được gửi yêu cầu.
+  - `403 Forbidden`: Tài khoản công dân bị tạm khóa theo quy tắc QTD-07.
+
+### [DCS-01-CN-001] Tra cứu Ví Sổ Đỏ Số của Công dân
+- **Method**: `GET`
+- **Path**: `/api/v1/auth/wallet`
+- **Quyền hạn vai trò**: `LAND_USER`, `ADMIN` (Bearer Token)
+- **Response `200 OK`**:
+  ```json
+  {
+    "user": {
+      "id": "b3e0c0a1-4321-4f9a-8b1e-7f6a5b4c3d2e",
+      "citizenId": "001090012345",
+      "fullName": "Nguyễn Văn An",
+      "role": "LAND_USER",
+      "phoneNumber": "0912345678"
+    },
+    "walletSummary": {
+      "parcels": [
+        {
+          "nationalCode": "HN-BA-DINH.012.0045",
+          "sheetNumber": 12,
+          "parcelNumber": 45,
+          "area": 125.6,
+          "address": "Số 18 Phố Liễu Giai, Phường Cống Vị, Quận Ba Đình, Hà Nội",
+          "certificateNumber": "CS 123456",
+          "status": "AVAILABLE"
+        }
+      ]
     }
   }
   ```
