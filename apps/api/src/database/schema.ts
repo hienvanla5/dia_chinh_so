@@ -156,6 +156,7 @@ export const auditLogs = pgTable('audit_logs', {
   entityId: varchar('entity_id', { length: 100 }).notNull(),
   oldData: jsonb('old_data'),
   newData: jsonb('new_data'),
+  hashSha256: varchar('hash_sha256', { length: 64 }),
   ipAddress: varchar('ip_address', { length: 50 }),
   userAgent: text('user_agent'),
   timestamp: timestamp('timestamp').defaultNow().notNull(),
