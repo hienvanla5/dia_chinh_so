@@ -1,6 +1,21 @@
 import type { Metadata } from 'next';
+import { Roboto, Montserrat } from 'next/font/google';
 import './globals.css';
 import { Navbar, Sidebar } from '@/components/layout';
+
+const roboto = Roboto({
+  subsets: ['latin', 'vietnamese'],
+  weight: ['400', '500', '700'],
+  variable: '--font-roboto',
+  display: 'swap',
+});
+
+const montserrat = Montserrat({
+  subsets: ['latin', 'vietnamese'],
+  weight: ['600', '700', '800', '900'],
+  variable: '--font-montserrat',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'ĐỊA CHÍNH SỐ - Sổ Đỏ Số & Bản Đồ Thửa Đất Thời Gian Thực',
@@ -14,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi">
+    <html lang="vi" className={`${roboto.variable} ${montserrat.variable}`}>
       <body className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 antialiased selection:bg-blue-100 selection:text-blue-900">
         <Navbar />
         <div className="flex flex-1 overflow-hidden">

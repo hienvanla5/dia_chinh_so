@@ -51,16 +51,8 @@ export function Navbar() {
         />
       </div>
 
-      {/* Right Actions & Status */}
+      {/* Right Actions */}
       <div className="flex items-center gap-3">
-        {/* Real-time System Status Pill */}
-        <div className="hidden sm:flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1 text-xs font-semibold text-emerald-800">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-          </span>
-          <span className="font-mono text-[11px]">VN-2000 PostGIS | Khóa 90p</span>
-        </div>
 
         {/* Notifications */}
         <button

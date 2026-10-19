@@ -8,6 +8,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-roboto)', 'Roboto', 'Open Sans', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        heading: ['var(--font-montserrat)', 'Montserrat', 'Poppins', 'Segoe UI', 'sans-serif'],
+      },
       colors: {
         primary: {
           50: '#eff6ff',

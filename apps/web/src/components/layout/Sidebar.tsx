@@ -8,13 +8,9 @@ import {
   FileText,
   Lock,
   Award,
-  ShieldCheck,
-  Building2,
   FileCheck2,
-  Users,
 } from 'lucide-react';
 import { NavItem } from './NavItem';
-import { Badge } from '@/components/ui/Badge';
 
 const mainNavigation = [
   {
@@ -67,8 +63,8 @@ export function Sidebar() {
       <div className="space-y-6">
         {/* Core Navigation Section */}
         <div className="space-y-1.5">
-          <p className="px-3 text-[10px] font-black uppercase tracking-wider text-slate-400">
-            Chức năng Cốt lõi
+          <p className="px-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+            Danh mục Chức năng
           </p>
           <div className="space-y-1">
             {mainNavigation.map((item) => (
@@ -83,62 +79,6 @@ export function Sidebar() {
                 isActive={pathname === item.href}
               />
             ))}
-          </div>
-        </div>
-
-        {/* 6 Personas (Đề án 06) Reference */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between px-3">
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-              6 Vai trò Phân quyền
-            </p>
-            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-              Đề án 06
-            </span>
-          </div>
-
-          <div className="rounded-xl border border-slate-200/70 bg-slate-50/70 p-3 text-xs space-y-2">
-            <div className="flex items-center gap-2 font-bold text-slate-800 text-[11px]">
-              <Users className="h-3.5 w-3.5 text-blue-600" />
-              <span>Phân quyền RBAC chuẩn:</span>
-            </div>
-            <ul className="text-[11px] text-slate-600 space-y-1.5 pl-1">
-              <li className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-                <span className="font-semibold text-slate-700">VT-01:</span> Cán bộ Địa chính Xã
-              </li>
-              <li className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-600" />
-                <span className="font-semibold text-slate-700">VT-02:</span> VP Đăng ký đất đai
-              </li>
-              <li className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-                <span className="font-semibold text-slate-700">VT-03:</span> Người sử dụng đất
-              </li>
-              <li className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
-                <span className="font-semibold text-slate-700">VT-04:</span> Công chứng & Ngân hàng
-              </li>
-              <li className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-purple-600" />
-                <span className="font-semibold text-slate-700">VT-05:</span> Thanh tra & Quy hoạch
-              </li>
-              <li className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-rose-600" />
-                <span className="font-semibold text-slate-700">VT-06:</span> Quản trị Hệ thống
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer Info */}
-      <div className="pt-4 border-t border-slate-100">
-        <div className="flex items-center gap-2 rounded-lg bg-blue-50/60 p-2.5 text-blue-900 border border-blue-100">
-          <ShieldCheck className="h-4 w-4 text-blue-700 shrink-0" />
-          <div className="text-[10px] leading-tight">
-            <span className="font-bold block">Tuân thủ Luật Đất đai 2024</span>
-            <span className="text-blue-600/90">Luật số 31/2024/QH15</span>
           </div>
         </div>
       </div>
