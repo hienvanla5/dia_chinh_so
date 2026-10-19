@@ -70,6 +70,17 @@ Implement code adhering strictly to the architecture:
      4. *Bản quyền & Chuẩn hóa Icon*: 100% icon sử dụng từ `lucide-react`.
      5. *Nhất quán Design System*: Cấm tự tiện viết `<button>` hoặc `<input>` trần với class CSS tự chế ngoài hệ thống.
      6. *Chi tiết & Empty States*: Mọi bảng danh sách rỗng phải có `EmptyState` hoặc `SearchEmptyState` kèm nút kêu gọi hành động (CTA). UX copy bằng tiếng Việt chuẩn mực hành chính theo Luật Đất đai 2024.
+   - **Quy chuẩn Font chữ & Typography (Sans-Serif)**:
+     - Font chính (Body): **Roboto** (Google Font, cân đối, sắc nét trên mọi thiết bị). Fallback: `Open Sans`, `Helvetica / Arial`.
+     - Font tiêu đề (Headings): **Montserrat** (mạnh mẽ, dứt khoát, hiện đại). Fallback: `Poppins`.
+     - Độ tương phản chữ cao: Dùng `text-slate-950`, `text-slate-900`, `text-slate-800`. Cấm dùng chữ màu xám mờ khó đọc.
+     - Tăng kích thước các thông số trọng yếu: Mã thửa đất 15 ký tự, số CCCD, mã OTP, số lượng thống kê phải có kích thước lớn, font đậm (`font-extrabold`).
+   - **Loại bỏ Status Thừa & Ngôn Từ Sáo Rỗng**:
+     - Cấm các pill/status kỹ thuật rườm rà trên Navbar (ví dụ: cấm pill `VN-2000 PostGIS | Khóa 90p`).
+     - Cấm các khẩu hiệu PR/marketing sáo rỗng (như "Giải quyết triệt để vấn nạn..."). Văn phong phải cô đọng, súc tích, mang tính chỉ dẫn công vụ chuẩn xác.
+   - **Thiết kế Từng Phần (Single-Story Focus)**:
+     - Chỉ thiết kế giao diện cho chính User Story đang kích hoạt hoặc các thành phần dùng chung liên quan trực tiếp.
+     - Tuyệt đối không sinh hàng loạt template mockup cho các story chưa làm để tránh loãng chất lượng và rác code.
    - Kết nối API Backend, kiểm soát trạng thái dữ liệu (Loading, Success, Error).
 
 ---

@@ -38,6 +38,17 @@ Khi Agent phát triển bất kỳ giao diện Frontend nào trong `apps/web/`, 
 | **5. Thiếu nhất quán Design System** | Mỗi trang một kiểu màu, kích thước nút khác nhau, padding tùy tiện | **BẮT BUỘC TÁI SỬ DỤNG 100% COMPONENT** từ `@/components/ui/` và `@/components/layout/`. Tuyệt đối không tự viết thẻ `<button>` hoặc `<input>` trần với class CSS tự chế. |
 | **6. Bỏ qua chi tiết nhỏ & UX Writing** | Không có Empty State khi bảng rỗng, thông báo lỗi dịch máy ngô nghê | Bắt buộc dùng `EmptyState` / `SearchEmptyState` cho mọi danh sách rỗng kèm nút hành động. UX copy bằng tiếng Việt chuẩn hành chính công vụ theo Luật Đất đai 2024. |
 
+### Quy Chuẩn Typography (Nhóm Sans-Serif Hiện Đại)
+- **Nội dung chính (Body Text)**: Sử dụng **Roboto** (Google Font, cân đối, sắc nét trên cả desktop và mobile). Hỗ trợ fallback: `Open Sans`, `Helvetica / Arial`, `sans-serif`.
+- **Tiêu đề & Banner (Headings)**: Sử dụng **Montserrat** (phong cách mạnh mẽ, hiện đại, dứt khoát). Hỗ trợ fallback: `Poppins`, `sans-serif`.
+- **Độ tương phản cao**: Bắt buộc sử dụng màu chữ đậm rõ ràng (`text-slate-950`, `text-slate-900`, `text-slate-800`). Cấm dùng chữ màu xám nhạt gây mỏi mắt hoặc khó đọc.
+- **Kích thước thông số trọng yếu**: Mã thửa đất 15 ký tự, số CCCD, mã OTP, số lượng thống kê phải có kích thước lớn, font đậm (`font-extrabold`), giúp quan sát nhanh chóng.
+
+### Tinh Giản Giao Diện & Loại Bỏ Ngôn Từ Sáo Rỗng
+- **Không nhồi nhét trạng thái thừa**: Nghiêm cấm đặt các pill/status kỹ thuật rườm rà trên Navbar (ví dụ: cấm pill `VN-2000 PostGIS | Khóa 90p`). Thanh Navbar giữ phong cách tinh giản, trang trọng và tiện dụng.
+- **Xóa bỏ card thừa & khẩu hiệu PR**: Loại bỏ các card thông báo nội bộ không có giá trị cho người dùng cuối; xóa bỏ các câu từ sáo rỗng, hô hào khẩu hiệu (như "Giải quyết triệt để vấn nạn..."). Mọi câu từ phải mang tính chỉ dẫn hành chính, ngắn gọn, súc tích.
+- **Thiết kế từng phần (Single-Story Focus)**: Chỉ thiết kế giao diện cho chính User Story đang kích hoạt hoặc các thành phần dùng chung liên quan trực tiếp. Tuyệt đối không sinh hàng loạt template mockup cho các story chưa làm.
+
 ### Bộ Giao Diện Dùng Chung (Design System Components)
 
 Mọi User Story khi dựng UI **BẮT BUỘC** import từ 2 thư mục chuẩn:
@@ -62,9 +73,9 @@ Mọi User Story khi dựng UI **BẮT BUỘC** import từ 2 thư mục chuẩn
    - `Modal`: Hộp thoại tương tác nổi, nền mờ `backdrop-blur`, đóng bằng phím ESC, phân tách rõ ràng Header - Body - Footer.
 
 2. **Bộ bố cục lớn (`@/components/layout`)**:
-   - `Navbar`: Thanh điều hướng đầu trang mang bản sắc Quốc gia (Đỏ Quốc kỳ, Huy hiệu, Đề án 06, Trạng thái PostGIS/Redlock thời gian thực, Cổng định danh).
-   - `Sidebar`: Thanh bên quản lý chức năng cốt lõi, tích hợp danh mục 6 vai trò Đề án 06 và thông tin tuân thủ Luật Đất đai 2024.
-   - `NavItem`: Phần tử menu đồng bộ có icon, trạng thái active nổi bật, badge cảnh báo.
+   - `Navbar`: Thanh điều hướng đầu trang mang bản sắc Quốc gia (Đỏ Quốc kỳ, Huy hiệu, Đề án 06, Tìm kiếm, Thông báo, Cổng định danh). Tinh gọn, không nhồi nhét trạng thái thừa.
+   - `Sidebar`: Thanh bên quản lý danh mục chức năng cốt lõi, menu đồng bộ, thoáng đãng, dễ nhìn.
+   - `NavItem`: Phần tử menu đồng bộ có icon, kích thước chữ rõ ràng (`text-sm font-medium`), trạng thái active nổi bật.
    - `PageHeader`: Tiêu đề trang chuẩn mực, kèm thanh điều hướng bánh mì (`breadcrumbs`), mô tả nghiệp vụ và khu vực nút thao tác (`actions`).
    - `MainLayout`: Khung bao bọc toàn diện responsive chuẩn cho máy tính và thiết bị di động.
 

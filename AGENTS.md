@@ -30,6 +30,17 @@
      4. *Bản quyền & icon lộn xộn*: 100% icon sử dụng thư viện chuẩn `lucide-react`, không tự nhúng SVG trôi nổi.
      5. *Khó bảo trì / thiếu nhất quán Design System*: Bắt buộc tái sử dụng: `Button` (với các biến thể `create`, `edit`, `delete`, `view`, `search`), `Input`, `SearchInput`, `Select`, `Badge`, `Card`, `EmptyState`, `Modal`, `Navbar`, `Sidebar`, `NavItem`, `PageHeader`.
      6. *Bỏ qua chi tiết nhỏ (Micro-interactions & UX Writing)*: Bắt buộc dùng `EmptyState` / `SearchEmptyState` khi bảng dữ liệu rỗng kèm nút hành động (CTA), thông báo lỗi rõ ràng bằng tiếng Việt hành chính chuẩn theo Luật Đất đai 2024.
+   - **Quy chuẩn Font Chữ & Typography (Bộ Sans-Serif Hiện Đại)**:
+     - Font chính (Body): **Roboto** (Google Font, cân đối, hiển thị hoàn hảo trên máy tính & điện thoại). Hỗ trợ fallback: `Open Sans` (rõ ràng, thân thiện), `Helvetica / Arial` (kinh điển, an toàn mọi trình duyệt).
+     - Font tiêu đề (Headings/Banners): **Montserrat** (mạnh mẽ, dứt khoát, hiện đại). Hỗ trợ fallback: `Poppins` (trẻ trung, công nghệ).
+     - Độ tương phản chữ cao: Bắt buộc dùng các sắc thái đậm rõ nét như `text-slate-950`, `text-slate-900`, `text-slate-800`. Tuyệt đối không dùng chữ màu xám mờ nhạt khó đọc.
+     - Tăng kích thước các thông số quan trọng: Mã thửa đất 15 ký tự, số CCCD, mã OTP, số lượng thống kê, số phát hành GCN phải lớn, đậm (`font-extrabold`, `text-base` đến `text-4xl`), dễ đọc tức thì.
+   - **Xóa Bỏ Thành Phần Thừa & Ngôn Từ Sáo Rỗng**:
+     - Nghiêm cấm các status thừa hoặc nhồi nhét kỹ thuật không cần thiết trên Navbar (ví dụ: cấm các pill như `VN-2000 PostGIS | Khóa 90p`). Navbar phải tinh gọn, trang trọng.
+     - Xóa bỏ triệt để các card thừa và các câu từ sáo rỗng, khẩu hiệu PR/marketing (ví dụ: "Giải quyết triệt để vấn nạn..."). Toàn bộ câu từ phải cô đọng, súc tích, mang tính chỉ dẫn công vụ hành chính chuẩn mực.
+   - **Quy Trình Thiết Kế "Từng Phần" (Single-Story UI Focus)**:
+     - Khi thực hiện mỗi User Story, Agent chỉ thiết kế và trau chuốt sâu sắc các thành phần giao diện phục vụ trực tiếp cho User Story đó.
+     - Tuyệt đối không thiết kế hàng loạt template / mockup giả lập sơ sài cho các User Story chưa thực hiện để tránh rác giao diện và mất kiểm soát chất lượng.
 5. **Chính sách Kiểm thử Nghiêm ngặt (Strict TDD / Test-Verified Policy)**:
    - **MỌI** User Story khi triển khai **BẮT BUỘC** phải có **Unit Test** và **Integration Test** đi kèm.
    - Các kịch bản kiểm thử phải ánh xạ trực tiếp và bao phủ đầy đủ các **Tiêu chí chấp nhận (Acceptance Criteria)** trong file story.
