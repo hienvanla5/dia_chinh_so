@@ -14,6 +14,12 @@ import {
   Compass,
 } from 'lucide-react';
 import { ParcelLegalStatus, LandPurposeCode } from '@diachinhso/shared';
+import {
+  Button,
+  SearchInput,
+  ParcelStatusBadge,
+  Badge,
+} from '@/components/ui';
 
 // Danh sách thửa đất mẫu phục vụ hiển thị bản đồ GIS
 const sampleParcels = [
@@ -89,42 +95,33 @@ export default function MapPage() {
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col gap-4">
       {/* Top search & tool bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-white p-3 shadow-xs">
         <div className="flex flex-1 items-center gap-2 max-w-md">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Nhập mã thửa (HN-BA-DINH.012...) hoặc địa chỉ..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 pl-9 pr-4 py-2 text-xs focus:border-blue-500 focus:outline-none"
-            />
-          </div>
+          <SearchInput
+            placeholder="Nhập mã thửa (HN-BA-DINH.012...) hoặc địa chỉ..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onClear={() => setSearchTerm('')}
+            size="sm"
+          />
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-600">Lớp bản đồ:</span>
-          <button
+          <span className="text-xs font-bold text-slate-600">Lớp bản đồ:</span>
+          <Button
+            variant={activeLayer === 'cadastral' ? 'primary' : 'outline'}
+            size="xs"
             onClick={() => setActiveLayer('cadastral')}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-              activeLayer === 'cadastral'
-                ? 'bg-blue-600 text-white'
-                : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-            }`}
           >
             Địa chính (VN-2000)
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={activeLayer === 'planning' ? 'primary' : 'outline'}
+            size="xs"
             onClick={() => setActiveLayer('planning')}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-              activeLayer === 'planning'
-                ? 'bg-blue-600 text-white'
-                : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-            }`}
           >
             Quy hoạch sử dụng đất
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -154,13 +151,21 @@ export default function MapPage() {
                   style={{ width: '180px', height: '140px' }}
                 >
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-white">Tờ: {parcel.sheetNumber} / Thửa: {parcel.parcelNumber}</span>
+                    <span className="font-bold text-white">
+                      Tờ: {parcel.sheetNumber} / Thửa: {parcel.parcelNumber}
+                    </span>
                     {isLocked ? (
-                      <span className="rounded bg-rose-500/20 px-1 text-[10px] font-bold text-rose-300">KHÓA</span>
+                      <span className="rounded bg-rose-500/20 px-1 text-[10px] font-bold text-rose-300">
+                        KHÓA
+                      </span>
                     ) : isMortgaged ? (
-                      <span className="rounded bg-amber-500/20 px-1 text-[10px] font-bold text-amber-300">THẾ CHẤP</span>
+                      <span className="rounded bg-amber-500/20 px-1 text-[10px] font-bold text-amber-300">
+                        THẾ CHẤP
+                      </span>
                     ) : (
-                      <span className="rounded bg-emerald-500/20 px-1 text-[10px] font-bold text-emerald-300">SẴN SÀNG</span>
+                      <span className="rounded bg-emerald-500/20 px-1 text-[10px] font-bold text-emerald-300">
+                        SẴN SÀNG
+                      </span>
                     )}
                   </div>
                   <div className="mt-4 text-center">
@@ -195,24 +200,14 @@ export default function MapPage() {
                   {selectedParcel.nationalCode}
                 </h3>
               </div>
-              <span
-                className={`rounded px-2 py-0.5 text-xs font-bold ${
-                  selectedParcel.legalStatus === ParcelLegalStatus.AVAILABLE
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : selectedParcel.legalStatus === ParcelLegalStatus.LOCKED
-                    ? 'bg-rose-100 text-rose-800'
-                    : 'bg-amber-100 text-amber-800'
-                }`}
-              >
-                {selectedParcel.legalStatus}
-              </span>
+              <ParcelStatusBadge status={selectedParcel.legalStatus} size="sm" />
             </div>
 
             {selectedParcel.legalStatus === ParcelLegalStatus.LOCKED && (
-              <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 space-y-1">
+              <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 space-y-1">
                 <div className="flex items-center gap-1.5 font-bold">
-                  <Lock className="h-4 w-4" />
-                  Đang trong phiên khóa công chứng
+                  <Lock className="h-4 w-4 text-rose-600" />
+                  <span>Đang trong phiên khóa công chứng</span>
                 </div>
                 <p>Khóa bởi: {selectedParcel.lockedBy}</p>
                 <p className="font-semibold text-rose-600">Thời gian còn lại: {selectedParcel.expiresIn}</p>
@@ -269,10 +264,15 @@ export default function MapPage() {
 
             {/* Action buttons */}
             <div className="pt-2 flex flex-col gap-2">
-              <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700">
-                <ShieldCheck className="h-4 w-4" />
+              <Button
+                variant="primary"
+                size="sm"
+                fullWidth
+                leftIcon={<ShieldCheck className="h-4 w-4" />}
+                onClick={() => alert(`Đã xác thực dữ liệu thửa đất ${selectedParcel.nationalCode}`)}
+              >
                 Kiểm tra Tính Toàn Vẹn Sổ Đỏ Số
-              </button>
+              </Button>
             </div>
           </div>
         )}

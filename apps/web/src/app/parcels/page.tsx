@@ -1,10 +1,30 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FileText, ShieldCheck, QrCode, Search, Filter, ExternalLink } from 'lucide-react';
+import {
+  FileText,
+  ShieldCheck,
+  QrCode,
+  Filter,
+  Plus,
+  ExternalLink,
+  MapPin,
+  Building,
+} from 'lucide-react';
 import { ParcelLegalStatus, LandPurposeCode } from '@diachinhso/shared';
+import {
+  Button,
+  ButtonCreate,
+  ButtonView,
+  SearchInput,
+  ParcelStatusBadge,
+  SearchEmptyState,
+  Modal,
+  Badge,
+} from '@/components/ui';
+import { PageHeader } from '@/components/layout';
 
-const sampleParcels = [
+const initialParcels = [
   {
     id: 'p-1',
     nationalCode: 'HN-BA-DINH.012.0045',
@@ -50,7 +70,7 @@ export default function ParcelsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeModalCertificate, setActiveModalCertificate] = useState<any>(null);
 
-  const filtered = sampleParcels.filter(
+  const filtered = initialParcels.filter(
     (p) =>
       p.nationalCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -59,125 +79,171 @@ export default function ParcelsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900">Quản lý Dữ liệu Thửa đất & Sổ Đỏ Số</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Tra cứu thông tin địa chính, mã định danh quốc gia 15 ký tự và xác thực Giấy chứng nhận điện tử.
-          </p>
+      <PageHeader
+        title="Quản lý Dữ liệu Thửa đất & Sổ Đỏ Số"
+        description="Tra cứu thông tin địa chính, mã định danh quốc gia 15 ký tự và xác thực Giấy chứng nhận quyền sử dụng đất điện tử theo Luật Đất đai 2024."
+        badge={
+          <Badge variant="primary" size="md">
+            {initialParcels.length} Thửa đất quản lý
+          </Badge>
+        }
+        breadcrumbs={[
+          { label: 'Cơ sở dữ liệu', href: '/parcels' },
+          { label: 'Danh mục thửa đất' },
+        ]}
+        actions={
+          <div className="flex items-center gap-3">
+            <ButtonCreate
+              onClick={() =>
+                alert('Tính năng tiếp nhận thửa đất mới theo quy trình cấp GCN lần đầu.')
+              }
+            >
+              Thêm thửa đất mới
+            </ButtonCreate>
+          </div>
+        }
+      />
+
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs">
+        <div className="w-full sm:w-96">
+          <SearchInput
+            placeholder="Tìm theo mã định danh, số tờ/thửa, chủ sở hữu..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onClear={() => setSearchTerm('')}
+            size="md"
+          />
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Tìm theo mã, chủ sở hữu, địa chỉ..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="rounded-lg border border-slate-300 pl-9 pr-4 py-2 text-xs focus:border-blue-500 focus:outline-none w-72"
-            />
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <Button variant="outline" size="sm" leftIcon={<Filter className="h-3.5 w-3.5" />}>
+            Lọc trạng thái
+          </Button>
+        </div>
+      </div>
+
+      {/* Table Data */}
+      {filtered.length === 0 ? (
+        <SearchEmptyState searchTerm={searchTerm} onReset={() => setSearchTerm('')} />
+      ) : (
+        <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-600 uppercase font-bold tracking-wider">
+                <tr>
+                  <th className="p-4">Mã định danh Quốc gia</th>
+                  <th className="p-4">Tờ / Thửa</th>
+                  <th className="p-4">Diện tích</th>
+                  <th className="p-4">Mục đích SD</th>
+                  <th className="p-4">Chủ sở hữu</th>
+                  <th className="p-4">Trạng thái Pháp lý</th>
+                  <th className="p-4 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map((parcel) => (
+                  <tr key={parcel.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="p-4 font-mono font-bold text-primary-900">
+                      {parcel.nationalCode}
+                    </td>
+                    <td className="p-4 font-semibold text-slate-700">
+                      Tờ {parcel.sheetNumber} / Thửa {parcel.parcelNumber}
+                    </td>
+                    <td className="p-4 font-bold text-slate-800">{parcel.area} m²</td>
+                    <td className="p-4">
+                      <span className="inline-flex rounded-md bg-blue-50 px-2 py-0.5 font-bold text-blue-700 border border-blue-200 text-[11px]">
+                        {parcel.purposeCode}
+                      </span>
+                    </td>
+                    <td className="p-4 font-medium text-slate-700">{parcel.owner}</td>
+                    <td className="p-4">
+                      <ParcelStatusBadge status={parcel.legalStatus} />
+                    </td>
+                    <td className="p-4 text-right">
+                      <ButtonView
+                        size="xs"
+                        leftIcon={<QrCode className="h-3.5 w-3.5 text-blue-600" />}
+                        onClick={() => setActiveModalCertificate(parcel)}
+                      >
+                        Xem Sổ Đỏ Số
+                      </ButtonView>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-      </div>
-
-      {/* Table */}
-      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-semibold">
-            <tr>
-              <th className="p-4">Mã định danh Quốc gia</th>
-              <th className="p-4">Tờ / Thửa</th>
-              <th className="p-4">Diện tích</th>
-              <th className="p-4">Mục đích SD</th>
-              <th className="p-4">Chủ sở hữu</th>
-              <th className="p-4">Trạng thái Pháp lý</th>
-              <th className="p-4 text-right">Sổ Đỏ Số</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {filtered.map((parcel) => (
-              <tr key={parcel.id} className="hover:bg-slate-50/80 transition">
-                <td className="p-4 font-mono font-bold text-slate-900">{parcel.nationalCode}</td>
-                <td className="p-4 font-semibold text-slate-700">Tờ {parcel.sheetNumber} / Thửa {parcel.parcelNumber}</td>
-                <td className="p-4 font-semibold text-slate-800">{parcel.area} m²</td>
-                <td className="p-4">
-                  <span className="rounded bg-blue-100 px-2 py-0.5 font-bold text-blue-700">
-                    {parcel.purposeCode}
-                  </span>
-                </td>
-                <td className="p-4 text-slate-700">{parcel.owner}</td>
-                <td className="p-4">
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
-                      parcel.legalStatus === ParcelLegalStatus.AVAILABLE
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : parcel.legalStatus === ParcelLegalStatus.LOCKED
-                        ? 'bg-rose-100 text-rose-800'
-                        : 'bg-amber-100 text-amber-800'
-                    }`}
-                  >
-                    {parcel.legalStatus}
-                  </span>
-                </td>
-                <td className="p-4 text-right">
-                  <button
-                    onClick={() => setActiveModalCertificate(parcel)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                  >
-                    <QrCode className="h-3.5 w-3.5 text-blue-600" />
-                    Xem GCN
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      )}
 
       {/* Modal View Digital Certificate */}
-      {activeModalCertificate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-6 w-6 text-emerald-600" />
-                <h3 className="font-bold text-slate-900">Giấy Chứng Nhận Điện Tử (Sổ Đỏ Số)</h3>
+      <Modal
+        isOpen={Boolean(activeModalCertificate)}
+        onClose={() => setActiveModalCertificate(null)}
+        title="Giấy Chứng Nhận Quyền Sử Dụng Đất Điện Tử"
+        description="Bản số hóa có giá trị pháp lý tương đương bản giấy theo Nghị định quy định chi tiết Luật Đất đai 2024."
+        icon={
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200">
+            <ShieldCheck className="h-6 w-6" />
+          </div>
+        }
+        footer={
+          <Button variant="secondary" size="sm" onClick={() => setActiveModalCertificate(null)}>
+            Đóng cửa sổ
+          </Button>
+        }
+      >
+        {activeModalCertificate && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 space-y-3 text-xs">
+              <div className="flex justify-between items-center font-bold text-slate-800">
+                <span className="font-mono text-sm text-slate-900">
+                  Số phát hành: {activeModalCertificate.certificateNumber}
+                </span>
+                <Badge variant="success" dot size="sm">
+                  CHỮ KÝ SỐ HỢP LỆ
+                </Badge>
               </div>
-              <button
-                onClick={() => setActiveModalCertificate(null)}
-                className="text-slate-400 hover:text-slate-600 text-lg font-bold"
-              >
-                ✕
-              </button>
-            </div>
 
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 space-y-2 text-xs">
-              <div className="flex justify-between font-mono font-bold text-slate-800">
-                <span>Số phát hành: {activeModalCertificate.certificateNumber}</span>
-                <span className="text-emerald-700">CHỮ KÝ SỐ HỢP LỆ</span>
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Mã định danh thửa đất:</span>
+                  <span className="font-mono font-bold text-slate-900">
+                    {activeModalCertificate.nationalCode}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Diện tích chứng nhận:</span>
+                  <span className="font-bold text-slate-900">
+                    {activeModalCertificate.area} m² ({activeModalCertificate.purposeCode})
+                  </span>
+                </div>
               </div>
-              <p className="text-slate-600">Thửa đất: <strong className="text-slate-900">{activeModalCertificate.nationalCode}</strong></p>
-              <p className="text-slate-600">Chủ sở hữu: <strong className="text-slate-900">{activeModalCertificate.owner}</strong></p>
-              <p className="text-slate-600">Địa chỉ: {activeModalCertificate.address}</p>
-              <div className="pt-2">
-                <span className="text-[10px] text-slate-400 font-mono block">Mã băm QR SHA-256:</span>
-                <span className="font-mono text-[10px] text-slate-600 break-all bg-white p-1.5 rounded border border-slate-200 block mt-0.5">
+
+              <div>
+                <span className="text-slate-500 block text-[11px]">Người sử dụng đất:</span>
+                <span className="font-semibold text-slate-900">
+                  {activeModalCertificate.owner}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-slate-500 block text-[11px]">Địa chỉ thửa đất:</span>
+                <span className="text-slate-700">{activeModalCertificate.address}</span>
+              </div>
+
+              <div className="pt-2 border-t border-emerald-200/60">
+                <span className="text-[10px] text-slate-500 font-mono block">
+                  Mã băm QR SHA-256 xác thực trực tuyến:
+                </span>
+                <span className="font-mono text-[10px] text-slate-700 break-all bg-white p-2 rounded-lg border border-slate-200 block mt-1 select-all">
                   {activeModalCertificate.qrHash}
                 </span>
               </div>
             </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                onClick={() => setActiveModalCertificate(null)}
-                className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-              >
-                Đóng
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

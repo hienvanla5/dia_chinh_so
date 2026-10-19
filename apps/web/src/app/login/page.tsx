@@ -4,6 +4,18 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { UserCheck, ShieldCheck, KeyRound, Building, User, ArrowRight } from 'lucide-react';
 import { UserRole } from '@diachinhso/shared';
+import {
+  Button,
+  Input,
+  Select,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+  Badge,
+} from '@/components/ui';
 
 export default function LoginPage() {
   const [tab, setTab] = useState<'citizen' | 'officer'>('citizen');
@@ -31,139 +43,150 @@ export default function LoginPage() {
   return (
     <div className="max-w-md mx-auto mt-6 space-y-6">
       <div className="text-center space-y-2">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-vnred-500 text-white shadow-lg shadow-red-200">
-          <ShieldCheck className="h-7 w-7" />
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-vnred-500 to-vnred-700 text-white shadow-lg shadow-red-500/25 ring-4 ring-red-100">
+          <ShieldCheck className="h-8 w-8 text-gold-500" />
         </div>
-        <h1 className="text-2xl font-black text-slate-900">Cổng Đăng Nhập Định Danh</h1>
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Cổng Đăng Nhập Định Danh</h1>
         <p className="text-xs text-slate-500">
-          Hệ thống Địa Chính Số - Sổ Đỏ Số & Cơ Sở Dữ Liệu Thời Gian Thực
+          Hệ thống Địa Chính Số - Sổ Đỏ Số & CSDL Thửa Đất Thời Gian Thực
         </p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-        {/* Tab switch */}
-        <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 text-xs font-semibold">
-          <button
-            onClick={() => { setTab('citizen'); setMessage(null); }}
-            className={`rounded-lg py-2 transition ${
-              tab === 'citizen' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Chủ đất (CCCD Sandbox)
-          </button>
-          <button
-            onClick={() => { setTab('officer'); setMessage(null); }}
-            className={`rounded-lg py-2 transition ${
-              tab === 'officer' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Cán bộ nghiệp vụ
-          </button>
-        </div>
-
-        {message && (
-          <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800">
-            {message}
+      <Card>
+        <CardHeader className="pb-3">
+          {/* Tab switch */}
+          <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-slate-100 p-1 text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => {
+                setTab('citizen');
+                setMessage(null);
+              }}
+              className={`rounded-lg py-2 transition-all duration-150 ${
+                tab === 'citizen'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              Chủ đất (CCCD Sandbox)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTab('officer');
+                setMessage(null);
+              }}
+              className={`rounded-lg py-2 transition-all duration-150 ${
+                tab === 'officer'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              Cán bộ nghiệp vụ
+            </button>
           </div>
-        )}
+        </CardHeader>
 
-        {tab === 'citizen' ? (
-          <form onSubmit={handleCitizenSubmit} className="space-y-4 text-xs">
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-blue-900 text-[11px] leading-relaxed">
-              <strong>Môi trường phát triển & kiểm thử:</strong> Hệ thống sử dụng cổng định danh số Sandbox (Decoupled IdP) mô phỏng quy trình CCCD 12 số mà không cần kết nối dữ liệu thật C06 VNeID.
+        <CardContent className="pt-2">
+          {message && (
+            <div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-800 font-medium">
+              {message}
             </div>
+          )}
 
-            <div>
-              <label className="block font-semibold text-slate-700">Số CCCD (12 chữ số):</label>
-              <input
-                type="text"
+          {tab === 'citizen' ? (
+            <form onSubmit={handleCitizenSubmit} className="space-y-4">
+              <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 text-blue-900 text-xs leading-relaxed">
+                <span className="font-bold block text-blue-950">Môi trường Decoupled Sandbox:</span>
+                Hệ thống sử dụng cổng định danh số Sandbox mô phỏng CCCD 12 số không phụ thuộc mạng thật C06 VNeID.
+              </div>
+
+              <Input
+                label="Số CCCD định danh (12 chữ số)"
                 required
                 maxLength={12}
                 value={citizenId}
                 onChange={(e) => setCitizenId(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs focus:border-blue-500 focus:outline-none"
+                placeholder="001090012345"
               />
-            </div>
 
-            <div>
-              <label className="block font-semibold text-slate-700">Họ và tên chủ đất:</label>
-              <input
-                type="text"
+              <Input
+                label="Họ và tên chủ đất"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                placeholder="Nguyễn Văn An"
               />
-            </div>
 
-            <div>
-              <label className="block font-semibold text-slate-700">Số điện thoại liên kết:</label>
-              <input
+              <Input
+                label="Số điện thoại liên kết OTP"
                 type="tel"
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                placeholder="0912345678"
               />
-            </div>
 
-            <button
-              type="submit"
-              className="w-full flex items-center justify-center gap-2 rounded-lg bg-vnred-500 py-2.5 font-bold text-white hover:bg-vnred-600 transition shadow-sm"
-            >
-              <UserCheck className="h-4 w-4" />
-              Đăng nhập với CCCD Sandbox
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleOfficerSubmit} className="space-y-4 text-xs">
-            <div>
-              <label className="block font-semibold text-slate-700">Vai trò Cán bộ:</label>
-              <select
+              <Button
+                variant="primary"
+                size="md"
+                type="submit"
+                fullWidth
+                className="bg-vnred-500 hover:bg-vnred-600 shadow-md shadow-red-500/25 mt-2"
+                leftIcon={<UserCheck className="h-4 w-4" />}
+              >
+                Đăng nhập với CCCD Sandbox
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleOfficerSubmit} className="space-y-4">
+              <Select
+                label="Vai trò Cán bộ Đề án 06"
                 value={role}
                 onChange={(e) => setRole(e.target.value as UserRole)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
-              >
-                <option value={UserRole.COMMUNE_OFFICER}>Cán bộ Địa chính xã/phường (VT-01)</option>
-                <option value={UserRole.LAND_REGISTRAR}>Văn phòng Đăng ký đất đai (VT-02)</option>
-                <option value={UserRole.NOTARY_BANK}>Công chứng viên & Tín dụng Ngân hàng (VT-04)</option>
-                <option value={UserRole.INSPECTOR}>Thanh tra & Quản lý Quy hoạch (VT-05)</option>
-                <option value={UserRole.ADMIN}>Quản trị viên Hệ thống (VT-06)</option>
-              </select>
-            </div>
+                options={[
+                  { value: UserRole.COMMUNE_OFFICER, label: 'Cán bộ Địa chính xã/phường (VT-01)' },
+                  { value: UserRole.LAND_REGISTRAR, label: 'Văn phòng Đăng ký đất đai (VT-02)' },
+                  {
+                    value: UserRole.NOTARY_BANK,
+                    label: 'Công chứng viên & Tín dụng Ngân hàng (VT-04)',
+                  },
+                  { value: UserRole.INSPECTOR, label: 'Thanh tra & Quản lý Quy hoạch (VT-05)' },
+                  { value: UserRole.ADMIN, label: 'Quản trị viên Hệ thống (VT-06)' },
+                ]}
+              />
 
-            <div>
-              <label className="block font-semibold text-slate-700">Tên đăng nhập:</label>
-              <input
-                type="text"
+              <Input
+                label="Tên tài khoản công vụ"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                placeholder="canbo_diachinh"
               />
-            </div>
 
-            <div>
-              <label className="block font-semibold text-slate-700">Mật khẩu:</label>
-              <input
+              <Input
+                label="Mật khẩu bảo mật"
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                placeholder="••••••"
               />
-            </div>
 
-            <button
-              type="submit"
-              className="w-full flex items-center justify-center gap-2 rounded-lg bg-slate-900 py-2.5 font-bold text-white hover:bg-slate-800 transition shadow-sm"
-            >
-              <KeyRound className="h-4 w-4" />
-              Đăng nhập Cán bộ nghiệp vụ
-            </button>
-          </form>
-        )}
-      </div>
+              <Button
+                variant="primary"
+                size="md"
+                type="submit"
+                fullWidth
+                className="mt-2"
+                leftIcon={<KeyRound className="h-4 w-4" />}
+              >
+                Đăng nhập Cán bộ nghiệp vụ
+              </Button>
+            </form>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
