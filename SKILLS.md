@@ -18,7 +18,7 @@
   2. Triển khai code Shared -> Backend API -> Frontend Web.
   3. Bắt buộc viết Unit Test & Integration Test bao phủ 4 Tiêu chí chấp nhận (ACs).
   4. Chạy kiểm thử tự động, tự sửa lỗi trong vòng lặp kín cho đến khi 100% test case PASS.
-  5. Cập nhật trạng thái story và tài liệu API tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md).
+  5. **Bắt buộc viết tài liệu API Endpoints** chi tiết vào [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md) (Request, Response, Roles, Error Codes) và cập nhật trạng thái story trong [`user_stories/<STORY_ID>.md`](file:///E:/personal_project/DIACHINHSO/user_stories/).
   6. Kiểm tra `pnpm build` toàn bộ Monorepo.
   7. Commit từng phần theo chuẩn Conventional Commits và push lên GitHub.
 

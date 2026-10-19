@@ -84,11 +84,20 @@ pnpm --filter @diachinhso/api test
 
 ---
 
-### Step 5: Update Documentation & Status
-1. Open `user_stories/<STORY_ID>.md`:
-   - Mark all completed tasks as done: change `- [ ]` to `- [x]`.
-   - Update metadata: change `- **Trạng thái**: Chưa thực hiện` to `- **Trạng thái**: Hoàn thành`.
-2. If any new API endpoints were introduced, update `docs/api-endpoints.md`.
+### Step 5: Write API Documentation (`docs/`) & Update Story Status
+1. **Mandatory API Documentation**:
+   - Open [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md).
+   - If the story creates or modifies any backend API endpoint, you **MUST** document it clearly under the corresponding module section:
+     - Tag with User Story ID: `### [<STORY_ID>] <Endpoint Name>`
+     - HTTP Method and Route path (`/api/v1/...`)
+     - Role requirements / Permissions
+     - Sample JSON Request Body / Query Parameters with data types
+     - Sample `200/201` Response payload
+     - Standard error status codes (`400`, `401`, `403`, `404`, `409`)
+2. **Update Story Markdown**:
+   - Open `user_stories/<STORY_ID>.md`:
+     - Mark all completed tasks as done: change `- [ ]` to `- [x]`.
+     - Update metadata: change `- **Trạng thái**: Chưa thực hiện` to `- **Trạng thái**: Hoàn thành`.
 
 ---
 
