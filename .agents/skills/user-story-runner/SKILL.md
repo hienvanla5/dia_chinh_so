@@ -50,9 +50,16 @@ Implement code adhering strictly to the architecture:
    - Expose REST endpoints in controller (`src/modules/<module>/<module>.controller.ts`) with Swagger decorators.
    - Apply guards (`JwtAuthGuard`, `RolesGuard`) based on the Persona role.
 
-3. **`apps/web`** (Frontend Implementation):
-   - Build UI components and pages in `src/app/` and `src/components/`.
-   - Connect API calls and handle error states / loading states.
+3. **`apps/web`** (Frontend Implementation - Tuân thủ nghiêm ngặt Design System):
+   - **Tái sử dụng 100% component dùng chung**: Bắt buộc import từ `@/components/ui/` (`Button`, `ButtonCreate`, `ButtonEdit`, `ButtonDelete`, `ButtonView`, `ButtonSearch`, `Input`, `SearchInput`, `Select`, `Badge`, `StatusBadge`, `Card`, `EmptyState`, `Modal`) và `@/components/layout/` (`Navbar`, `Sidebar`, `NavItem`, `PageHeader`, `MainLayout`).
+   - **Khắc phục 6 cạm bẫy thiết kế của AI**:
+     1. *Thấu cảm Persona*: Giao diện phân rõ đối tượng phục vụ (Cán bộ địa chính cần mật độ dữ liệu cao; Người dân cần trực quan, dễ thao tác).
+     2. *Bản sắc Thương hiệu Quốc gia*: Màu sắc chủ đạo Đỏ Quốc kỳ (`vnred-500`), Vàng sao (`gold-500`), Xanh công vụ (`primary-900`), Xanh pháp lý (`emerald-600`).
+     3. *Logic Nghiệp vụ & Kỹ thuật*: Mọi nút bấm tương tác phải có `isLoading`, `disabled`, `aria-busy`. Mọi trạng thái pháp lý phải dùng `ParcelStatusBadge` hoặc `DossierStatusBadge`.
+     4. *Bản quyền & Chuẩn hóa Icon*: 100% icon sử dụng từ `lucide-react`.
+     5. *Nhất quán Design System*: Cấm tự tiện viết `<button>` hoặc `<input>` trần với class CSS tự chế ngoài hệ thống.
+     6. *Chi tiết & Empty States*: Mọi bảng danh sách rỗng phải có `EmptyState` hoặc `SearchEmptyState` kèm nút kêu gọi hành động (CTA). UX copy bằng tiếng Việt chuẩn mực hành chính theo Luật Đất đai 2024.
+   - Kết nối API Backend, kiểm soát trạng thái dữ liệu (Loading, Success, Error).
 
 ---
 

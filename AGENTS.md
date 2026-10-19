@@ -21,14 +21,23 @@
      - Cấu trúc Response thành công `200/201` mẫu
      - Danh sách mã lỗi đặc thù (`400`, `401`, `403`, `404`, `409 Conflict`)
    - Tuyệt đối không để mã nguồn API chạy mà không có tài liệu phản ánh tương ứng trong `docs/`.
-4. **Chính sách Kiểm thử Nghiêm ngặt (Strict TDD / Test-Verified Policy)**:
+4. **Quy Chuẩn Thiết Kế UI/UX & Design System (Chống 6 Cạm Bẫy của AI)**:
+   - Khi xây dựng giao diện Frontend trong `apps/web/`, Agent **BẮT BUỘC TÁI SỬ DỤNG 100% BỘ GIAO DIỆN CHUNG** tại `@/components/ui/` và `@/components/layout/`. Tuyệt đối cấm viết code HTML/CSS trần tự chế.
+   - **Xử lý triệt để 6 cạm bẫy thiết kế của AI**:
+     1. *Thiếu thấu cảm & UX context*: Phải thiết kế chuẩn hóa theo từng Persona (Cán bộ địa chính cần mật độ thông tin cao; Người dân cần trực quan, dễ thao tác, có giải thích rõ ràng).
+     2. *Giao diện rập khuôn, mất bản sắc*: Tuân thủ nhận diện Quốc gia: Cờ đỏ sao vàng (`vnred-500`, `gold-500`), Xanh công vụ (`primary-900`), Xanh pháp lý (`emerald-600`), chuẩn mực văn hóa hành chính Việt Nam.
+     3. *Xa rời logic kinh doanh & kỹ thuật*: Mọi nút bấm tương tác phải có cờ `isLoading`, `disabled`, `aria-busy`. Mọi trạng thái pháp lý phải dùng `ParcelStatusBadge` hoặc `DossierStatusBadge`.
+     4. *Bản quyền & icon lộn xộn*: 100% icon sử dụng thư viện chuẩn `lucide-react`, không tự nhúng SVG trôi nổi.
+     5. *Khó bảo trì / thiếu nhất quán Design System*: Bắt buộc tái sử dụng: `Button` (với các biến thể `create`, `edit`, `delete`, `view`, `search`), `Input`, `SearchInput`, `Select`, `Badge`, `Card`, `EmptyState`, `Modal`, `Navbar`, `Sidebar`, `NavItem`, `PageHeader`.
+     6. *Bỏ qua chi tiết nhỏ (Micro-interactions & UX Writing)*: Bắt buộc dùng `EmptyState` / `SearchEmptyState` khi bảng dữ liệu rỗng kèm nút hành động (CTA), thông báo lỗi rõ ràng bằng tiếng Việt hành chính chuẩn theo Luật Đất đai 2024.
+5. **Chính sách Kiểm thử Nghiêm ngặt (Strict TDD / Test-Verified Policy)**:
    - **MỌI** User Story khi triển khai **BẮT BUỘC** phải có **Unit Test** và **Integration Test** đi kèm.
    - Các kịch bản kiểm thử phải ánh xạ trực tiếp và bao phủ đầy đủ các **Tiêu chí chấp nhận (Acceptance Criteria)** trong file story.
-5. **Quy tắc Vòng lặp Tự sửa lỗi (Self-Correction Loop)**:
+6. **Quy tắc Vòng lặp Tự sửa lỗi (Self-Correction Loop)**:
    - Sau khi viết code và test, Agent chạy lệnh test tương ứng (`pnpm test` hoặc `pnpm --filter @diachinhso/api test`).
    - Nếu test fail: Đọc kỹ stack trace, xác định nguyên nhân gốc rễ, sửa đổi mã nguồn hoặc kịch bản test, chạy lại cho đến khi **100% test case PASS**.
    - **TUYỆT ĐỐI KHÔNG** commit hay push mã nguồn đang gãy test, không được dùng `test.skip` hoặc giả lập kết quả giả tạo.
-6. **Chiến lược Commit Nguyên tử (Atomic Commits) & Push**:
+7. **Chiến lược Commit Nguyên tử (Atomic Commits) & Push**:
    - Chia nhỏ commit theo từng thành phần: `feat(shared)`, `feat(api)`, `test(api)`, `feat(web)`, `docs(api)`, `docs(story)`.
    - Chạy `pnpm build` kiểm tra toàn bộ Monorepo.
    - Chỉ push (`git push origin main`) sau khi toàn bộ tests, build và docs đều hoàn tất.
@@ -42,7 +51,7 @@ Khi người dùng gửi yêu cầu chứa **Mã User Story** (ví dụ: `DCS-01
 ```mermaid
 flowchart TD
     S1["1. Đọc spec: user_stories/<STORY_ID>.md"] --> S2["2. Trích xuất ACs, Tasks, Rules, Dependencies"]
-    S2 --> S3["3. Triển khai Code: Shared -> Backend API -> Frontend Web"]
+    S2 --> S3["3. Triển khai Code: Shared -> Backend API -> Frontend Web (Design System)"]
     S3 --> S4["4. Viết Unit Test & Integration Test (bám sát AC)"]
     S4 --> S5{"5. Chạy test: pnpm test"}
     S5 -- "FAIL (Lỗi)" --> S5_Fix["Đọc log lỗi, phân tích & tự sửa mã nguồn"]
@@ -67,8 +76,8 @@ Tuân thủ thứ tự phân tầng phụ thuộc:
    - Service nghiệp vụ, xử lý ACID transaction, Redis lock/cache.
    - Controller kèm Swagger annotations, validation pipe, guards.
 3. **`apps/web`**:
-   - Xây dựng UI page/component trong `src/app/` và `src/components/`.
-   - Kết nối API Backend, kiểm soát trạng thái giao diện và phản hồi người dùng.
+   - Bắt buộc dùng toàn diện hệ thống UI components tại `@/components/ui/` (`Button`, `Input`, `Select`, `Badge`, `StatusBadge`, `Card`, `EmptyState`, `Modal`) và layout tại `@/components/layout/` (`Navbar`, `Sidebar`, `NavItem`, `PageHeader`, `MainLayout`).
+   - Kết nối API Backend, kiểm soát trạng thái giao diện (Loading, Success, Empty, Error).
 
 ### Bước 3: Viết Bộ Kiểm Thử (Unit & Integration Tests)
 - **Vị trí file test**: Đặt cạnh file cần test với hậu tố `.spec.ts` (ví dụ: `spatial.service.spec.ts`, `lock.service.spec.ts`).
@@ -112,6 +121,9 @@ Tuân thủ thứ tự phân tầng phụ thuộc:
 
 - **Backend**: NestJS 10, TypeScript, Drizzle ORM, PostgreSQL 16 + PostGIS 3.4, IORedis.
 - **Frontend**: Next.js 15 (App Router, React 19), Tailwind CSS, Lucide React, MapLibre GL JS.
+- **Thư viện UI Design System**:
+  - Components dùng chung: `apps/web/src/components/ui/` (`Button`, `Input`, `Select`, `Badge`, `StatusBadge`, `Card`, `EmptyState`, `Modal`).
+  - Layout & Bố cục: `apps/web/src/components/layout/` (`Navbar`, `Sidebar`, `NavItem`, `PageHeader`, `MainLayout`).
 - **Shared Package**: `@diachinhso/shared` (`packages/shared/src/index.ts`).
 - **Tài liệu API**: `docs/api-endpoints.md`.
 - **Hệ quy chiếu GIS**: VN-2000 (kinh tuyến trục 105°00', múi chiếu 3 độ, SRID 3405/9210) chuyển đổi WGS84 (SRID 4326) để hiển thị web.
