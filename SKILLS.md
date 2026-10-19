@@ -13,14 +13,15 @@
   - Gửi mã Story, ví dụ: `DCS-01-CN-001`, `DCS-04-CN-002`, `DCS-02-CN-003`.
   - Gửi tên Story, ví dụ: `"Đăng nhập Cổng Định danh Số"`, `"Tạo mã QR bảo mật động"`.
   - Gửi lệnh: `/story <Mã Story>` hoặc `Triển khai story <Tên Story>`.
-- **Quy trình thực thi**:
-  1. Đọc đặc tả tại [`user_stories/<STORY_ID>.md`](file:///E:/personal_project/DIACHINHSO/user_stories/).
-  2. Triển khai code Shared -> Backend API -> Frontend Web (Tuân thủ nghiêm ngặt Design System tại Bước 2).
-  3. Bắt buộc viết Unit Test & Integration Test bao phủ 4 Tiêu chí chấp nhận (ACs).
-  4. Chạy kiểm thử tự động, tự sửa lỗi trong vòng lặp kín cho đến khi 100% test case PASS.
-  5. **Bắt buộc viết tài liệu API Endpoints** chi tiết vào [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md) (Request, Response, Roles, Error Codes) và cập nhật trạng thái story trong [`user_stories/<STORY_ID>.md`](file:///E:/personal_project/DIACHINHSO/user_stories/).
-  6. Kiểm tra `pnpm build` toàn bộ Monorepo.
-  7. Commit từng phần theo chuẩn Conventional Commits và push lên GitHub.
+- **Quy trình thực thi (Mô hình GitHub Flow Đơn Giản)**:
+  1. **Tạo nhánh tính năng**: Khởi tạo nhánh `feature/<STORY_ID>-<ten-tinh-nang>` từ nhánh `main`.
+  2. **Đọc đặc tả**: Đọc đặc tả tại [`user_stories/<STORY_ID>.md`](file:///E:/personal_project/DIACHINHSO/user_stories/).
+  3. **Triển khai code**: Code phân tầng Shared -> Backend API -> Frontend Web (Tuân thủ nghiêm ngặt Design System tại Mục 2).
+  4. **Kiểm thử bám sát ACs**: Viết Unit Test & Integration Test bao phủ 4 Tiêu chí chấp nhận.
+  5. **Vòng lặp sửa lỗi**: Chạy kiểm thử tự động `pnpm test`, tự sửa lỗi trong vòng lặp kín cho đến khi 100% test case PASS.
+  6. **Viết API Docs**: Cập nhật tài liệu API chi tiết vào [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md) và cập nhật trạng thái story trong [`user_stories/<STORY_ID>.md`](file:///E:/personal_project/DIACHINHSO/user_stories/).
+  7. **Biên dịch Monorepo**: Kiểm tra `pnpm build` toàn bộ Monorepo.
+  8. **Commit & Merge GitHub Flow**: Commit từng phần trên nhánh feature -> Checkout `main` -> Merge trực tiếp nhánh feature vào `main` -> `git push origin main` -> Xóa nhánh feature cục bộ.
 
 ---
 

@@ -1,13 +1,13 @@
 ---
 name: user-story-runner
 description: >-
-  Automated Story-Driven Workflow executor for Dia Chinh So project. Activates whenever
-  the user specifies a User Story ID (e.g. 'DCS-01-CN-001') or a story title.
-  Reads user_stories/<STORY_ID>.md, implements code, writes unit & integration tests,
-  executes tests with self-correcting fix loops, commits atomically, and pushes to git remote.
+  Automated Story-Driven Workflow executor for Dia Chinh So project using GitHub Flow.
+  Activates whenever the user specifies a User Story ID (e.g. 'DCS-01-CN-001') or a story title.
+  Creates a feature branch from main, implements code, writes unit & integration tests,
+  executes tests, verifies build, commits atomically, merges directly into main, and pushes to git remote.
 ---
 
-# User Story Runner - Automated Implementation & Verification Runbook
+# User Story Runner - Automated Implementation & Verification Runbook (GitHub Flow)
 
 This skill defines the exact automated procedure to execute when the user mentions, inputs, or requests the implementation of a User Story from the **Địa Chính Số** backlog (located in `user_stories/`).
 
@@ -21,9 +21,20 @@ Activate this skill whenever:
 
 ---
 
-## Step-by-Step Execution Runbook
+## Step-by-Step Execution Runbook (GitHub Flow)
 
-### Step 1: Identify & Read Story Specification
+### Step 1 (GitHub Flow): Create Feature Branch from `main`
+Before making any changes, ensure `main` is clean and updated, then create and switch to a dedicated feature branch:
+```bash
+git checkout main
+git pull origin main
+git checkout -b feature/<STORY_ID>-<ten-tinh-nang>
+```
+*Example*: `git checkout -b feature/DCS-01-CN-001-citizen-idp-login`
+
+---
+
+### Step 2: Identify & Read Story Specification
 1. Search `user_stories/` for the requested Story ID or title.
 2. Open and view `user_stories/<STORY_ID>.md`.
 3. Extract and parse:
@@ -35,7 +46,7 @@ Activate this skill whenever:
 
 ---
 
-### Step 2: Implementation (Shared -> API -> Web)
+### Step 3: Implementation on Feature Branch (Shared -> API -> Web)
 Implement code adhering strictly to the architecture:
 
 1. **`packages/shared`** (if new types, schemas, or constants are required):
@@ -63,7 +74,7 @@ Implement code adhering strictly to the architecture:
 
 ---
 
-### Step 3: Write Unit & Integration Tests (BẮT BUỘC)
+### Step 4: Write Unit & Integration Tests (BẮT BUỘC)
 Write test suites specifically testing the 4 Acceptance Criteria of the story:
 1. **Unit Tests**:
    - Location: `apps/api/src/modules/<module>/<module>.service.spec.ts`.
@@ -74,13 +85,13 @@ Write test suites specifically testing the 4 Acceptance Criteria of the story:
 
 ---
 
-### Step 4: Execute Tests & Self-Correction Loop
+### Step 5: Execute Tests & Self-Correction Loop
 Run the test runner and enforce the zero-failure gate:
 ```bash
 pnpm --filter @diachinhso/api test
 ```
 
-- **If tests PASS (Green)**: Proceed to Step 5.
+- **If tests PASS (Green)**: Proceed to Step 6.
 - **If tests FAIL (Red)**:
   1. Inspect the stack trace and failure output.
   2. Diagnose whether the issue is in the business logic or test assertions.
@@ -91,7 +102,7 @@ pnpm --filter @diachinhso/api test
 
 ---
 
-### Step 5: Write API Documentation (`docs/`) & Update Story Status
+### Step 6: Write API Documentation (`docs/`) & Update Story Status
 1. **Mandatory API Documentation**:
    - Open [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md).
    - If the story creates or modifies any backend API endpoint, you **MUST** document it clearly under the corresponding module section:
@@ -108,7 +119,7 @@ pnpm --filter @diachinhso/api test
 
 ---
 
-### Step 6: Verify Monorepo Build
+### Step 7: Verify Monorepo Build
 Run the full monorepo build to verify zero compile or type errors:
 ```bash
 pnpm build
@@ -117,32 +128,39 @@ Confirm `@diachinhso/shared`, `@diachinhso/api`, and `@diachinhso/web` all build
 
 ---
 
-### Step 7: Atomic Commits & Git Push
-Commit changes in small, logical increments:
-```bash
-git add packages/shared/
-git commit -m "feat(shared): add types and schemas for <STORY_ID>"
+### Step 8 (GitHub Flow): Commit on Feature Branch, Merge into `main` & Push
+1. **Commit changes in small, logical increments on the feature branch**:
+   ```bash
+   git add packages/shared/ ; git commit -m "feat(shared): add types and schemas for <STORY_ID>"
+   git add apps/api/ ; git commit -m "feat(api): implement business logic for <STORY_ID>"
+   git add apps/api/src/**/*.spec.ts ; git commit -m "test(api): unit and integration tests for <STORY_ID>"
+   git add apps/web/ ; git commit -m "feat(web): add UI interface for <STORY_ID>"
+   git add docs/ ; git commit -m "docs(api): document endpoints for <STORY_ID>"
+   git add user_stories/ ; git commit -m "docs(story): mark <STORY_ID> as completed"
+   ```
 
-git add apps/api/src/modules/
-git commit -m "feat(api): implement business logic for <STORY_ID>"
+2. **Merge directly into `main` branch**:
+   ```bash
+   git checkout main
+   git merge feature/<STORY_ID>-<ten-tinh-nang>
+   ```
 
-git add apps/api/src/**/*.spec.ts
-git commit -m "test(api): unit and integration tests for <STORY_ID>"
+3. **Push to remote repository**:
+   ```bash
+   git push origin main
+   ```
 
-git add apps/web/
-git commit -m "feat(web): add UI interface for <STORY_ID>"
-
-git add user_stories/ docs/
-git commit -m "docs(story): complete <STORY_ID> and update endpoints"
-
-git push origin main
-```
+4. **Clean up local feature branch**:
+   ```bash
+   git branch -d feature/<STORY_ID>-<ten-tinh-nang>
+   ```
 
 ---
 
-### Step 8: User Summary
+### Step 9: User Summary
 Respond to the user with:
 - Story implemented (ID & Title).
 - Key files created/modified with clickable `file://` links.
 - Test execution output showing 100% passed test cases.
-- Commit hash and push confirmation.
+- Commit hash and push confirmation on `main`.
+- Confirmation that the feature branch was merged directly into `main`.

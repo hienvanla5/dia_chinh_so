@@ -37,30 +37,40 @@
    - Sau khi viết code và test, Agent chạy lệnh test tương ứng (`pnpm test` hoặc `pnpm --filter @diachinhso/api test`).
    - Nếu test fail: Đọc kỹ stack trace, xác định nguyên nhân gốc rễ, sửa đổi mã nguồn hoặc kịch bản test, chạy lại cho đến khi **100% test case PASS**.
    - **TUYỆT ĐỐI KHÔNG** commit hay push mã nguồn đang gãy test, không được dùng `test.skip` hoặc giả lập kết quả giả tạo.
-7. **Chiến lược Commit Nguyên tử (Atomic Commits) & Push**:
-   - Chia nhỏ commit theo từng thành phần: `feat(shared)`, `feat(api)`, `test(api)`, `feat(web)`, `docs(api)`, `docs(story)`.
-   - Chạy `pnpm build` kiểm tra toàn bộ Monorepo.
-   - Chỉ push (`git push origin main`) sau khi toàn bộ tests, build và docs đều hoàn tất.
+7. **Quy Chuẩn Quản Lý Nhánh Git (Mô hình GitHub Flow Đơn Giản)**:
+   - **Bước 1 (Branching)**: Trước khi code bất kỳ tính năng hoặc User Story nào, Agent **BẮT BUỘC** tạo nhánh mới từ nhánh `main` theo định dạng `feature/<STORY_ID>-<ten-tinh-nang>` (hoặc `feature/<ten-tinh-nang>`).
+   - **Bước 2 (Verify & Commit)**: Thực hiện code, viết test và kiểm tra toàn bộ hoạt động trơn tru (`pnpm test` 100% PASS, `pnpm build` 100% PASS). Thực hiện các commit nguyên tử (Atomic Commits) trên chính nhánh feature này.
+   - **Bước 3 (Merge & Push)**: Chuyển về nhánh `main`, thực hiện merge trực tiếp nhánh feature vào `main` (`git merge feature/...`), đẩy lên remote GitHub (`git push origin main`), và dọn dẹp nhánh feature cục bộ (`git branch -d feature/...`).
 
 ---
 
-## 2. Quy Trình Tự Động Hóa Thực Thi User Story (Story-Driven Workflow)
+## 2. Quy Trình Tự Động Hóa Thực Thi User Story (GitHub Flow Workflow)
 
-Khi người dùng gửi yêu cầu chứa **Mã User Story** (ví dụ: `DCS-01-CN-001`, `DCS-03-CN-001`) hoặc **Tên User Story** (ví dụ: `Đăng nhập Cổng Định danh Số`, `Khóa phiên giao dịch`), Agent lập tức kích hoạt quy trình tự động 7 bước sau:
+Khi người dùng gửi yêu cầu chứa **Mã User Story** (ví dụ: `DCS-01-CN-001`, `DCS-03-CN-001`) hoặc **Tên User Story** (ví dụ: `Đăng nhập Cổng Định danh Số`, `Khóa phiên giao dịch`), Agent lập tức kích hoạt quy trình tự động hóa GitHub Flow gồm các bước sau:
 
 ```mermaid
 flowchart TD
-    S1["1. Đọc spec: user_stories/<STORY_ID>.md"] --> S2["2. Trích xuất ACs, Tasks, Rules, Dependencies"]
-    S2 --> S3["3. Triển khai Code: Shared -> Backend API -> Frontend Web (Design System)"]
-    S3 --> S4["4. Viết Unit Test & Integration Test (bám sát AC)"]
-    S4 --> S5{"5. Chạy test: pnpm test"}
+    S0["1. GitHub Flow: Tạo nhánh feature/<story-id>-<ten-tinh-nang> từ main"] --> S1["2. Đọc đặc tả: user_stories/<STORY_ID>.md"]
+    S1 --> S2["3. Trích xuất ACs, Tasks, Rules, Dependencies"]
+    S2 --> S3["4. Code trên nhánh feature: Shared -> Backend API -> Frontend Web (Design System)"]
+    S3 --> S4["5. Viết Unit Test & Integration Test (bám sát AC)"]
+    S4 --> S5{"6. Kiểm tra: pnpm test & pnpm build"}
     S5 -- "FAIL (Lỗi)" --> S5_Fix["Đọc log lỗi, phân tích & tự sửa mã nguồn"]
     S5_Fix --> S5
-    S5 -- "100% PASS" --> S6["6. Viết API Docs tại docs/api-endpoints.md & Tích [x] Tasks trong Story MD"]
-    S6 --> S7["7. Kiểm tra pnpm build -> Commit nguyên tử -> git push origin main"]
+    S5 -- "100% PASS" --> S6["7. Viết API Docs tại docs/ & Cập nhật Story MD & Commit nguyên tử trên feature"]
+    S6 --> S7["8. GitHub Flow: Checkout main -> Merge trực tiếp feature -> git push origin main -> Xóa nhánh feature"]
 ```
 
-### Bước 1: Tra cứu & Đọc Đặc Tả Story
+### Bước 1 (GitHub Flow - Tạo Nhánh): Khởi Tạo Nhánh Tính Năng
+- Đảm bảo nhánh `main` đang ở trạng thái sạch và mới nhất từ remote:
+  ```bash
+  git checkout main
+  git pull origin main
+  git checkout -b feature/<STORY_ID>-<ten-tinh-nang>
+  ```
+- *Ví dụ*: `git checkout -b feature/DCS-01-CN-001-citizen-idp-login`
+
+### Bước 2: Tra Cứu & Đọc Đặc Tả Story
 - Tìm file Markdown tại `user_stories/<STORY_ID>.md`.
 - Đọc kỹ 4 phần:
   1. Persona & Mục tiêu nghiệp vụ.
@@ -68,7 +78,7 @@ flowchart TD
   3. 5 Tasks kỹ thuật cần đạt.
   4. Quy tắc nghiệp vụ liên quan (QTD-xx).
 
-### Bước 2: Triển khai Mã Nguồn (Code Implementation)
+### Bước 3: Triển Khai Mã Nguồn (Code Implementation trên Nhánh Feature)
 Tuân thủ thứ tự phân tầng phụ thuộc:
 1. **`packages/shared`**: Khai báo enums, interfaces, Zod schemas, constants. Chạy `pnpm --filter @diachinhso/shared build`.
 2. **`apps/api`**:
@@ -79,18 +89,18 @@ Tuân thủ thứ tự phân tầng phụ thuộc:
    - Bắt buộc dùng toàn diện hệ thống UI components tại `@/components/ui/` (`Button`, `Input`, `Select`, `Badge`, `StatusBadge`, `Card`, `EmptyState`, `Modal`) và layout tại `@/components/layout/` (`Navbar`, `Sidebar`, `NavItem`, `PageHeader`, `MainLayout`).
    - Kết nối API Backend, kiểm soát trạng thái giao diện (Loading, Success, Empty, Error).
 
-### Bước 3: Viết Bộ Kiểm Thử (Unit & Integration Tests)
+### Bước 4: Viết Bộ Kiểm Thử (Unit & Integration Tests)
 - **Vị trí file test**: Đặt cạnh file cần test với hậu tố `.spec.ts` (ví dụ: `spatial.service.spec.ts`, `lock.service.spec.ts`).
 - **Phạm vi Unit Test**: Kiểm thử logic nghiệp vụ độc lập, validation, xử lý dữ liệu sai định dạng (AC-02), quy tắc ràng buộc (AC-03).
 - **Phạm vi Integration Test**: Kiểm thử controller API với NestJS Testing Module, mô phỏng phản hồi HTTP (200, 400, 409, 403, 404).
 
-### Bước 4: Thực thi Kiểm thử & Vòng lặp Sửa lỗi
-- Chạy lệnh: `pnpm --filter @diachinhso/api test`
+### Bước 5: Thực Thi Kiểm Thử & Vòng Lặp Sửa Lỗi (Zero-Failure Gate)
+- Chạy lệnh: `pnpm --filter @diachinhso/api test` (hoặc `pnpm test`).
 - Phân tích output:
   - Nếu xuất hiện lỗi đỏ: Phân tích log lỗi chi tiết, sửa code/test ngay lập tức.
   - Lặp lại lệnh test cho đến khi terminal báo xanh: `Test Suites: X passed, X total. Tests: Y passed, Y total.`
 
-### Bước 5: Viết Tài Liệu API (`docs/`) & Cập Nhật Trạng Thái Story
+### Bước 6: Viết Tài Liệu API (`docs/`) & Cập Nhật Trạng Thái Story
 - **Bắt buộc viết/cập nhật tài liệu API**: Mở file [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md), thêm mới hoặc cập nhật thông số endpoint thuộc Story đó:
   - Gắn thẻ mã User Story: `### [DCS-XX-YY-ZZZ] Tên Endpoint`
   - Mô tả URL, HTTP Method, Role Guard, JSON Request Body & Response mẫu, các mã lỗi.
@@ -98,22 +108,34 @@ Tuân thủ thứ tự phân tầng phụ thuộc:
   - Đổi `- [ ]` thành `- [x]` cho các task đã hoàn thành.
   - Đổi `- **Trạng thái**: Chưa thực hiện` thành `- **Trạng thái**: Hoàn thành`.
 
-### Bước 6: Kiểm tra Biên dịch Monorepo (Build Gate)
+### Bước 7: Kiểm Tra Biên Dịch Monorepo (Build Gate)
 - Chạy: `pnpm build`
 - Xác nhận cả 3 projects (`@diachinhso/shared`, `@diachinhso/api`, `@diachinhso/web`) đều compile thành công không có cảnh báo hoặc lỗi TypeScript.
 
-### Bước 7: Commit Từng Phần & Đẩy Mã Nguồn
-- Commit các thay đổi theo chuẩn Conventional Commits:
-  ```bash
-  git add packages/shared/ ; git commit -m "feat(shared): add types and schemas for <STORY_ID>"
-  git add apps/api/ ; git commit -m "feat(api): implement service and controller for <STORY_ID>"
-  git add apps/api/src/**/*.spec.ts ; git commit -m "test(api): unit and integration tests for <STORY_ID>"
-  git add apps/web/ ; git commit -m "feat(web): add UI interface for <STORY_ID>"
-  git add docs/ ; git commit -m "docs(api): document endpoints for <STORY_ID>"
-  git add user_stories/ ; git commit -m "docs(story): mark <STORY_ID> as completed"
-  ```
-- Push lên repository: `git push origin main`.
-- Tổng kết ngắn gọn cho người dùng: Các file đã tạo/sửa, liên kết API docs đã viết, kết quả test pass, commit IDs.
+### Bước 8 (GitHub Flow - Merge & Push): Commit trên Feature, Merge vào `main` & Đẩy Mã Nguồn
+1. **Commit nguyên tử trên nhánh feature**:
+   ```bash
+   git add packages/shared/ ; git commit -m "feat(shared): add types and schemas for <STORY_ID>"
+   git add apps/api/ ; git commit -m "feat(api): implement service and controller for <STORY_ID>"
+   git add apps/api/src/**/*.spec.ts ; git commit -m "test(api): unit and integration tests for <STORY_ID>"
+   git add apps/web/ ; git commit -m "feat(web): add UI interface for <STORY_ID>"
+   git add docs/ ; git commit -m "docs(api): document endpoints for <STORY_ID>"
+   git add user_stories/ ; git commit -m "docs(story): mark <STORY_ID> as completed"
+   ```
+2. **Merge trực tiếp vào nhánh `main`**:
+   ```bash
+   git checkout main
+   git merge feature/<STORY_ID>-<ten-tinh-nang>
+   ```
+3. **Đẩy lên GitHub remote**:
+   ```bash
+   git push origin main
+   ```
+4. **Xóa nhánh feature cục bộ**:
+   ```bash
+   git branch -d feature/<STORY_ID>-<ten-tinh-nang>
+   ```
+5. **Tổng kết ngắn gọn cho người dùng**: Mã Story, các file đã tạo/sửa, kết quả test pass, commit IDs, và thông báo nhánh feature đã được merge thành công vào `main`.
 
 ---
 
