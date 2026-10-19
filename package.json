@@ -1,0 +1,22 @@
+{
+  "name": "dia_chinh_so",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Địa Chính Số - Sổ Đỏ Số & Cơ Sở Dữ Liệu Thửa Đất Thời Gian Thực",
+  "author": "hienvanla5",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"@diachinhso/*\" dev",
+    "dev:api": "pnpm --filter @diachinhso/api dev",
+    "dev:web": "pnpm --filter @diachinhso/web dev",
+    "build": "pnpm --recursive --filter \"@diachinhso/*\" build",
+    "lint": "pnpm --recursive --filter \"@diachinhso/*\" lint",
+    "test": "pnpm --recursive --filter \"@diachinhso/*\" test",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

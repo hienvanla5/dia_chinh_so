@@ -1,0 +1,33 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import configuration from './config/configuration';
+import { DatabaseModule } from './database/database.module';
+import { RedisModule } from './common/redis/redis.module';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { AuthModule } from './modules/auth/auth.module';
+import { ParcelModule } from './modules/parcel/parcel.module';
+import { LockModule } from './modules/lock/lock.module';
+import { CertificateModule } from './modules/certificate/certificate.module';
+import { DossierModule } from './modules/dossier/dossier.module';
+import { SpatialModule } from './modules/spatial/spatial.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [configuration],
+    }),
+    DatabaseModule,
+    RedisModule,
+    AuthModule,
+    ParcelModule,
+    LockModule,
+    CertificateModule,
+    DossierModule,
+    SpatialModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
