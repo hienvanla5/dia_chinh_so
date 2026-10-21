@@ -191,11 +191,11 @@ export interface OfficerSsoLoginResponse {
   sessionExpiry: string;
 }
 
-// Phân quyền truy cập dữ liệu địa chính theo cấp hành chính 3 cấp (DCS-01-CN-003)
+// Phân quyền truy cập dữ liệu địa chính theo mô hình chính quyền địa phương 2 cấp tinh gọn (Bãi bỏ cấp trung gian Quận/Huyện)
 export enum AdministrativeLevel {
   PROVINCE = 'PROVINCE', // Cấp Tỉnh / Thành phố trực thuộc Trung ương (Cấp 1)
-  DISTRICT = 'DISTRICT', // Cấp Quận / Huyện / Thị xã / TP thuộc tỉnh (Cấp 2)
-  COMMUNE = 'COMMUNE',   // Cấp Xã / Phường / Thị trấn (Cấp 3)
+  COMMUNE = 'COMMUNE',   // Cấp Cơ sở: Xã / Phường / Thị trấn (Cấp 2 - Trực thuộc trực tiếp Tỉnh/TP)
+  DISTRICT = 'DISTRICT', // Cấp Quận / Huyện (Đã bãi bỏ theo nghị định mới - lưu trữ phục vụ dữ liệu lịch sử)
 }
 
 export enum JurisdictionAction {
@@ -211,6 +211,14 @@ export interface AdministrativeUnit {
   name: string;
   level: AdministrativeLevel;
   parentCode?: string;
+  formerUnits?: string[];
+}
+
+export interface MergedProvinceInfo {
+  code: string;
+  name: string;
+  formerUnits: string[];
+  region: string;
 }
 
 export interface JurisdictionPolicy {
