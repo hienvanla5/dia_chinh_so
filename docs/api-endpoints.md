@@ -157,6 +157,103 @@
   - `401 Unauthorized`: Mã xác thực MFA không chính xác hoặc đã hết hạn.
   - `403 Forbidden`: Tài khoản bị tạm khóa, vi phạm thẩm quyền địa giới hành chính (QTD-16) hoặc phát hiện địa chỉ IP bất thường ngoài mạng công vụ (QTD-22).
 
+### [DCS-01-CN-003] Lấy danh mục phân cấp địa giới hành chính 3 cấp (Tỉnh - Huyện - Xã)
+- **Method**: `GET`
+- **Path**: `/api/v1/jurisdiction/hierarchy`
+- **Quyền hạn vai trò**: Tất cả người dùng và cán bộ hệ thống
+- **Response `200 OK`**:
+  ```json
+  {
+    "totalUnits": 14,
+    "provinces": [
+      {
+        "code": "TINH_HN",
+        "name": "Thành phố Hà Nội",
+        "level": "PROVINCE",
+        "districts": [
+          {
+            "code": "HUYEN_BD",
+            "name": "Quận Ba Đình",
+            "level": "DISTRICT",
+            "parentCode": "TINH_HN",
+            "communes": [
+              {
+                "code": "XA_CONG_VI",
+                "name": "Phường Cống Vị",
+                "level": "COMMUNE",
+                "parentCode": "HUYEN_BD"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+  ```
+
+### [DCS-01-CN-003] Cấu hình ma trận phân quyền RBAC phân cấp 3 cấp
+- **Method**: `POST`
+- **Path**: `/api/v1/jurisdiction/matrix`
+- **Quyền hạn vai trò**: `ADMIN` (Quản trị viên Hệ thống)
+- **Request Body**:
+  ```json
+  {
+    "role": "LAND_REGISTRAR",
+    "level": "DISTRICT",
+    "unitCode": "HUYEN_BD",
+    "allowedActions": ["READ", "CREATE", "UPDATE", "APPROVE"],
+    "description": "Văn phòng Đăng ký Đất đai Ba Đình"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "message": "Cấu hình ma trận phân quyền cấp hành chính thành công",
+    "policy": {
+      "id": "pol-1729500000000",
+      "role": "LAND_REGISTRAR",
+      "level": "DISTRICT",
+      "unitCode": "HUYEN_BD",
+      "unitName": "Quận Ba Đình",
+      "allowedActions": ["READ", "CREATE", "UPDATE", "APPROVE"],
+      "description": "Văn phòng Đăng ký Đất đai Ba Đình",
+      "updatedAt": "2026-10-21T10:30:00.000Z"
+    },
+    "auditHash": "7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069"
+  }
+  ```
+- **Mã lỗi đặc thù**:
+  - `400 Bad Request`: Thiếu trường bắt buộc, danh sách quyền rỗng, hoặc mã đơn vị hành chính không tồn tại trong danh mục 3 cấp.
+  - `403 Forbidden`: Người dùng không có quyền quản trị viên.
+
+### [DCS-01-CN-003] Đánh giá thẩm quyền truy cập dữ liệu địa chính theo thẩm quyền 3 cấp (QTD-16)
+- **Method**: `POST`
+- **Path**: `/api/v1/jurisdiction/evaluate`
+- **Quyền hạn vai trò**: Tất cả vai trò nghiệp vụ
+- **Request Body**:
+  ```json
+  {
+    "userRole": "COMMUNE_OFFICER",
+    "userUnitCode": "XA_CONG_VI",
+    "action": "READ",
+    "targetUnitCode": "XA_CONG_VI"
+  }
+  ```
+- **Response `200 OK` (Thành công - Trong thẩm quyền địa giới)**:
+  ```json
+  {
+    "granted": true,
+    "reason": "Thao tác hợp lệ trong phạm vi thẩm quyền địa giới hành chính được phân công (Phường Cống Vị -> Phường Cống Vị)",
+    "userLevel": "COMMUNE",
+    "targetLevel": "COMMUNE",
+    "auditHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+  ```
+- **Mã lỗi đặc thù**:
+  - `400 Bad Request`: Mã đơn vị hành chính người dùng hoặc mục tiêu không tồn tại.
+  - `403 Forbidden`: Vượt quyền địa giới hành chính theo quy định phân cấp quản lý (QTD-16). Ví dụ cán bộ xã Phường Cống Vị cố thao tác lên dữ liệu của Phường Liễu Giai hoặc Quận Hoàn Kiếm.
+
 ### 2.2. Đăng nhập Cán bộ nghiệp vụ liên ngành (SSO / Internal Login)
 - **Method**: `POST`
 - **Path**: `/api/v1/auth/officer-login`
