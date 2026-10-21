@@ -166,3 +166,27 @@ export interface CitizenAuthResponse {
     certificateCount: number;
   };
 }
+
+// Đăng nhập SSO tài khoản công vụ cho cán bộ ngành (DCS-01-CN-002)
+export interface OfficerSsoLoginRequest {
+  username: string;
+  password: string;
+  mfaCode: string;
+  role: UserRole;
+  administrativeUnitCode?: string;
+}
+
+export interface OfficerSsoLoginResponse {
+  accessToken: string;
+  user: {
+    id: string;
+    username: string;
+    fullName: string;
+    role: UserRole;
+    department?: string;
+    administrativeUnitCode: string;
+    administrativeUnitName: string;
+  };
+  auditHash: string;
+  sessionExpiry: string;
+}

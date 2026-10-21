@@ -30,6 +30,15 @@ export const OfficerLoginSchema = z.object({
   role: z.nativeEnum(UserRole),
 });
 
+// Schema đăng nhập SSO tài khoản công vụ kèm MFA (DCS-01-CN-002)
+export const OfficerSsoLoginSchema = z.object({
+  username: z.string().min(3, 'Tên đăng nhập công vụ tối thiểu 3 ký tự'),
+  password: z.string().min(6, 'Mật khẩu công vụ tối thiểu 6 ký tự'),
+  mfaCode: z.string().length(6, 'Mã xác thực MFA phải gồm đúng 6 chữ số').regex(/^\d{6}$/, 'Mã MFA chỉ chứa ký tự số'),
+  role: z.nativeEnum(UserRole),
+  administrativeUnitCode: z.string().min(2, 'Mã đơn vị hành chính tối thiểu 2 ký tự').optional(),
+});
+
 // Schema tọa độ đỉnh ranh giới VN-2000
 export const VertexVN2000Schema = z.object({
   pointIndex: z.number().int().positive(),
@@ -78,6 +87,7 @@ export type CitizenAuthInput = z.infer<typeof CitizenAuthSchema>;
 export type CitizenSendOtpInput = z.infer<typeof CitizenSendOtpSchema>;
 export type CitizenVerifyOtpInput = z.infer<typeof CitizenVerifyOtpSchema>;
 export type OfficerLoginInput = z.infer<typeof OfficerLoginSchema>;
+export type OfficerSsoLoginInput = z.infer<typeof OfficerSsoLoginSchema>;
 export type CreateParcelInput = z.infer<typeof CreateParcelSchema>;
 export type CreateTransactionLockInput = z.infer<typeof CreateTransactionLockSchema>;
 export type CreateDossierInput = z.infer<typeof CreateDossierSchema>;
