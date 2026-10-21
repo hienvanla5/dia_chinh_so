@@ -395,7 +395,7 @@ export default function LoginPage() {
                   {/* Mã băm kiểm toán SHA-256 (AC-04) */}
                   <div className="pt-2 border-t border-emerald-200/60">
                     <span className="text-xs font-semibold text-slate-700 block">
-                      Mã băm kiểm toán SHA-256 (AC-04):
+                      Mã băm kiểm toán SHA-256:
                     </span>
                     <span className="font-mono text-xs text-slate-900 break-all bg-white p-2.5 rounded-lg border border-slate-200 block mt-1 select-all font-medium">
                       {authResult.auditHash}
@@ -466,7 +466,7 @@ export default function LoginPage() {
                   {/* Phân quyền địa giới hành chính theo QTD-16 */}
                   <div className="pt-2 border-t border-blue-200/60 space-y-1">
                     <span className="text-xs font-semibold text-slate-700 block">
-                      Thẩm quyền địa giới hành chính (QTD-16):
+                      Thẩm quyền địa giới hành chính:
                     </span>
                     <p className="font-semibold text-slate-900 text-xs">
                       {officerAuthResult.user.administrativeUnitName}
@@ -479,7 +479,7 @@ export default function LoginPage() {
                   {/* Mã băm kiểm toán SHA-256 (AC-04) */}
                   <div className="pt-2 border-t border-blue-200/60">
                     <span className="text-xs font-semibold text-slate-700 block">
-                      Mã băm kiểm toán SHA-256 (AC-04):
+                      Mã băm kiểm toán SHA-256:
                     </span>
                     <span className="font-mono text-xs text-slate-900 break-all bg-white p-2.5 rounded-lg border border-slate-200 block mt-1 select-all font-medium">
                       {officerAuthResult.auditHash}
@@ -507,7 +507,7 @@ export default function LoginPage() {
               <form onSubmit={handleOfficerSubmit} className="space-y-4">
                 <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-950 leading-relaxed">
                   <p>
-                    <strong className="font-semibold text-blue-900">Cổng SSO Công vụ tập trung (DCS-01-CN-002):</strong> Xác thực đa yếu tố MFA và phân quyền theo địa giới hành chính xã/phường (QTD-16).
+                    <strong className="font-semibold text-blue-900">Cổng SSO Công vụ tập trung:</strong> Xác thực đa yếu tố MFA và phân quyền theo địa giới hành chính xã/phường.
                   </p>
                 </div>
 
@@ -516,14 +516,14 @@ export default function LoginPage() {
                   value={officerRole}
                   onChange={(e) => setOfficerRole(e.target.value as UserRole)}
                   options={[
-                    { value: UserRole.COMMUNE_OFFICER, label: 'Cán bộ Địa chính xã/phường (VT-01)' },
-                    { value: UserRole.LAND_REGISTRAR, label: 'Văn phòng Đăng ký đất đai (VT-02)' },
+                    { value: UserRole.COMMUNE_OFFICER, label: 'Cán bộ Địa chính xã/phường' },
+                    { value: UserRole.LAND_REGISTRAR, label: 'Văn phòng Đăng ký đất đai' },
                     {
                       value: UserRole.NOTARY_BANK,
-                      label: 'Công chứng viên & Tín dụng Ngân hàng (VT-04)',
+                      label: 'Công chứng viên & Tín dụng Ngân hàng',
                     },
-                    { value: UserRole.INSPECTOR, label: 'Thanh tra & Quản lý Quy hoạch (VT-05)' },
-                    { value: UserRole.ADMIN, label: 'Quản trị viên Hệ thống (VT-06)' },
+                    { value: UserRole.INSPECTOR, label: 'Thanh tra & Quản lý Quy hoạch' },
+                    { value: UserRole.ADMIN, label: 'Quản trị viên Hệ thống' },
                   ]}
                 />
 
@@ -557,7 +557,7 @@ export default function LoginPage() {
                 />
 
                 <Input
-                  label="Đơn vị hành chính quản lý (QTD-16)"
+                  label="Đơn vị hành chính quản lý"
                   required
                   value={officerUnit}
                   onChange={(e) => setOfficerUnit(e.target.value)}

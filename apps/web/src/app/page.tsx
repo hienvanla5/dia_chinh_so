@@ -67,7 +67,7 @@ export default function HomePage() {
               Đăng nhập SSO tài khoản công vụ cho cán bộ ngành (SSO + MFA)
             </h2>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Xác thực tập trung SSO đa yếu tố MFA cho cán bộ địa chính xã/phường, phân quyền tác động dữ liệu chặt chẽ theo thẩm quyền địa giới hành chính (QTD-16) và cơ chế khóa phiên an toàn thông tin (QTD-22).
+              Xác thực tập trung SSO đa yếu tố MFA cho cán bộ địa chính xã/phường, phân quyền tác động dữ liệu chặt chẽ theo thẩm quyền địa giới hành chính và cơ chế khóa phiên bảo đảm an toàn thông tin.
             </p>
             <div className="pt-2">
               <Link
