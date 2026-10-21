@@ -26,30 +26,73 @@ import * as crypto from 'crypto';
 export class JurisdictionService {
   private readonly logger = new Logger(JurisdictionService.name);
 
-  // Danh mục chuẩn hóa Đơn vị hành chính 3 cấp (Tỉnh - Huyện - Xã)
+  // Danh mục 34 Tỉnh / Thành phố sau sáp nhập và các Xã / Phường trực thuộc trực tiếp (Mô hình 2 cấp tinh gọn)
   private readonly administrativeUnits: AdministrativeUnit[] = [
-    // Cấp 1: Tỉnh / Thành phố trực thuộc Trung ương
-    { code: 'TINH_HN', name: 'Thành phố Hà Nội', level: AdministrativeLevel.PROVINCE },
-    { code: 'TINH_HCM', name: 'Thành phố Hồ Chí Minh', level: AdministrativeLevel.PROVINCE },
-    { code: 'TINH_DN', name: 'Thành phố Đà Nẵng', level: AdministrativeLevel.PROVINCE },
+    // === 34 TỈNH / THÀNH PHỐ SAU SÁP NHẬP (CẤP 1) ===
+    { code: 'TINH_HN', name: 'Thành phố Hà Nội', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hà Nội', 'Hà Tây cũ'] },
+    { code: 'TINH_HCM', name: 'Thành phố Hồ Chí Minh', level: AdministrativeLevel.PROVINCE, formerUnits: ['TP. Hồ Chí Minh'] },
+    { code: 'TINH_HP', name: 'Thành phố Hải Phòng', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hải Phòng'] },
+    { code: 'TINH_DN', name: 'Thành phố Đà Nẵng', level: AdministrativeLevel.PROVINCE, formerUnits: ['Đà Nẵng'] },
+    { code: 'TINH_CT', name: 'Thành phố Cần Thơ', level: AdministrativeLevel.PROVINCE, formerUnits: ['Cần Thơ'] },
+    { code: 'TINH_HABAC', name: 'Tỉnh Hà Bắc', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bắc Ninh', 'Bắc Giang'] },
+    { code: 'TINH_HAIHUNG', name: 'Tỉnh Hải Hưng', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hải Dương', 'Hưng Yên'] },
+    { code: 'TINH_NAMHA', name: 'Tỉnh Nam Hà', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hà Nam', 'Nam Định'] },
+    { code: 'TINH_TB', name: 'Tỉnh Thái Bình', level: AdministrativeLevel.PROVINCE, formerUnits: ['Thái Bình'] },
+    { code: 'TINH_NB', name: 'Tỉnh Ninh Bình', level: AdministrativeLevel.PROVINCE, formerUnits: ['Ninh Bình'] },
+    { code: 'TINH_VINHPHU', name: 'Tỉnh Vĩnh Phú', level: AdministrativeLevel.PROVINCE, formerUnits: ['Vĩnh Phúc', 'Phú Thọ'] },
+    { code: 'TINH_QN', name: 'Tỉnh Quảng Ninh', level: AdministrativeLevel.PROVINCE, formerUnits: ['Quảng Ninh'] },
+    { code: 'TINH_LS', name: 'Tỉnh Lạng Sơn', level: AdministrativeLevel.PROVINCE, formerUnits: ['Lạng Sơn'] },
+    { code: 'TINH_CB', name: 'Tỉnh Cao Bằng', level: AdministrativeLevel.PROVINCE, formerUnits: ['Cao Bằng'] },
+    { code: 'TINH_BACTHAI', name: 'Tỉnh Bắc Thái', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bắc Kạn', 'Thái Nguyên'] },
+    { code: 'TINH_HATUYEN', name: 'Tỉnh Hà Tuyên', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hà Giang', 'Tuyên Quang'] },
+    { code: 'TINH_HOANGLIENSON', name: 'Tỉnh Hoàng Liên Sơn', level: AdministrativeLevel.PROVINCE, formerUnits: ['Lào Cai', 'Yên Bái'] },
+    { code: 'TINH_SL', name: 'Tỉnh Sơn La', level: AdministrativeLevel.PROVINCE, formerUnits: ['Sơn La'] },
+    { code: 'TINH_DIENBIEN_LAICHAU', name: 'Tỉnh Điện Biên - Lai Châu', level: AdministrativeLevel.PROVINCE, formerUnits: ['Điện Biên', 'Lai Châu'] },
+    { code: 'TINH_HB', name: 'Tỉnh Hòa Bình', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hòa Bình'] },
+    { code: 'TINH_TH', name: 'Tỉnh Thanh Hóa', level: AdministrativeLevel.PROVINCE, formerUnits: ['Thanh Hóa'] },
+    { code: 'TINH_NA', name: 'Tỉnh Nghệ An', level: AdministrativeLevel.PROVINCE, formerUnits: ['Nghệ An'] },
+    { code: 'TINH_HT', name: 'Tỉnh Hà Tĩnh', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hà Tĩnh'] },
+    { code: 'TINH_BINHTRITHIEN', name: 'Tỉnh Bình Trị Thiên', level: AdministrativeLevel.PROVINCE, formerUnits: ['Quảng Bình', 'Quảng Trị', 'Thừa Thiên Huế'] },
+    { code: 'TINH_QUANGNAM_NGAI', name: 'Tỉnh Quảng Nam - Quảng Ngãi', level: AdministrativeLevel.PROVINCE, formerUnits: ['Quảng Nam', 'Quảng Ngãi'] },
+    { code: 'TINH_NGHIABINH', name: 'Tỉnh Nghĩa Bình', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bình Định', 'Phú Yên'] },
+    { code: 'TINH_PHUKHANH', name: 'Tỉnh Phú Khánh', level: AdministrativeLevel.PROVINCE, formerUnits: ['Khánh Hòa', 'Ninh Thuận'] },
+    { code: 'TINH_THUANLAM', name: 'Tỉnh Thuận Lâm', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bình Thuận', 'Lâm Đồng'] },
+    { code: 'TINH_GIALAI_KONTUM', name: 'Tỉnh Gia Lai - Kon Tum', level: AdministrativeLevel.PROVINCE, formerUnits: ['Gia Lai', 'Kon Tum'] },
+    { code: 'TINH_DAKLAK_DAKNONG', name: 'Tỉnh Đắk Lắk - Đắk Nông', level: AdministrativeLevel.PROVINCE, formerUnits: ['Đắk Lắk', 'Đắk Nông'] },
+    { code: 'TINH_SONGBE', name: 'Tỉnh Sông Bé', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bình Dương', 'Bình Phước'] },
+    { code: 'TINH_DONGNAI_BRVT', name: 'Tỉnh Đồng Nai - Bà Rịa Vũng Tàu', level: AdministrativeLevel.PROVINCE, formerUnits: ['Đồng Nai', 'Bà Rịa - Vũng Tàu'] },
+    { code: 'TINH_TAYNINH_LONGAN', name: 'Tỉnh Tây Ninh - Long An', level: AdministrativeLevel.PROVINCE, formerUnits: ['Tây Ninh', 'Long An'] },
+    { code: 'TINH_CUULONG', name: 'Tỉnh Cửu Long', level: AdministrativeLevel.PROVINCE, formerUnits: ['Tiền Giang', 'Bến Tre', 'Vĩnh Long', 'Trà Vinh'] },
 
-    // Cấp 2: Quận / Huyện
-    { code: 'HUYEN_BD', name: 'Quận Ba Đình', level: AdministrativeLevel.DISTRICT, parentCode: 'TINH_HN' },
-    { code: 'HUYEN_HK', name: 'Quận Hoàn Kiếm', level: AdministrativeLevel.DISTRICT, parentCode: 'TINH_HN' },
-    { code: 'HUYEN_CG', name: 'Quận Cầu Giấy', level: AdministrativeLevel.DISTRICT, parentCode: 'TINH_HN' },
-    { code: 'HUYEN_Q1', name: 'Quận 1', level: AdministrativeLevel.DISTRICT, parentCode: 'TINH_HCM' },
+    // === CÁC XÃ / PHƯỜNG TRỰC THUỘC TRỰC TIẾP CẤP TỈNH (CẤP 2 - CƠ SỞ) ===
+    // Trực thuộc Thành phố Hà Nội
+    { code: 'XA_CONG_VI', name: 'Phường Cống Vị', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN' },
+    { code: 'XA_LIEU_GIAI', name: 'Phường Liễu Giai', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN' },
+    { code: 'XA_KIM_MA', name: 'Phường Kim Mã', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN' },
+    { code: 'XA_TRANG_TIEN', name: 'Phường Tràng Tiền', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN' },
+    { code: 'XA_HANG_TRONG', name: 'Phường Hàng Trống', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN' },
+    { code: 'XA_DICH_VONG', name: 'Phường Dịch Vọng', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN' },
 
-    // Cấp 3: Xã / Phường
-    { code: 'XA_CONG_VI', name: 'Phường Cống Vị', level: AdministrativeLevel.COMMUNE, parentCode: 'HUYEN_BD' },
-    { code: 'XA_LIEU_GIAI', name: 'Phường Liễu Giai', level: AdministrativeLevel.COMMUNE, parentCode: 'HUYEN_BD' },
-    { code: 'XA_KIM_MA', name: 'Phường Kim Mã', level: AdministrativeLevel.COMMUNE, parentCode: 'HUYEN_BD' },
-    { code: 'XA_TRANG_TIEN', name: 'Phường Tràng Tiền', level: AdministrativeLevel.COMMUNE, parentCode: 'HUYEN_HK' },
-    { code: 'XA_HANG_TRONG', name: 'Phường Hàng Trống', level: AdministrativeLevel.COMMUNE, parentCode: 'HUYEN_HK' },
-    { code: 'XA_DICH_VONG', name: 'Phường Dịch Vọng', level: AdministrativeLevel.COMMUNE, parentCode: 'HUYEN_CG' },
-    { code: 'XA_BEN_NGHE', name: 'Phường Bến Nghé', level: AdministrativeLevel.COMMUNE, parentCode: 'HUYEN_Q1' },
+    // Trực thuộc Thành phố Hồ Chí Minh
+    { code: 'XA_BEN_NGHE', name: 'Phường Bến Nghé', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HCM' },
+    { code: 'XA_BEN_THANH', name: 'Phường Bến Thành', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HCM' },
+
+    // Trực thuộc Thành phố Đà Nẵng
+    { code: 'XA_HAI_CHAU', name: 'Phường Hải Châu', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_DN' },
+
+    // Trực thuộc Thành phố Hải Phòng
+    { code: 'XA_HONG_BANG', name: 'Phường Hồng Bàng', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HP' },
+
+    // Trực thuộc Thành phố Cần Thơ
+    { code: 'XA_NINH_KIEU', name: 'Phường Ninh Kiều', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_CT' },
+
+    // Lưu trữ đơn vị quận/huyện phục vụ truy vết lịch sử (Deprecated / Legacy support)
+    { code: 'HUYEN_BD', name: 'Khu vực Ba Đình (Lịch sử)', level: AdministrativeLevel.DISTRICT, parentCode: 'TINH_HN' },
+    { code: 'HUYEN_HK', name: 'Khu vực Hoàn Kiếm (Lịch sử)', level: AdministrativeLevel.DISTRICT, parentCode: 'TINH_HN' },
+    { code: 'HUYEN_CG', name: 'Khu vực Cầu Giấy (Lịch sử)', level: AdministrativeLevel.DISTRICT, parentCode: 'TINH_HN' },
   ];
 
-  // Lưu trữ ma trận chính sách phân quyền (Bộ nhớ cache / fallback khi chưa có bảng riêng)
+  // Lưu trữ ma trận chính sách phân quyền
   private policies: Map<string, JurisdictionPolicy> = new Map();
 
   constructor(
@@ -61,7 +104,7 @@ export class JurisdictionService {
   }
 
   /**
-   * Khởi tạo ma trận phân quyền mặc định
+   * Khởi tạo ma trận phân quyền mặc định theo mô hình 2 cấp tinh gọn
    */
   private initDefaultPolicies() {
     const defaultPolicies: JurisdictionPolicy[] = [
@@ -82,18 +125,18 @@ export class JurisdictionService {
         updatedAt: new Date().toISOString(),
       },
       {
-        id: 'pol-reg-bd',
+        id: 'pol-reg-hn',
         role: UserRole.LAND_REGISTRAR,
-        level: AdministrativeLevel.DISTRICT,
-        unitCode: 'HUYEN_BD',
-        unitName: 'Quận Ba Đình',
+        level: AdministrativeLevel.PROVINCE,
+        unitCode: 'TINH_HN',
+        unitName: 'Thành phố Hà Nội',
         allowedActions: [
           JurisdictionAction.READ,
           JurisdictionAction.CREATE,
           JurisdictionAction.UPDATE,
           JurisdictionAction.APPROVE,
         ],
-        description: 'Văn phòng Đăng ký Đất đai cấp Huyện: Đọc, lập, thẩm định và hiệu chỉnh',
+        description: 'Văn phòng Đăng ký Đất đai cấp Tỉnh: Quản lý, thẩm định trực tiếp hồ sơ cấp cơ sở',
         updatedAt: new Date().toISOString(),
       },
       {
@@ -107,17 +150,17 @@ export class JurisdictionService {
           JurisdictionAction.CREATE,
           JurisdictionAction.UPDATE,
         ],
-        description: 'Cán bộ Địa chính cấp Xã: Tra cứu, khai báo và cập nhật hiện trạng địa bàn',
+        description: 'Cán bộ Địa chính cấp Cơ sở: Tra cứu, khai báo và cập nhật hiện trạng địa bàn',
         updatedAt: new Date().toISOString(),
       },
       {
-        id: 'pol-notary-bd',
+        id: 'pol-notary-hn',
         role: UserRole.NOTARY_BANK,
-        level: AdministrativeLevel.DISTRICT,
-        unitCode: 'HUYEN_BD',
-        unitName: 'Quận Ba Đình',
+        level: AdministrativeLevel.PROVINCE,
+        unitCode: 'TINH_HN',
+        unitName: 'Thành phố Hà Nội',
         allowedActions: [JurisdictionAction.READ, JurisdictionAction.UPDATE],
-        description: 'Công chứng & Ngân hàng: Tra cứu và cập nhật trạng thái thế chấp/khóa',
+        description: 'Công chứng & Ngân hàng: Tra cứu và cập nhật trạng thái thế chấp/khóa liên xã',
         updatedAt: new Date().toISOString(),
       },
       {
@@ -145,59 +188,58 @@ export class JurisdictionService {
   }
 
   /**
-   * Kiểm tra quan hệ trực thuộc trong cây 3 cấp (Parent -> Child)
+   * Kiểm tra quan hệ trực thuộc trong mô hình 2 cấp tinh gọn (Tỉnh -> Xã/Phường)
    */
   isDescendant(parentCode: string, targetCode: string): boolean {
     if (parentCode === targetCode) return true;
     const target = this.findUnit(targetCode);
-    if (!target || !target.parentCode) return false;
+    if (!target) return false;
     if (target.parentCode === parentCode) return true;
-    return this.isDescendant(parentCode, target.parentCode);
+
+    // Hỗ trợ truy vết ngược nếu target là quận/huyện cũ trực thuộc tỉnh
+    if (target.parentCode) {
+      return this.isDescendant(parentCode, target.parentCode);
+    }
+    return false;
   }
 
   /**
-   * [DCS-01-CN-003] Lấy danh mục cây phân cấp hành chính 3 cấp
+   * Lấy danh mục địa giới hành chính theo mô hình 2 cấp (34 Tỉnh thành và Xã/Phường trực thuộc)
    */
   async getHierarchy() {
     const provinces = this.administrativeUnits.filter(
       (u) => u.level === AdministrativeLevel.PROVINCE,
-    );
-    const districts = this.administrativeUnits.filter(
-      (u) => u.level === AdministrativeLevel.DISTRICT,
     );
     const communes = this.administrativeUnits.filter(
       (u) => u.level === AdministrativeLevel.COMMUNE,
     );
 
     return {
+      model: 'TWO_TIER_CONSOLIDATED',
+      description: 'Mô hình chính quyền địa phương 2 cấp tinh gọn (Tỉnh/TP và Xã/Phường)',
+      totalProvinces: provinces.length,
       totalUnits: this.administrativeUnits.length,
       provinces: provinces.map((p) => ({
         ...p,
-        districts: districts
-          .filter((d) => d.parentCode === p.code)
-          .map((d) => ({
-            ...d,
-            communes: communes.filter((c) => c.parentCode === d.code),
-          })),
+        communes: communes.filter((c) => c.parentCode === p.code),
       })),
     };
   }
 
   /**
-   * [DCS-01-CN-003] Lấy danh sách ma trận chính sách phân quyền hiện tại
+   * Lấy danh sách ma trận chính sách phân quyền hiện tại
    */
   async getPolicies(): Promise<JurisdictionPolicy[]> {
     return Array.from(this.policies.values());
   }
 
   /**
-   * [DCS-01-CN-003] Cấu hình / Cập nhật ma trận phân quyền RBAC 3 cấp (Quản trị viên)
+   * Cấu hình / Cập nhật ma trận phân quyền RBAC theo mô hình 2 cấp
    */
   async configurePolicy(
     dto: ConfigureJurisdictionPolicyRequest,
     meta?: { username?: string; ipAddress?: string },
   ) {
-    // 1. Kiểm tra validation bằng Zod (TC-02)
     const parsed = ConfigureJurisdictionPolicySchema.safeParse(dto);
     if (!parsed.success) {
       const errorDetails = parsed.error.issues.map((i) => i.message).join('; ');
@@ -206,11 +248,11 @@ export class JurisdictionService {
 
     const { role, level, unitCode, allowedActions, description } = parsed.data;
 
-    // 2. Kiểm tra tính hợp lệ của mã đơn vị hành chính (TC-02)
+    // Kiểm tra tính hợp lệ của mã đơn vị hành chính
     const unit = this.findUnit(unitCode);
     if (!unit) {
       throw new BadRequestException(
-        `Đơn vị hành chính với mã '${unitCode}' không tồn tại trong hệ thống phân cấp 3 cấp`,
+        `Đơn vị hành chính với mã '${unitCode}' không tồn tại trong hệ thống`,
       );
     }
 
@@ -221,7 +263,6 @@ export class JurisdictionService {
       );
     }
 
-    // 3. Cập nhật hoặc lưu chính sách mới (TC-01)
     const policyKey = `${role}_${unitCode}`;
     const existing = this.policies.get(policyKey);
     const policyId = existing ? existing.id : `pol-${Date.now()}`;
@@ -239,7 +280,7 @@ export class JurisdictionService {
 
     this.policies.set(policyKey, newPolicy);
 
-    // 4. Sinh mã băm SHA-256 nhật ký kiểm toán bất biến (AC-04 / TC-04)
+    // Sinh mã băm SHA-256 nhật ký kiểm toán bất biến
     const auditPayload = {
       action: 'CONFIGURE_JURISDICTION_POLICY',
       policyId,
@@ -257,7 +298,6 @@ export class JurisdictionService {
       .update(JSON.stringify(auditPayload))
       .digest('hex');
 
-    // 5. Ghi nhật ký vào CSDL nếu có kết nối (TC-04)
     if (this.db) {
       try {
         await this.db.insert(auditLogs).values({
@@ -278,20 +318,19 @@ export class JurisdictionService {
 
     return {
       success: true,
-      message: 'Cấu hình ma trận phân quyền cấp hành chính thành công',
+      message: 'Cấu hình ma trận phân quyền thành công',
       policy: newPolicy,
       auditHash,
     };
   }
 
   /**
-   * [DCS-01-CN-003] Đánh giá thẩm quyền truy cập dữ liệu địa chính theo thẩm quyền 3 cấp (QTD-16)
+   * Đánh giá thẩm quyền truy cập dữ liệu địa chính theo thẩm quyền 2 cấp tinh gọn (QTD-16)
    */
   async evaluatePermission(
     dto: EvaluatePermissionRequest,
     meta?: { ipAddress?: string },
   ): Promise<EvaluatePermissionResponse> {
-    // 1. Kiểm tra validation bằng Zod (TC-02)
     const parsed = EvaluatePermissionSchema.safeParse(dto);
     if (!parsed.success) {
       const errorDetails = parsed.error.issues.map((i) => i.message).join('; ');
@@ -300,7 +339,6 @@ export class JurisdictionService {
 
     const { userRole, userUnitCode, action, targetUnitCode } = parsed.data;
 
-    // 2. Tìm thông tin đơn vị hành chính
     const userUnit = this.findUnit(userUnitCode);
     if (!userUnit) {
       throw new BadRequestException(
@@ -315,25 +353,25 @@ export class JurisdictionService {
       );
     }
 
-    // 3. Đánh giá nguyên tắc thẩm quyền địa giới theo QTD-16 (TC-03)
+    // Đánh giá thẩm quyền theo nguyên tắc 2 cấp (QTD-16):
     let isWithinJurisdiction = false;
 
     if (userRole === UserRole.ADMIN) {
-      // Quản trị viên hệ thống có toàn quyền trên mọi đơn vị
+      // Quản trị viên hệ thống có toàn quyền trên 34 tỉnh thành và mọi đơn vị cơ sở
       isWithinJurisdiction = true;
     } else if (userUnit.level === AdministrativeLevel.PROVINCE) {
-      // Cấp Tỉnh có thẩm quyền đối với Tỉnh đó và mọi Huyện, Xã trực thuộc
+      // Cấp Tỉnh có thẩm quyền đối với Tỉnh đó và mọi Xã/Phường trực thuộc trực tiếp
       isWithinJurisdiction = this.isDescendant(userUnit.code, targetUnit.code);
     } else if (userUnit.level === AdministrativeLevel.DISTRICT) {
-      // Cấp Huyện có thẩm quyền đối với Huyện đó và các Xã/Phường trực thuộc
+      // Khu vực lịch sử (nếu có): Thẩm quyền đối với chính nó hoặc các xã trực thuộc
       isWithinJurisdiction =
-        targetUnit.code === userUnit.code || targetUnit.parentCode === userUnit.code;
+        targetUnit.code === userUnit.code || targetUnit.parentCode === userUnit.code || this.isDescendant(userUnit.parentCode || '', targetUnit.code);
     } else if (userUnit.level === AdministrativeLevel.COMMUNE) {
-      // Cấp Xã chỉ có thẩm quyền duy nhất trong phạm vi đúng Xã/Phường đó
+      // Cấp Cơ sở: Chỉ có thẩm quyền duy nhất trong phạm vi đúng Xã/Phường đó
       isWithinJurisdiction = targetUnit.code === userUnit.code;
     }
 
-    // 4. Nếu vi phạm địa giới hành chính (QTD-16) -> Chặn và ghi nhật ký vi phạm (TC-03, TC-04)
+    // Nếu vi phạm thẩm quyền địa giới -> Chặn ngay lập tức (QTD-16)
     if (!isWithinJurisdiction) {
       const violationPayload = {
         action: 'JURISDICTION_BOUNDARY_VIOLATION',
@@ -375,7 +413,7 @@ export class JurisdictionService {
       );
     }
 
-    // 5. Kiểm tra quyền thao tác (CRUD action) theo chính sách ma trận
+    // Kiểm tra quyền thao tác (CRUD action) theo chính sách ma trận
     const policy = this.policies.get(`${userRole}_${userUnitCode}`);
     if (policy && !policy.allowedActions.includes(action)) {
       throw new ForbiddenException(
@@ -383,7 +421,6 @@ export class JurisdictionService {
       );
     }
 
-    // 6. Luồng thành công (TC-01, TC-04)
     const successPayload = {
       action: 'JURISDICTION_ACCESS_EVALUATED',
       userRole,

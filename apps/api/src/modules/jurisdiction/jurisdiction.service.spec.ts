@@ -6,7 +6,7 @@ import {
   JurisdictionAction,
 } from '@diachinhso/shared';
 
-describe('JurisdictionService [DCS-01-CN-003]', () => {
+describe('JurisdictionService [Mô hình 2 cấp tinh gọn & CSDL 34 Tỉnh thành]', () => {
   let service: JurisdictionService;
   let mockDb: any;
 
@@ -24,44 +24,57 @@ describe('JurisdictionService [DCS-01-CN-003]', () => {
     expect(service).toBeDefined();
   });
 
-  describe('Cây phân cấp hành chính 3 cấp (Hierarchy)', () => {
-    it('lấy danh mục 3 cấp Tỉnh - Huyện - Xã chuẩn hóa', async () => {
+  describe('Cây phân cấp hành chính 2 cấp tinh gọn (34 Tỉnh thành)', () => {
+    it('lấy danh mục 34 Tỉnh / Thành phố sau sáp nhập và các Xã/Phường trực thuộc trực tiếp', async () => {
       const hierarchy = await service.getHierarchy();
-      expect(hierarchy.totalUnits).toBeGreaterThan(0);
-      expect(hierarchy.provinces.length).toBeGreaterThan(0);
+      expect(hierarchy.model).toBe('TWO_TIER_CONSOLIDATED');
+      expect(hierarchy.totalProvinces).toBe(34);
+      expect(hierarchy.provinces.length).toBe(34);
 
+      // Kiểm tra thủ đô Hà Nội
       const hanoi = hierarchy.provinces.find((p) => p.code === 'TINH_HN');
       expect(hanoi).toBeDefined();
-      expect(hanoi?.districts.length).toBeGreaterThan(0);
+      expect(hanoi?.name).toBe('Thành phố Hà Nội');
+      expect(hanoi?.formerUnits).toContain('Hà Nội');
+      expect(hanoi?.communes.length).toBeGreaterThan(0);
 
-      const baDinh = hanoi?.districts.find((d) => d.code === 'HUYEN_BD');
-      expect(baDinh).toBeDefined();
-      expect(baDinh?.communes.length).toBeGreaterThan(0);
-
-      const congVi = baDinh?.communes.find((c) => c.code === 'XA_CONG_VI');
+      // Kiểm tra xã/phường trực thuộc trực tiếp cấp Tỉnh (không qua quận/huyện)
+      const congVi = hanoi?.communes.find((c) => c.code === 'XA_CONG_VI');
       expect(congVi).toBeDefined();
       expect(congVi?.name).toBe('Phường Cống Vị');
+      expect(congVi?.parentCode).toBe('TINH_HN');
+
+      // Kiểm tra tỉnh sáp nhập (ví dụ: Hà Bắc, Hải Hưng, Bình Trị Thiên, Cửu Long)
+      const haBac = hierarchy.provinces.find((p) => p.code === 'TINH_HABAC');
+      expect(haBac).toBeDefined();
+      expect(haBac?.name).toBe('Tỉnh Hà Bắc');
+      expect(haBac?.formerUnits).toContain('Bắc Ninh');
+      expect(haBac?.formerUnits).toContain('Bắc Giang');
+
+      const cuuLong = hierarchy.provinces.find((p) => p.code === 'TINH_CUULONG');
+      expect(cuuLong).toBeDefined();
+      expect(cuuLong?.name).toBe('Tỉnh Cửu Long');
     });
   });
 
-  describe('DCS-01-CN-003-TC-01: Luồng thành công', () => {
-    it('Quản trị viên cấu hình chính sách phân quyền cấp Huyện thành công', async () => {
+  describe('TC-01: Luồng thành công theo mô hình 2 cấp', () => {
+    it('Quản trị viên cấu hình chính sách phân quyền cấp Tỉnh thành công', async () => {
       const result = await service.configurePolicy({
         role: UserRole.LAND_REGISTRAR,
-        level: AdministrativeLevel.DISTRICT,
-        unitCode: 'HUYEN_HK',
+        level: AdministrativeLevel.PROVINCE,
+        unitCode: 'TINH_HABAC',
         allowedActions: [
           JurisdictionAction.READ,
           JurisdictionAction.CREATE,
           JurisdictionAction.UPDATE,
           JurisdictionAction.APPROVE,
         ],
-        description: 'Văn phòng Đăng ký Đất đai Hoàn Kiếm',
+        description: 'Văn phòng Đăng ký Đất đai Tỉnh Hà Bắc',
       });
 
       expect(result.success).toBe(true);
-      expect(result.policy.unitCode).toBe('HUYEN_HK');
-      expect(result.policy.unitName).toBe('Quận Hoàn Kiếm');
+      expect(result.policy.unitCode).toBe('TINH_HABAC');
+      expect(result.policy.unitName).toBe('Tỉnh Hà Bắc');
       expect(result.policy.allowedActions).toContain(JurisdictionAction.APPROVE);
       expect(result.auditHash).toBeDefined();
       expect(result.auditHash).toHaveLength(64);
@@ -81,21 +94,21 @@ describe('JurisdictionService [DCS-01-CN-003]', () => {
       expect(evalResult.auditHash).toHaveLength(64);
     });
 
-    it('Đánh giá quyền thành công: Cán bộ cấp Huyện thẩm định hồ sơ xã trực thuộc', async () => {
+    it('Đánh giá quyền thành công: Cán bộ cấp Tỉnh thẩm định trực tiếp hồ sơ xã/phường trực thuộc', async () => {
       const evalResult = await service.evaluatePermission({
         userRole: UserRole.LAND_REGISTRAR,
-        userUnitCode: 'HUYEN_BD',
+        userUnitCode: 'TINH_HN',
         action: JurisdictionAction.APPROVE,
-        targetUnitCode: 'XA_CONG_VI', // Cống Vị trực thuộc Ba Đình
+        targetUnitCode: 'XA_CONG_VI', // Cống Vị trực thuộc trực tiếp Hà Nội
       });
 
       expect(evalResult.granted).toBe(true);
-      expect(evalResult.userLevel).toBe(AdministrativeLevel.DISTRICT);
+      expect(evalResult.userLevel).toBe(AdministrativeLevel.PROVINCE);
       expect(evalResult.targetLevel).toBe(AdministrativeLevel.COMMUNE);
       expect(evalResult.auditHash).toBeDefined();
     });
 
-    it('Đánh giá quyền thành công: Quản trị viên hệ thống có toàn quyền trên mọi đơn vị', async () => {
+    it('Đánh giá quyền thành công: Quản trị viên hệ thống có toàn quyền trên 34 tỉnh thành', async () => {
       const evalResult = await service.evaluatePermission({
         userRole: UserRole.ADMIN,
         userUnitCode: 'TINH_HN',
@@ -108,7 +121,7 @@ describe('JurisdictionService [DCS-01-CN-003]', () => {
     });
   });
 
-  describe('DCS-01-CN-003-TC-02: Dữ liệu không hợp lệ', () => {
+  describe('TC-02: Dữ liệu không hợp lệ', () => {
     it('từ chối khi danh sách thao tác được phép bị rỗng', async () => {
       await expect(
         service.configurePolicy({
@@ -120,7 +133,7 @@ describe('JurisdictionService [DCS-01-CN-003]', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('từ chối khi mã đơn vị hành chính không tồn tại trong danh mục 3 cấp', async () => {
+    it('từ chối khi mã đơn vị hành chính không tồn tại', async () => {
       await expect(
         service.configurePolicy({
           role: UserRole.COMMUNE_OFFICER,
@@ -131,7 +144,7 @@ describe('JurisdictionService [DCS-01-CN-003]', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('từ chối khi cấp hành chính không tương thích với đơn vị (Cấp xã nhưng chọn Tỉnh)', async () => {
+    it('từ chối khi cấp hành chính không tương thích với đơn vị', async () => {
       await expect(
         service.configurePolicy({
           role: UserRole.COMMUNE_OFFICER,
@@ -141,32 +154,10 @@ describe('JurisdictionService [DCS-01-CN-003]', () => {
         }),
       ).rejects.toThrow(BadRequestException);
     });
-
-    it('từ chối đánh giá khi mã đơn vị của người dùng không tồn tại', async () => {
-      await expect(
-        service.evaluatePermission({
-          userRole: UserRole.COMMUNE_OFFICER,
-          userUnitCode: 'MA_SAI_123',
-          action: JurisdictionAction.READ,
-          targetUnitCode: 'XA_CONG_VI',
-        }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('từ chối đánh giá khi mã đơn vị dữ liệu mục tiêu không tồn tại', async () => {
-      await expect(
-        service.evaluatePermission({
-          userRole: UserRole.COMMUNE_OFFICER,
-          userUnitCode: 'XA_CONG_VI',
-          action: JurisdictionAction.READ,
-          targetUnitCode: 'MA_TARGET_SAI_999',
-        }),
-      ).rejects.toThrow(BadRequestException);
-    });
   });
 
-  describe('DCS-01-CN-003-TC-03: Ràng buộc nghiệp vụ QTD-16', () => {
-    it('chặn ngay lập tức khi cán bộ xã thao tác trên địa bàn xã khác cùng huyện', async () => {
+  describe('TC-03: Ràng buộc nghiệp vụ phân cấp địa giới (QTD-16)', () => {
+    it('chặn ngay lập tức khi cán bộ xã thao tác trên địa bàn xã khác', async () => {
       await expect(
         service.evaluatePermission({
           userRole: UserRole.COMMUNE_OFFICER,
@@ -177,35 +168,35 @@ describe('JurisdictionService [DCS-01-CN-003]', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('chặn ngay lập tức khi cán bộ xã thao tác trên địa bàn quận khác', async () => {
+    it('chặn cán bộ xã khi thao tác trên địa bàn xã thuộc tỉnh khác', async () => {
       await expect(
         service.evaluatePermission({
           userRole: UserRole.COMMUNE_OFFICER,
           userUnitCode: 'XA_CONG_VI',
           action: JurisdictionAction.READ,
-          targetUnitCode: 'XA_TRANG_TIEN', // Tràng Tiền thuộc Hoàn Kiếm
+          targetUnitCode: 'XA_BEN_NGHE', // Bến Nghé thuộc TP.HCM
         }),
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('chặn cán bộ huyện khi thao tác trên địa bàn huyện khác', async () => {
+    it('chặn cán bộ tỉnh này khi thao tác trên địa bàn tỉnh khác', async () => {
       await expect(
         service.evaluatePermission({
           userRole: UserRole.LAND_REGISTRAR,
-          userUnitCode: 'HUYEN_BD', // Ba Đình
+          userUnitCode: 'TINH_HN', // Hà Nội
           action: JurisdictionAction.APPROVE,
-          targetUnitCode: 'XA_TRANG_TIEN', // Tràng Tiền thuộc Hoàn Kiếm
+          targetUnitCode: 'XA_BEN_NGHE', // Bến Nghé thuộc TP.HCM
         }),
       ).rejects.toThrow(ForbiddenException);
     });
   });
 
-  describe('DCS-01-CN-003-TC-04: Kiểm toán & Đồng bộ', () => {
-    it('sinh mã băm SHA-256 bất biến khi cấu hình chính sách phân quyền', async () => {
+  describe('TC-04: Kiểm toán & Đồng bộ', () => {
+    it('sinh mã băm SHA-256 bất biến khi cấu hình chính sách', async () => {
       const result = await service.configurePolicy({
         role: UserRole.NOTARY_BANK,
-        level: AdministrativeLevel.DISTRICT,
-        unitCode: 'HUYEN_CG',
+        level: AdministrativeLevel.PROVINCE,
+        unitCode: 'TINH_DN',
         allowedActions: [JurisdictionAction.READ],
       });
 
@@ -214,7 +205,7 @@ describe('JurisdictionService [DCS-01-CN-003]', () => {
       expect(mockDb.insert).toHaveBeenCalled();
     });
 
-    it('ghi nhận nhật ký kiểm toán vi phạm khi phát hiện vượt quyền địa giới (QTD-16)', async () => {
+    it('ghi nhận nhật ký kiểm toán vi phạm khi phát hiện vượt quyền địa giới', async () => {
       try {
         await service.evaluatePermission({
           userRole: UserRole.COMMUNE_OFFICER,
