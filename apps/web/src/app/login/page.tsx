@@ -1,36 +1,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import {
-  UserCheck,
-  ShieldCheck,
-  KeyRound,
-  Building,
-  User,
-  ArrowRight,
   Smartphone,
-  CheckCircle2,
-  AlertTriangle,
   RotateCcw,
-  Sparkles,
-  Lock,
-  Layers,
-  Award,
+  ShieldCheck,
+  UserCheck,
+  KeyRound,
+  AlertTriangle,
 } from 'lucide-react';
 import { UserRole } from '@diachinhso/shared';
 import {
   Button,
-  ButtonCreate,
   Input,
   Select,
   Card,
   CardHeader,
-  CardTitle,
-  CardDescription,
   CardContent,
-  CardFooter,
-  Badge,
 } from '@/components/ui';
 
 export default function LoginPage() {
@@ -138,16 +124,13 @@ export default function LoginPage() {
 
   return (
     <div className="max-w-md mx-auto mt-6 space-y-6">
-      {/* Brand & Emblem Header */}
-      <div className="text-center space-y-2">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-vnred-500 to-vnred-700 text-white shadow-lg shadow-red-500/25 ring-4 ring-red-100">
-          <ShieldCheck className="h-8 w-8 text-gold-500" />
-        </div>
+      {/* Brand Header: Clean title without icon/badge clutter */}
+      <div className="text-center space-y-1">
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight font-heading">
           Cổng Đăng Nhập Định Danh
         </h1>
         <p className="text-sm font-medium text-slate-600">
-          Hệ thống Địa Chính Số & Sổ Đỏ Số Điện Tử
+          Hệ thống Địa Chính Số
         </p>
       </div>
 
@@ -198,13 +181,9 @@ export default function LoginPage() {
             citizenStep === 'input' ? (
               // BƯỚC 1: NHẬP CCCD & SỐ ĐIỆN THOẠI
               <form onSubmit={handleSendOtp} className="space-y-4">
-                <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 text-blue-950 text-xs space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-sm text-blue-900">
-                    <Sparkles className="h-4 w-4 text-blue-600" />
-                    <span>Môi trường Thử nghiệm Sandbox:</span>
-                  </div>
-                  <p className="text-xs text-blue-900/90 leading-relaxed">
-                    Nhập số CCCD 12 số và số điện thoại bất kỳ để nhận mã OTP xác thực mô phỏng.
+                <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-950 leading-relaxed">
+                  <p>
+                    <strong className="font-semibold text-blue-900">Môi trường Thử nghiệm Sandbox:</strong> Nhập số CCCD 12 số và số điện thoại bất kỳ để nhận mã OTP xác thực mô phỏng.
                   </p>
                 </div>
 
@@ -257,16 +236,12 @@ export default function LoginPage() {
               <form onSubmit={handleVerifyOtp} className="space-y-4">
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-emerald-950 text-xs space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold flex items-center gap-1.5 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                      Mã OTP đã được gửi đến:
+                    <span className="font-semibold text-xs">
+                      Mã OTP đã gửi đến: {phone.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2')}
                     </span>
-                    <Badge variant="success" size="sm" className="font-mono font-bold">
-                      {phone.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2')}
-                    </Badge>
                   </div>
                   <div className="flex items-center justify-between pt-1 border-t border-emerald-200/60 text-xs">
-                    <span className="text-emerald-800 font-medium">Mã Sandbox thử nghiệm:</span>
+                    <span className="text-emerald-800">Mã Sandbox:</span>
                     <button
                       type="button"
                       onClick={() => setOtpCode(mockOtp)}
@@ -345,17 +320,9 @@ export default function LoginPage() {
               // BƯỚC 3: ĐÃ ĐĂNG NHẬP THÀNH CÔNG - HIỂN THỊ VÍ SỔ ĐỎ SỐ (AC-01 & AC-04)
               <div className="space-y-4">
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 text-xs space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                      <span className="font-extrabold text-emerald-950 text-base font-heading">
-                        ĐỊNH DANH THÀNH CÔNG
-                      </span>
-                    </div>
-                    <Badge variant="success" dot size="sm">
-                      QTD-07 Hợp lệ
-                    </Badge>
-                  </div>
+                  <h2 className="font-extrabold text-emerald-950 text-base font-heading">
+                    Định danh thành công
+                  </h2>
 
                   <div className="space-y-1.5 text-slate-800 border-t border-emerald-200/60 pt-2.5">
                     <p className="text-sm">
@@ -380,19 +347,13 @@ export default function LoginPage() {
 
                 {/* Tóm tắt Ví Sổ Đỏ Số */}
                 <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-slate-900 flex items-center gap-1.5 text-sm">
-                      <Award className="h-4 w-4 text-blue-600" />
-                      Ví Sổ Đỏ Số Cá Nhân:
-                    </span>
-                    <Badge variant="primary" size="sm" className="font-bold">
-                      {authResult.wallet.parcelsCount} Thửa đất
-                    </Badge>
-                  </div>
+                  <h3 className="font-extrabold text-slate-900 text-sm font-heading">
+                    Ví Sổ Đỏ Số cá nhân
+                  </h3>
 
                   <div className="rounded-lg bg-slate-50 p-3 space-y-2 text-xs border border-slate-100">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-600">Mã định danh:</span>
+                      <span className="font-medium text-slate-600">Mã định danh thửa đất:</span>
                       <span className="font-mono font-bold text-sm text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                         {authResult.wallet.nationalCode}
                       </span>
@@ -405,24 +366,20 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 pt-1">
-                  <Link href="/parcels">
-                    <Button variant="primary" size="md" fullWidth leftIcon={<Layers className="h-4 w-4" />}>
-                      Quản lý tài sản trong Ví Sổ Đỏ Số
-                    </Button>
-                  </Link>
-
-                  <button
-                    type="button"
+                <div className="pt-1">
+                  <Button
+                    variant="outline"
+                    size="md"
+                    fullWidth
                     onClick={() => {
                       setCitizenStep('input');
                       setAuthResult(null);
                       setOtpCode('');
                     }}
-                    className="text-xs text-slate-600 hover:text-slate-950 font-semibold py-1 text-center"
+                    className="text-slate-700"
                   >
                     Đăng xuất Cổng Định danh
-                  </button>
+                  </Button>
                 </div>
               </div>
             )
@@ -430,9 +387,8 @@ export default function LoginPage() {
             // TAB CÁN BỘ NGHIỆP VỤ
             <form onSubmit={handleOfficerSubmit} className="space-y-4">
               {officerSuccess && (
-                <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-800 font-medium flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                  Đăng nhập Cán bộ thành công với vai trò: {role}!
+                <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-800 font-medium">
+                  Đăng nhập Cán bộ thành công với vai trò: {role}
                 </div>
               )}
 

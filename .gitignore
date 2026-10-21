@@ -1,4 +1,6 @@
-# Logs
+# Temporary Office files
+~$*
+
 logs
 *.log
 npm-debug.log*
