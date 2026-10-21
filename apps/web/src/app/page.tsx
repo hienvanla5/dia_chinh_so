@@ -32,17 +32,18 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Active Feature Card - Story DCS-01-CN-001 */}
+      {/* Active Features List */}
       <Card className="border-slate-200 shadow-xs">
         <CardHeader>
           <CardTitle className="text-lg font-bold text-slate-900 font-heading">
             Chức năng đang hoạt động
           </CardTitle>
           <CardDescription className="text-sm text-slate-600">
-            Tính năng được triển khai và kiểm thử hoàn chỉnh theo User Story DCS-01-CN-001.
+            Các tính năng xác thực và định danh số đã được kiểm thử và triển khai hoàn chỉnh.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* DCS-01-CN-001 */}
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
             <h2 className="text-base font-bold text-slate-900 font-heading">
               Đăng nhập Cổng Định danh Số Công dân (CCCD + OTP SMS)
@@ -55,7 +56,25 @@ export default function HomePage() {
                 href="/login"
                 className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-700 hover:text-blue-900 transition-colors"
               >
-                Trải nghiệm quy trình đăng nhập <ArrowRight className="h-4 w-4" />
+                Trải nghiệm đăng nhập Công dân <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* DCS-01-CN-002 */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+            <h2 className="text-base font-bold text-slate-900 font-heading">
+              Đăng nhập SSO tài khoản công vụ cho cán bộ ngành (SSO + MFA)
+            </h2>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Xác thực tập trung SSO đa yếu tố MFA cho cán bộ địa chính xã/phường, phân quyền tác động dữ liệu chặt chẽ theo thẩm quyền địa giới hành chính (QTD-16) và cơ chế khóa phiên an toàn thông tin (QTD-22).
+            </p>
+            <div className="pt-2">
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-700 hover:text-blue-900 transition-colors"
+              >
+                Trải nghiệm đăng nhập Cán bộ SSO <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </div>
