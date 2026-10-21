@@ -190,3 +190,59 @@ export interface OfficerSsoLoginResponse {
   auditHash: string;
   sessionExpiry: string;
 }
+
+// Phân quyền truy cập dữ liệu địa chính theo cấp hành chính 3 cấp (DCS-01-CN-003)
+export enum AdministrativeLevel {
+  PROVINCE = 'PROVINCE', // Cấp Tỉnh / Thành phố trực thuộc Trung ương (Cấp 1)
+  DISTRICT = 'DISTRICT', // Cấp Quận / Huyện / Thị xã / TP thuộc tỉnh (Cấp 2)
+  COMMUNE = 'COMMUNE',   // Cấp Xã / Phường / Thị trấn (Cấp 3)
+}
+
+export enum JurisdictionAction {
+  READ = 'READ',       // Tra cứu / Xem thông tin địa chính
+  CREATE = 'CREATE',   // Khai báo / Tạo mới thửa đất, hồ sơ
+  UPDATE = 'UPDATE',   // Cập nhật / Hiệu chỉnh biến động
+  APPROVE = 'APPROVE', // Phê duyệt / Thẩm định hồ sơ
+  DELETE = 'DELETE',   // Xóa / Thu hồi thửa đất, hồ sơ
+}
+
+export interface AdministrativeUnit {
+  code: string;
+  name: string;
+  level: AdministrativeLevel;
+  parentCode?: string;
+}
+
+export interface JurisdictionPolicy {
+  id: string;
+  role: UserRole;
+  level: AdministrativeLevel;
+  unitCode: string;
+  unitName: string;
+  allowedActions: JurisdictionAction[];
+  description?: string;
+  updatedAt: string;
+}
+
+export interface ConfigureJurisdictionPolicyRequest {
+  role: UserRole;
+  level: AdministrativeLevel;
+  unitCode: string;
+  allowedActions: JurisdictionAction[];
+  description?: string;
+}
+
+export interface EvaluatePermissionRequest {
+  userRole: UserRole;
+  userUnitCode: string;
+  action: JurisdictionAction;
+  targetUnitCode: string;
+}
+
+export interface EvaluatePermissionResponse {
+  granted: boolean;
+  reason: string;
+  userLevel: AdministrativeLevel;
+  targetLevel: AdministrativeLevel;
+  auditHash: string;
+}

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus } from '../types';
+import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction } from '../types';
 
 // Schema xác thực Mock CCCD / Sandbox IdP
 export const CitizenAuthSchema = z.object({
@@ -92,3 +92,24 @@ export type CreateParcelInput = z.infer<typeof CreateParcelSchema>;
 export type CreateTransactionLockInput = z.infer<typeof CreateTransactionLockSchema>;
 export type CreateDossierInput = z.infer<typeof CreateDossierSchema>;
 export type ReviewDossierInput = z.infer<typeof ReviewDossierSchema>;
+
+// Schema cấu hình chính sách phân quyền địa giới 3 cấp (DCS-01-CN-003)
+export const ConfigureJurisdictionPolicySchema = z.object({
+  role: z.nativeEnum(UserRole, { errorMap: () => ({ message: 'Vai trò người dùng không hợp lệ' }) }),
+  level: z.nativeEnum(AdministrativeLevel, { errorMap: () => ({ message: 'Cấp hành chính không hợp lệ trong 3 cấp' }) }),
+  unitCode: z.string().min(2, 'Mã đơn vị hành chính tối thiểu 2 ký tự'),
+  allowedActions: z.array(z.nativeEnum(JurisdictionAction, { errorMap: () => ({ message: 'Thao tác không hợp lệ' }) }))
+    .min(1, 'Danh sách quyền thao tác không được rỗng'),
+  description: z.string().optional(),
+});
+
+// Schema đánh giá thẩm quyền truy cập dữ liệu địa giới (DCS-01-CN-003)
+export const EvaluatePermissionSchema = z.object({
+  userRole: z.nativeEnum(UserRole, { errorMap: () => ({ message: 'Vai trò người dùng không hợp lệ' }) }),
+  userUnitCode: z.string().min(2, 'Mã đơn vị hành chính của người dùng không được để trống'),
+  action: z.nativeEnum(JurisdictionAction, { errorMap: () => ({ message: 'Thao tác nghiệp vụ không hợp lệ' }) }),
+  targetUnitCode: z.string().min(2, 'Mã đơn vị hành chính dữ liệu mục tiêu không được để trống'),
+});
+
+export type ConfigureJurisdictionPolicyInput = z.infer<typeof ConfigureJurisdictionPolicySchema>;
+export type EvaluatePermissionInput = z.infer<typeof EvaluatePermissionSchema>;
