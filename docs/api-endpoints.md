@@ -157,7 +157,7 @@
   - `401 Unauthorized`: Mã xác thực MFA không chính xác hoặc đã hết hạn.
   - `403 Forbidden`: Tài khoản bị tạm khóa, vi phạm thẩm quyền địa giới hành chính (QTD-16) hoặc phát hiện địa chỉ IP bất thường ngoài mạng công vụ (QTD-22).
 
-### [DCS-01-CN-003] Lấy danh mục phân cấp địa giới hành chính 3 cấp (Tỉnh - Huyện - Xã)
+### [DCS-01-CN-003] Lấy danh mục phân cấp địa giới hành chính mô hình 2 cấp (34 Tỉnh thành & Xã/Phường)
 - **Method**: `GET`
 - **Path**: `/api/v1/jurisdiction/hierarchy`
 - **Quyền hạn vai trò**: Tất cả người dùng và cán bộ hệ thống
@@ -191,7 +191,7 @@
   }
   ```
 
-### [DCS-01-CN-003] Cấu hình ma trận phân quyền RBAC phân cấp 3 cấp
+### [DCS-01-CN-003] Cấu hình ma trận phân quyền RBAC mô hình 2 cấp tinh gọn
 - **Method**: `POST`
 - **Path**: `/api/v1/jurisdiction/matrix`
 - **Quyền hạn vai trò**: `ADMIN` (Quản trị viên Hệ thống)
@@ -227,7 +227,7 @@
   - `400 Bad Request`: Thiếu trường bắt buộc, danh sách quyền rỗng, hoặc mã đơn vị hành chính không tồn tại trong danh mục 3 cấp.
   - `403 Forbidden`: Người dùng không có quyền quản trị viên.
 
-### [DCS-01-CN-003] Đánh giá thẩm quyền truy cập dữ liệu địa chính theo thẩm quyền 3 cấp (QTD-16)
+### [DCS-01-CN-003] Đánh giá thẩm quyền truy cập dữ liệu địa chính theo mô hình 2 cấp (QTD-16)
 - **Method**: `POST`
 - **Path**: `/api/v1/jurisdiction/evaluate`
 - **Quyền hạn vai trò**: Tất cả vai trò nghiệp vụ
