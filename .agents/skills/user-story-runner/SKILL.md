@@ -79,6 +79,14 @@ Implement code adhering strictly to the architecture:
      - Cấm các pill/status kỹ thuật rườm rà trên Navbar (ví dụ: cấm pill `VN-2000 PostGIS | Khóa 90p`).
      - Cấm các khẩu hiệu PR/marketing sáo rỗng (như "Giải quyết triệt để vấn nạn..."). Văn phong phải cô đọng, súc tích, mang tính chỉ dẫn công vụ chuẩn xác.
      - **Tuyệt đối cấm gắn icon, badge hoặc pill trạng thái gần các tiêu đề** (`h1`, `h2`, `h3`, card titles, ví dụ: cấm gắn badge `Luật Đất đai 2024`, `QTD-07 Hợp lệ`, `Đề án 06`, biểu tượng ngôi sao, checkmark, sparkles ngay cạnh tiêu đề). Tiêu đề phải thanh thoát, trang trọng, tập trung vào nội dung chính. Giao diện chưa cần quá phức tạp.
+   - **Tuyệt Đối Ẩn Toàn Bộ Mã ID Nội Bộ Khỏi Giao Diện Web (Hide Internal IDs from User-Facing UI)**:
+     - **Nghiêm cấm hiển thị các mã định danh nội bộ** kỹ thuật, mã quản trị dự án hoặc mã kiểm thử trên giao diện người dùng Web. Cụ thể: tuyệt đối không đưa các mã quy tắc nghiệp vụ (`QTD-xx` như `QTD-16`, `QTD-22`), mã vai trò (`VT-xx` như `VT-01`, `VT-02`, `VT-04`), mã tiêu chí chấp nhận (`AC-xx`, `TC-xx`), mã công việc (`CV-xx`), hoặc mã User Story (`DCS-xx-yy-zzz`) vào các tiêu đề, nhãn (label), placeholder, mô tả trợ giúp (helper text), dropdown options, thẻ badge, hoặc thông báo hiển thị cho người dùng/cán bộ.
+     - **Chuẩn hóa ngôn ngữ hiển thị**: Bắt buộc sử dụng danh xưng và thuật ngữ hành chính tiếng Việt tường minh, trang trọng theo Luật Đất đai 2024. Ví dụ:
+       - Dùng `Cán bộ Địa chính xã/phường` (KHÔNG dùng `Cán bộ Địa chính xã/phường (VT-01)`).
+       - Dùng `Thẩm quyền địa giới hành chính:` (KHÔNG dùng `Thẩm quyền địa giới hành chính (QTD-16):`).
+       - Dùng `Mã băm kiểm toán SHA-256:` (KHÔNG dùng `Mã băm kiểm toán SHA-256 (AC-04):`).
+       - Dùng `Đơn vị hành chính quản lý` (KHÔNG dùng `Đơn vị hành chính quản lý (QTD-16)`).
+     - Các mã `DCS`, `QTD`, `VT`, `AC`, `TC`, `CV` chỉ phục vụ tài liệu đặc tả kỹ thuật (`user_stories/`, `docs/api-endpoints.md`), mã nguồn backend/database/test, git commit messages và chú thích nội bộ trong code (code comments).
    - **Tập Trung Tuyệt Đối Vào User Story Đang Thực Hiện (Zero Overengineering & No Scope Creep)**:
      - Khi thực hiện một User Story, chỉ tạo và hoàn thiện đúng các backend API và frontend (route, màn hình, form, trang kết quả) phục vụ trực tiếp cho User Story đó.
      - *Ví dụ*: User Story đăng nhập `DCS-01-CN-001` chỉ hoàn thiện backend auth/audit và frontend route `/login` (màn hình nhập CCCD/OTP và màn hình định danh thành công), không sinh các route khác khi chưa làm.
