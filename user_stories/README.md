@@ -8,8 +8,8 @@
 
 | STT | Mã Story | Tên User Story | Vai trò | Điểm | Độ ưu tiên | Trạng thái |
 |---|---|---|---|---|---|---|
-| 1 | [DCS-01-CN-001](./DCS-01-CN-001.md) | [Đăng nhập Cổng Định danh Số Công dân qua CCCD và OTP SMS](./DCS-01-CN-001.md) | Chủ sử dụng đất | 5 | Bắt buộc | Chưa thực hiện |
-| 2 | [DCS-01-CN-002](./DCS-01-CN-002.md) | [Đăng nhập SSO tài khoản công vụ cho cán bộ ngành](./DCS-01-CN-002.md) | Cán bộ Địa chính xã/phường | 5 | Bắt buộc | Chưa thực hiện |
+| 1 | [DCS-01-CN-001](./DCS-01-CN-001.md) | [Đăng nhập Cổng Định danh Số Công dân qua CCCD và OTP SMS](./DCS-01-CN-001.md) | Chủ sử dụng đất | 5 | Bắt buộc | Hoàn thành |
+| 2 | [DCS-01-CN-002](./DCS-01-CN-002.md) | [Đăng nhập SSO tài khoản công vụ cho cán bộ ngành](./DCS-01-CN-002.md) | Cán bộ Địa chính xã/phường | 5 | Bắt buộc | Hoàn thành |
 | 3 | [DCS-01-CN-003](./DCS-01-CN-003.md) | [Phân quyền truy cập dữ liệu địa chính theo cấp hành chính 3 cấp](./DCS-01-CN-003.md) | Quản trị viên Hệ thống | 8 | Bắt buộc | Chưa thực hiện |
 | 4 | [DCS-01-CN-004](./DCS-01-CN-004.md) | [Tích hợp chứng thư số chuyên dùng công vụ và SmartCA](./DCS-01-CN-004.md) | Văn phòng Đăng ký Đất đai | 8 | Bắt buộc | Chưa thực hiện |
 | 5 | [DCS-01-CN-005](./DCS-01-CN-005.md) | [Quản lý phiên làm việc và bảo mật xác thực 2FA](./DCS-01-CN-005.md) | Quản trị viên Hệ thống | 3 | Quan trọng | Chưa thực hiện |

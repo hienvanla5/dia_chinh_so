@@ -121,6 +121,42 @@
   }
   ```
 
+### [DCS-01-CN-002] Đăng nhập SSO tài khoản công vụ cho cán bộ ngành kèm MFA
+- **Method**: `POST`
+- **Path**: `/api/v1/auth/officer/sso-login`
+- **Quyền hạn vai trò**: Public / Cán bộ ngành (`COMMUNE_OFFICER`, `LAND_REGISTRAR`, `NOTARY_BANK`, `INSPECTOR`, `ADMIN`)
+- **Request Body**:
+  ```json
+  {
+    "username": "canbo.convi@diachinh.gov.vn",
+    "password": "SecurePassword2026!",
+    "mfaCode": "123456",
+    "role": "COMMUNE_OFFICER",
+    "administrativeUnitCode": "XA_CONG_VI"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "officer-uuid-002",
+      "username": "canbo.convi@diachinh.gov.vn",
+      "fullName": "Nguyễn Văn Bình",
+      "role": "COMMUNE_OFFICER",
+      "department": "Phường Cống Vị, Ba Đình, Hà Nội",
+      "administrativeUnitCode": "XA_CONG_VI",
+      "administrativeUnitName": "Phường Cống Vị, Quận Ba Đình, Hà Nội"
+    },
+    "auditHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sessionExpiry": "2026-10-21T18:00:00.000Z"
+  }
+  ```
+- **Mã lỗi đặc thù**:
+  - `400 Bad Request`: Dữ liệu đầu vào không hợp lệ hoặc mã MFA không đúng 6 số.
+  - `401 Unauthorized`: Mã xác thực MFA không chính xác hoặc đã hết hạn.
+  - `403 Forbidden`: Tài khoản bị tạm khóa, vi phạm thẩm quyền địa giới hành chính (QTD-16) hoặc phát hiện địa chỉ IP bất thường ngoài mạng công vụ (QTD-22).
+
 ### 2.2. Đăng nhập Cán bộ nghiệp vụ liên ngành (SSO / Internal Login)
 - **Method**: `POST`
 - **Path**: `/api/v1/auth/officer-login`
