@@ -78,6 +78,23 @@ export default function HomePage() {
               </Link>
             </div>
           </div>
+          {/* DCS-01-CN-003 */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+            <h2 className="text-base font-bold text-slate-900 font-heading">
+              Phân quyền truy cập dữ liệu địa chính theo cấp hành chính 3 cấp
+            </h2>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Cấu hình ma trận phân quyền RBAC phân cấp Tỉnh - Huyện - Xã, tự động kiểm soát và ngăn chặn can thiệp vượt quyền địa giới hành chính, kiểm toán bất biến với mã băm SHA-256.
+            </p>
+            <div className="pt-2">
+              <Link
+                href="/jurisdiction"
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-700 hover:text-blue-900 transition-colors"
+              >
+                Trải nghiệm Phân quyền Địa giới 3 cấp <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ShieldCheck, UserCheck } from 'lucide-react';
+import { ShieldCheck, UserCheck, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 export function Navbar() {
@@ -28,6 +28,15 @@ export function Navbar() {
 
       {/* Right Actions */}
       <div className="flex items-center gap-3">
+        <Link href="/jurisdiction">
+          <Button
+            variant="outline"
+            size="sm"
+            leftIcon={<Shield className="h-4 w-4" />}
+          >
+            <span>Phân quyền Địa giới</span>
+          </Button>
+        </Link>
         <Link href="/login">
           <Button
             variant="primary"
