@@ -6,6 +6,7 @@ import {
   CitizenSendOtpInput,
   CitizenVerifyOtpInput,
   OfficerLoginInput,
+  OfficerSsoLoginInput,
 } from '@diachinhso/shared';
 
 @ApiTags('Xác thực & Định danh Số (Auth & IdP)')
@@ -55,6 +56,34 @@ export class AuthController {
     @Headers('user-agent') userAgent: string,
   ) {
     return this.authService.verifyCitizenOtp(body, { ipAddress, userAgent });
+  }
+
+  @Post('officer/sso-login')
+  @ApiOperation({
+    summary: '[DCS-01-CN-002] Đăng nhập SSO tài khoản công vụ cho cán bộ ngành kèm MFA',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Đăng nhập SSO thành công, trả về JWT Access Token phân quyền địa giới hành chính và mã băm SHA-256',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Dữ liệu đầu vào không hợp lệ hoặc thiếu mã MFA',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Mã xác thực MFA không chính xác hoặc đã hết hạn',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Tài khoản bị khóa hoặc vi phạm thẩm quyền địa giới (QTD-16) hoặc phát hiện IP bất thường (QTD-22)',
+  })
+  async officerSsoLogin(
+    @Body() body: OfficerSsoLoginInput,
+    @Ip() ipAddress: string,
+    @Headers('user-agent') userAgent: string,
+  ) {
+    return this.authService.officerSsoLogin(body, { ipAddress, userAgent });
   }
 
   @Post('officer-login')
