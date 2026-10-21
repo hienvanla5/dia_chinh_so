@@ -11,6 +11,7 @@ import { LockModule } from './modules/lock/lock.module';
 import { CertificateModule } from './modules/certificate/certificate.module';
 import { DossierModule } from './modules/dossier/dossier.module';
 import { SpatialModule } from './modules/spatial/spatial.module';
+import { JurisdictionModule } from './modules/jurisdiction/jurisdiction.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { SpatialModule } from './modules/spatial/spatial.module';
     CertificateModule,
     DossierModule,
     SpatialModule,
+    JurisdictionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
