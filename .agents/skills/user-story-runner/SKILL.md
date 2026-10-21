@@ -75,12 +75,15 @@ Implement code adhering strictly to the architecture:
      - Font tiêu đề (Headings): **Montserrat** (mạnh mẽ, dứt khoát, hiện đại). Fallback: `Poppins`.
      - Độ tương phản chữ cao: Dùng `text-slate-950`, `text-slate-900`, `text-slate-800`. Cấm dùng chữ màu xám mờ khó đọc.
      - Tăng kích thước các thông số trọng yếu: Mã thửa đất 15 ký tự, số CCCD, mã OTP, số lượng thống kê phải có kích thước lớn, font đậm (`font-extrabold`).
-   - **Loại bỏ Status Thừa & Ngôn Từ Sáo Rỗng**:
+   - **Loại bỏ Status Thừa, Ngôn Từ Sáo Rỗng & Icon/Badge Cạnh Tiêu Đề**:
      - Cấm các pill/status kỹ thuật rườm rà trên Navbar (ví dụ: cấm pill `VN-2000 PostGIS | Khóa 90p`).
      - Cấm các khẩu hiệu PR/marketing sáo rỗng (như "Giải quyết triệt để vấn nạn..."). Văn phong phải cô đọng, súc tích, mang tính chỉ dẫn công vụ chuẩn xác.
-   - **Thiết kế Từng Phần (Single-Story Focus)**:
-     - Chỉ thiết kế giao diện cho chính User Story đang kích hoạt hoặc các thành phần dùng chung liên quan trực tiếp.
-     - Tuyệt đối không sinh hàng loạt template mockup cho các story chưa làm để tránh loãng chất lượng và rác code.
+     - **Tuyệt đối cấm gắn icon, badge hoặc pill trạng thái gần các tiêu đề** (`h1`, `h2`, `h3`, card titles, ví dụ: cấm gắn badge `Luật Đất đai 2024`, `QTD-07 Hợp lệ`, `Đề án 06`, biểu tượng ngôi sao, checkmark, sparkles ngay cạnh tiêu đề). Tiêu đề phải thanh thoát, trang trọng, tập trung vào nội dung chính. Giao diện chưa cần quá phức tạp.
+   - **Tập Trung Tuyệt Đối Vào User Story Đang Thực Hiện (Zero Overengineering & No Scope Creep)**:
+     - Khi thực hiện một User Story, chỉ tạo và hoàn thiện đúng các backend API và frontend (route, màn hình, form, trang kết quả) phục vụ trực tiếp cho User Story đó.
+     - *Ví dụ*: User Story đăng nhập `DCS-01-CN-001` chỉ hoàn thiện backend auth/audit và frontend route `/login` (màn hình nhập CCCD/OTP và màn hình định danh thành công), không sinh các route khác khi chưa làm.
+     - **TUYỆT ĐỐI CẤM** tạo trước các route, trang mockup (placeholder/stub pages như `/map`, `/parcels`, `/locks`, `/dossiers`, `/certificates`) hoặc dựng sẵn menu, link ảo khi các Story đó chưa được giao thực hiện.
+     - Không dàn trải nội dung, không vẽ trước tính năng tương lai. Toàn bộ mã nguồn phải phản ánh chân thực tiến độ thực tế của các Story đã hoàn thành.
    - Kết nối API Backend, kiểm soát trạng thái dữ liệu (Loading, Success, Error).
 
 ---

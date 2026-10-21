@@ -47,7 +47,8 @@ Khi Agent phát triển bất kỳ giao diện Frontend nào trong `apps/web/`, 
 ### Tinh Giản Giao Diện & Loại Bỏ Ngôn Từ Sáo Rỗng
 - **Không nhồi nhét trạng thái thừa**: Nghiêm cấm đặt các pill/status kỹ thuật rườm rà trên Navbar (ví dụ: cấm pill `VN-2000 PostGIS | Khóa 90p`). Thanh Navbar giữ phong cách tinh giản, trang trọng và tiện dụng.
 - **Xóa bỏ card thừa & khẩu hiệu PR**: Loại bỏ các card thông báo nội bộ không có giá trị cho người dùng cuối; xóa bỏ các câu từ sáo rỗng, hô hào khẩu hiệu (như "Giải quyết triệt để vấn nạn..."). Mọi câu từ phải mang tính chỉ dẫn hành chính, ngắn gọn, súc tích.
-- **Thiết kế từng phần (Single-Story Focus)**: Chỉ thiết kế giao diện cho chính User Story đang kích hoạt hoặc các thành phần dùng chung liên quan trực tiếp. Tuyệt đối không sinh hàng loạt template mockup cho các story chưa làm.
+- **Không gắn icon/badge gần tiêu đề**: Tuyệt đối cấm gắn icon, badge, pill trạng thái (như `Luật Đất đai 2024`, `QTD-07 Hợp lệ`, `Đề án 06`, ngôi sao, sparkles, checkmark...) ngay cạnh tiêu đề (`h1`, `h2`, `h3`, card titles). Tiêu đề phải thanh thoát, trang trọng, tập trung vào nội dung chính. Giao diện chưa cần quá phức tạp.
+- **Tập trung chính xác vào User Story đang thực hiện (Zero Overengineering)**: Chỉ tạo và hoàn thiện đúng các backend API và frontend (route, màn hình, form, trang kết quả) phục vụ trực tiếp cho User Story đó. Tuyệt đối CẤM tạo trước các route, trang mockup (placeholder/stub pages như `/map`, `/parcels`, `/locks`, `/dossiers`, `/certificates`) hoặc dựng sẵn menu, link ảo khi các Story đó chưa được giao thực hiện. Không dàn trải nội dung, không vẽ trước tính năng tương lai.
 
 ### Bộ Giao Diện Dùng Chung (Design System Components)
 

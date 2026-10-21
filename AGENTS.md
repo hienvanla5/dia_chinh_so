@@ -35,12 +35,15 @@
      - Font tiêu đề (Headings/Banners): **Montserrat** (mạnh mẽ, dứt khoát, hiện đại). Hỗ trợ fallback: `Poppins` (trẻ trung, công nghệ).
      - Độ tương phản chữ cao: Bắt buộc dùng các sắc thái đậm rõ nét như `text-slate-950`, `text-slate-900`, `text-slate-800`. Tuyệt đối không dùng chữ màu xám mờ nhạt khó đọc.
      - Tăng kích thước các thông số quan trọng: Mã thửa đất 15 ký tự, số CCCD, mã OTP, số lượng thống kê, số phát hành GCN phải lớn, đậm (`font-extrabold`, `text-base` đến `text-4xl`), dễ đọc tức thì.
-   - **Xóa Bỏ Thành Phần Thừa & Ngôn Từ Sáo Rỗng**:
+   - **Xóa Bỏ Thành Phần Thừa, Ngôn Từ Sáo Rỗng & Icon/Badge Cạnh Tiêu Đề**:
      - Nghiêm cấm các status thừa hoặc nhồi nhét kỹ thuật không cần thiết trên Navbar (ví dụ: cấm các pill như `VN-2000 PostGIS | Khóa 90p`). Navbar phải tinh gọn, trang trọng.
      - Xóa bỏ triệt để các card thừa và các câu từ sáo rỗng, khẩu hiệu PR/marketing (ví dụ: "Giải quyết triệt để vấn nạn..."). Toàn bộ câu từ phải cô đọng, súc tích, mang tính chỉ dẫn công vụ hành chính chuẩn mực.
-   - **Quy Trình Thiết Kế "Từng Phần" (Single-Story UI Focus)**:
-     - Khi thực hiện mỗi User Story, Agent chỉ thiết kế và trau chuốt sâu sắc các thành phần giao diện phục vụ trực tiếp cho User Story đó.
-     - Tuyệt đối không thiết kế hàng loạt template / mockup giả lập sơ sài cho các User Story chưa thực hiện để tránh rác giao diện và mất kiểm soát chất lượng.
+     - **Tuyệt đối cấm gắn icon, badge hoặc pill trạng thái gần các tiêu đề** (`h1`, `h2`, `h3`, card titles, ví dụ: cấm gắn badge `Luật Đất đai 2024`, `QTD-07 Hợp lệ`, `Đề án 06`, biểu tượng ngôi sao, checkmark, sparkles ngay cạnh tiêu đề). Tiêu đề phải thanh thoát, trang trọng, tập trung vào nội dung chính. Giao diện chưa cần quá phức tạp.
+   - **Tập Trung Tuyệt Đối Vào User Story Đang Thực Hiện (Zero Overengineering & No Scope Creep)**:
+     - Khi thực hiện một User Story, Agent **CHỈ ĐƯỢC PHÉP** hoàn thiện đúng các backend API và frontend (route, màn hình, form, trang kết quả) phục vụ trực tiếp cho User Story đó.
+     - *Ví dụ*: User Story đăng nhập `DCS-01-CN-001` chỉ hoàn thiện backend auth/audit và frontend route `/login` (màn hình nhập CCCD/OTP và màn hình định danh thành công), không sinh các route khác khi chưa làm.
+     - **TUYỆT ĐỐI CẤM** tạo trước các route, trang mockup (placeholder/stub pages như `/map`, `/parcels`, `/locks`, `/dossiers`, `/certificates`) hoặc dựng sẵn menu, link ảo khi các Story đó chưa được giao thực hiện.
+     - Không dàn trải nội dung, không vẽ trước tính năng tương lai. Toàn bộ mã nguồn phải phản ánh chân thực tiến độ thực tế của các Story đã hoàn thành.
 5. **Chính sách Kiểm thử Nghiêm ngặt (Strict TDD / Test-Verified Policy)**:
    - **MỌI** User Story khi triển khai **BẮT BUỘC** phải có **Unit Test** và **Integration Test** đi kèm.
    - Các kịch bản kiểm thử phải ánh xạ trực tiếp và bao phủ đầy đủ các **Tiêu chí chấp nhận (Acceptance Criteria)** trong file story.
