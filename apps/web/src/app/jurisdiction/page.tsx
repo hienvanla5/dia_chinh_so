@@ -8,6 +8,7 @@ import { Select } from '@/components/ui/Select';
 import {
   UserRole,
   AdministrativeLevel,
+  AdministrativeUnit,
   JurisdictionAction,
   JurisdictionPolicy,
 } from '@diachinhso/shared';
@@ -19,59 +20,64 @@ import {
   Compass,
 } from 'lucide-react';
 
-// Danh mục 34 Tỉnh / Thành phố sau sáp nhập và Xã/Phường trực thuộc trực tiếp (Mô hình 2 cấp tinh gọn)
-const ADMINISTRATIVE_UNITS_DATA = [
-  // 5 Thành phố trực thuộc Trung ương
-  { code: 'TINH_HN', name: 'Thành phố Hà Nội', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hà Nội', 'Hà Tây cũ'] },
-  { code: 'TINH_HCM', name: 'Thành phố Hồ Chí Minh', level: AdministrativeLevel.PROVINCE, formerUnits: ['TP. Hồ Chí Minh'] },
-  { code: 'TINH_HP', name: 'Thành phố Hải Phòng', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hải Phòng'] },
-  { code: 'TINH_DN', name: 'Thành phố Đà Nẵng', level: AdministrativeLevel.PROVINCE, formerUnits: ['Đà Nẵng'] },
-  { code: 'TINH_CT', name: 'Thành phố Cần Thơ', level: AdministrativeLevel.PROVINCE, formerUnits: ['Cần Thơ'] },
-
-  // 29 Tỉnh sáp nhập quy mô lớn theo định hướng tinh giản bộ máy
-  { code: 'TINH_HABAC', name: 'Tỉnh Hà Bắc', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bắc Ninh', 'Bắc Giang'] },
-  { code: 'TINH_HAIHUNG', name: 'Tỉnh Hải Hưng', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hải Dương', 'Hưng Yên'] },
-  { code: 'TINH_NAMHA', name: 'Tỉnh Nam Hà', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hà Nam', 'Nam Định'] },
-  { code: 'TINH_TB', name: 'Tỉnh Thái Bình', level: AdministrativeLevel.PROVINCE, formerUnits: ['Thái Bình'] },
-  { code: 'TINH_NB', name: 'Tỉnh Ninh Bình', level: AdministrativeLevel.PROVINCE, formerUnits: ['Ninh Bình'] },
-  { code: 'TINH_VINHPHU', name: 'Tỉnh Vĩnh Phú', level: AdministrativeLevel.PROVINCE, formerUnits: ['Vĩnh Phúc', 'Phú Thọ'] },
-  { code: 'TINH_QN', name: 'Tỉnh Quảng Ninh', level: AdministrativeLevel.PROVINCE, formerUnits: ['Quảng Ninh'] },
-  { code: 'TINH_LS', name: 'Tỉnh Lạng Sơn', level: AdministrativeLevel.PROVINCE, formerUnits: ['Lạng Sơn'] },
-  { code: 'TINH_CB', name: 'Tỉnh Cao Bằng', level: AdministrativeLevel.PROVINCE, formerUnits: ['Cao Bằng'] },
-  { code: 'TINH_BACTHAI', name: 'Tỉnh Bắc Thái', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bắc Kạn', 'Thái Nguyên'] },
-  { code: 'TINH_HATUYEN', name: 'Tỉnh Hà Tuyên', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hà Giang', 'Tuyên Quang'] },
-  { code: 'TINH_HOANGLIENSON', name: 'Tỉnh Hoàng Liên Sơn', level: AdministrativeLevel.PROVINCE, formerUnits: ['Lào Cai', 'Yên Bái'] },
-  { code: 'TINH_SL', name: 'Tỉnh Sơn La', level: AdministrativeLevel.PROVINCE, formerUnits: ['Sơn La'] },
-  { code: 'TINH_DIENBIEN_LAICHAU', name: 'Tỉnh Điện Biên - Lai Châu', level: AdministrativeLevel.PROVINCE, formerUnits: ['Điện Biên', 'Lai Châu'] },
-  { code: 'TINH_HB', name: 'Tỉnh Hòa Bình', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hòa Bình'] },
-  { code: 'TINH_TH', name: 'Tỉnh Thanh Hóa', level: AdministrativeLevel.PROVINCE, formerUnits: ['Thanh Hóa'] },
-  { code: 'TINH_NA', name: 'Tỉnh Nghệ An', level: AdministrativeLevel.PROVINCE, formerUnits: ['Nghệ An'] },
-  { code: 'TINH_HT', name: 'Tỉnh Hà Tĩnh', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hà Tĩnh'] },
-  { code: 'TINH_BINHTRITHIEN', name: 'Tỉnh Bình Trị Thiên', level: AdministrativeLevel.PROVINCE, formerUnits: ['Quảng Bình', 'Quảng Trị', 'Thừa Thiên Huế'] },
-  { code: 'TINH_QUANGNAM_NGAI', name: 'Tỉnh Quảng Nam - Quảng Ngãi', level: AdministrativeLevel.PROVINCE, formerUnits: ['Quảng Nam', 'Quảng Ngãi'] },
-  { code: 'TINH_NGHIABINH', name: 'Tỉnh Nghĩa Bình', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bình Định', 'Phú Yên'] },
-  { code: 'TINH_PHUKHANH', name: 'Tỉnh Phú Khánh', level: AdministrativeLevel.PROVINCE, formerUnits: ['Khánh Hòa', 'Ninh Thuận'] },
-  { code: 'TINH_THUANLAM', name: 'Tỉnh Thuận Lâm', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bình Thuận', 'Lâm Đồng'] },
-  { code: 'TINH_GIALAI_KONTUM', name: 'Tỉnh Gia Lai - Kon Tum', level: AdministrativeLevel.PROVINCE, formerUnits: ['Gia Lai', 'Kon Tum'] },
-  { code: 'TINH_DAKLAK_DAKNONG', name: 'Tỉnh Đắk Lắk - Đắk Nông', level: AdministrativeLevel.PROVINCE, formerUnits: ['Đắk Lắk', 'Đắk Nông'] },
-  { code: 'TINH_SONGBE', name: 'Tỉnh Sông Bé', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bình Dương', 'Bình Phước'] },
-  { code: 'TINH_DONGNAI_BRVT', name: 'Tỉnh Đồng Nai - Bà Rịa Vũng Tàu', level: AdministrativeLevel.PROVINCE, formerUnits: ['Đồng Nai', 'Bà Rịa - Vũng Tàu'] },
-  { code: 'TINH_TAYNINH_LONGAN', name: 'Tỉnh Tây Ninh - Long An', level: AdministrativeLevel.PROVINCE, formerUnits: ['Tây Ninh', 'Long An'] },
-  { code: 'TINH_CUULONG', name: 'Tỉnh Cửu Long', level: AdministrativeLevel.PROVINCE, formerUnits: ['Tiền Giang', 'Bến Tre', 'Vĩnh Long', 'Trà Vinh'] },
-
-  // Cấp Cơ sở: Các Xã / Phường trực thuộc trực tiếp Cấp Tỉnh (Bãi bỏ cấp trung gian Quận/Huyện)
-  { code: 'XA_CONG_VI', name: 'Phường Cống Vị', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN' },
-  { code: 'XA_LIEU_GIAI', name: 'Phường Liễu Giai', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN' },
-  { code: 'XA_KIM_MA', name: 'Phường Kim Mã', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN' },
-  { code: 'XA_TRANG_TIEN', name: 'Phường Tràng Tiền', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN' },
-  { code: 'XA_HANG_TRONG', name: 'Phường Hàng Trống', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN' },
-  { code: 'XA_DICH_VONG', name: 'Phường Dịch Vọng', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN' },
-  { code: 'XA_BEN_NGHE', name: 'Phường Bến Nghé', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HCM' },
-  { code: 'XA_BEN_THANH', name: 'Phường Bến Thành', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HCM' },
-  { code: 'XA_HAI_CHAU', name: 'Phường Hải Châu', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_DN' },
-  { code: 'XA_HONG_BANG', name: 'Phường Hồng Bàng', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HP' },
-  { code: 'XA_NINH_KIEU', name: 'Phường Ninh Kiều', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_CT' },
+// Danh mục 34 Tỉnh / Thành phố theo nghị định mới: 23 Tỉnh/TP sáp nhập và 11 Tỉnh/TP giữ nguyên
+const MERGED_PROVINCES_DATA: AdministrativeUnit[] = [
+  { code: 'TINH_TUYENQUANG', name: 'Tỉnh Tuyên Quang', level: AdministrativeLevel.PROVINCE, formerUnits: ['Tuyên Quang', 'Hà Giang'] },
+  { code: 'TINH_LAOCAI', name: 'Tỉnh Lào Cai', level: AdministrativeLevel.PROVINCE, formerUnits: ['Lào Cai', 'Yên Bái'] },
+  { code: 'TINH_THAINGUYEN', name: 'Tỉnh Thái Nguyên', level: AdministrativeLevel.PROVINCE, formerUnits: ['Thái Nguyên', 'Bắc Kạn'] },
+  { code: 'TINH_PHUTHO', name: 'Tỉnh Phú Thọ', level: AdministrativeLevel.PROVINCE, formerUnits: ['Phú Thọ', 'Vĩnh Phúc', 'Hòa Bình'] },
+  { code: 'TINH_BACNINH', name: 'Tỉnh Bắc Ninh', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bắc Ninh', 'Bắc Giang'] },
+  { code: 'TINH_HUNGYEN', name: 'Tỉnh Hưng Yên', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hưng Yên', 'Thái Bình'] },
+  { code: 'TINH_HP', name: 'Thành phố Hải Phòng', level: AdministrativeLevel.PROVINCE, formerUnits: ['TP. Hải Phòng', 'Hải Dương'] },
+  { code: 'TINH_NINHBINH', name: 'Tỉnh Ninh Bình', level: AdministrativeLevel.PROVINCE, formerUnits: ['Ninh Bình', 'Hà Nam', 'Nam Định'] },
+  { code: 'TINH_QUANGTRI', name: 'Tỉnh Quảng Trị', level: AdministrativeLevel.PROVINCE, formerUnits: ['Quảng Trị', 'Quảng Bình'] },
+  { code: 'TINH_DN', name: 'Thành phố Đà Nẵng', level: AdministrativeLevel.PROVINCE, formerUnits: ['TP. Đà Nẵng', 'Quảng Nam'] },
+  { code: 'TINH_QUANGNGAI', name: 'Tỉnh Quảng Ngãi', level: AdministrativeLevel.PROVINCE, formerUnits: ['Quảng Ngãi', 'Kon Tum'] },
+  { code: 'TINH_GIALAI', name: 'Tỉnh Gia Lai', level: AdministrativeLevel.PROVINCE, formerUnits: ['Gia Lai', 'Bình Định'] },
+  { code: 'TINH_KHANHHOA', name: 'Tỉnh Khánh Hòa', level: AdministrativeLevel.PROVINCE, formerUnits: ['Khánh Hòa', 'Ninh Thuận'] },
+  { code: 'TINH_LAMDONG', name: 'Tỉnh Lâm Đồng', level: AdministrativeLevel.PROVINCE, formerUnits: ['Lâm Đồng', 'Đắk Nông', 'Bình Thuận'] },
+  { code: 'TINH_DAKLAK', name: 'Tỉnh Đắk Lắk', level: AdministrativeLevel.PROVINCE, formerUnits: ['Đắk Lắk', 'Phú Yên'] },
+  { code: 'TINH_HCM', name: 'Thành phố Hồ Chí Minh', level: AdministrativeLevel.PROVINCE, formerUnits: ['TP. Hồ Chí Minh', 'Bình Dương', 'Bà Rịa - Vũng Tàu'] },
+  { code: 'TINH_DONGNAI', name: 'Thành phố Đồng Nai', level: AdministrativeLevel.PROVINCE, formerUnits: ['Đồng Nai', 'Bình Phước'] },
+  { code: 'TINH_TAYNINH', name: 'Tỉnh Tây Ninh', level: AdministrativeLevel.PROVINCE, formerUnits: ['Tây Ninh', 'Long An'] },
+  { code: 'TINH_CT', name: 'Thành phố Cần Thơ', level: AdministrativeLevel.PROVINCE, formerUnits: ['TP. Cần Thơ', 'Sóc Trăng', 'Hậu Giang'] },
+  { code: 'TINH_VINHLONG', name: 'Tỉnh Vĩnh Long', level: AdministrativeLevel.PROVINCE, formerUnits: ['Vĩnh Long', 'Bến Tre', 'Trà Vinh'] },
+  { code: 'TINH_DONGTHAP', name: 'Tỉnh Đồng Tháp', level: AdministrativeLevel.PROVINCE, formerUnits: ['Đồng Tháp', 'Tiền Giang'] },
+  { code: 'TINH_CAMAU', name: 'Tỉnh Cà Mau', level: AdministrativeLevel.PROVINCE, formerUnits: ['Cà Mau', 'Bạc Liêu'] },
+  { code: 'TINH_ANGIANG', name: 'Tỉnh An Giang', level: AdministrativeLevel.PROVINCE, formerUnits: ['An Giang', 'Kiên Giang'] },
 ];
+
+const RETAINED_PROVINCES_DATA: AdministrativeUnit[] = [
+  { code: 'TINH_HN', name: 'Thành phố Hà Nội', level: AdministrativeLevel.PROVINCE },
+  { code: 'TINH_HUE', name: 'Thành phố Huế', level: AdministrativeLevel.PROVINCE },
+  { code: 'TINH_LAICHAU', name: 'Tỉnh Lai Châu', level: AdministrativeLevel.PROVINCE },
+  { code: 'TINH_DIENBIEN', name: 'Tỉnh Điện Biên', level: AdministrativeLevel.PROVINCE },
+  { code: 'TINH_SONLA', name: 'Tỉnh Sơn La', level: AdministrativeLevel.PROVINCE },
+  { code: 'TINH_LANGSON', name: 'Tỉnh Lạng Sơn', level: AdministrativeLevel.PROVINCE },
+  { code: 'TINH_QUANGNINH', name: 'Tỉnh Quảng Ninh', level: AdministrativeLevel.PROVINCE },
+  { code: 'TINH_THANHHOA', name: 'Tỉnh Thanh Hóa', level: AdministrativeLevel.PROVINCE },
+  { code: 'TINH_NGHEAN', name: 'Tỉnh Nghệ An', level: AdministrativeLevel.PROVINCE },
+  { code: 'TINH_HATINH', name: 'Tỉnh Hà Tĩnh', level: AdministrativeLevel.PROVINCE },
+  { code: 'TINH_CAOBANG', name: 'Tỉnh Cao Bằng', level: AdministrativeLevel.PROVINCE },
+];
+
+// Danh mục Xã / Phường trực thuộc trực tiếp Cấp Tỉnh / TP
+const COMMUNES_DATA: (AdministrativeUnit & { provinceName: string })[] = [
+  { code: 'XA_CONG_VI', name: 'Phường Cống Vị', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN', provinceName: 'Thành phố Hà Nội' },
+  { code: 'XA_LIEU_GIAI', name: 'Phường Liễu Giai', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN', provinceName: 'Thành phố Hà Nội' },
+  { code: 'XA_KIM_MA', name: 'Phường Kim Mã', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN', provinceName: 'Thành phố Hà Nội' },
+  { code: 'XA_TRANG_TIEN', name: 'Phường Tràng Tiền', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN', provinceName: 'Thành phố Hà Nội' },
+  { code: 'XA_HANG_TRONG', name: 'Phường Hàng Trống', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN', provinceName: 'Thành phố Hà Nội' },
+  { code: 'XA_DICH_VONG', name: 'Phường Dịch Vọng', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HN', provinceName: 'Thành phố Hà Nội' },
+  { code: 'XA_BEN_NGHE', name: 'Phường Bến Nghé', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HCM', provinceName: 'Thành phố Hồ Chí Minh' },
+  { code: 'XA_BEN_THANH', name: 'Phường Bến Thành', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HCM', provinceName: 'Thành phố Hồ Chí Minh' },
+  { code: 'XA_HAI_CHAU', name: 'Phường Hải Châu', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_DN', provinceName: 'Thành phố Đà Nẵng' },
+  { code: 'XA_HONG_BANG', name: 'Phường Hồng Bàng', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_HP', provinceName: 'Thành phố Hải Phòng' },
+  { code: 'XA_NINH_KIEU', name: 'Phường Ninh Kiều', level: AdministrativeLevel.COMMUNE, parentCode: 'TINH_CT', provinceName: 'Thành phố Cần Thơ' },
+];
+
+const ALL_PROVINCES: AdministrativeUnit[] = [...MERGED_PROVINCES_DATA, ...RETAINED_PROVINCES_DATA];
+const ALL_UNITS: (AdministrativeUnit & { provinceName?: string })[] = [...ALL_PROVINCES, ...COMMUNES_DATA];
 
 const INITIAL_POLICIES: JurisdictionPolicy[] = [
   {
@@ -164,13 +170,21 @@ const ACTION_LABELS: Record<JurisdictionAction, string> = {
   [JurisdictionAction.DELETE]: 'Xóa / Thu hồi',
 };
 
+// Màu sắc và kiểu hiển thị rõ ràng, nổi bật cho từng quyền thao tác
+const ACTION_BADGE_STYLES: Record<JurisdictionAction, string> = {
+  [JurisdictionAction.READ]: 'bg-slate-100 text-slate-900 border-slate-300',
+  [JurisdictionAction.CREATE]: 'bg-sky-50 text-sky-950 border-sky-300',
+  [JurisdictionAction.UPDATE]: 'bg-amber-50 text-amber-950 border-amber-300',
+  [JurisdictionAction.APPROVE]: 'bg-emerald-50 text-emerald-950 border-emerald-300',
+  [JurisdictionAction.DELETE]: 'bg-rose-50 text-rose-950 border-rose-300',
+};
+
 export default function JurisdictionPage() {
   const [activeTab, setActiveTab] = useState<'matrix' | 'hierarchy' | 'evaluate'>('matrix');
 
-  // Danh sách chính sách
   const [policies, setPolicies] = useState<JurisdictionPolicy[]>(INITIAL_POLICIES);
 
-  // Form cấu hình chính sách mới (Chỉ hỗ trợ 2 cấp: Tỉnh/TP và Xã/Phường)
+  // Form cấu hình chính sách
   const [selectedRole, setSelectedRole] = useState<UserRole>(UserRole.COMMUNE_OFFICER);
   const [selectedLevel, setSelectedLevel] = useState<AdministrativeLevel>(AdministrativeLevel.COMMUNE);
   const [selectedUnitCode, setSelectedUnitCode] = useState<string>('XA_CONG_VI');
@@ -182,7 +196,7 @@ export default function JurisdictionPage() {
   const [isSavingPolicy, setIsSavingPolicy] = useState<boolean>(false);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
 
-  // Công cụ kiểm tra thẩm quyền địa giới 2 cấp
+  // Form kiểm tra thẩm quyền địa giới
   const [evalUserRole, setEvalUserRole] = useState<UserRole>(UserRole.COMMUNE_OFFICER);
   const [evalUserUnitCode, setEvalUserUnitCode] = useState<string>('XA_CONG_VI');
   const [evalAction, setEvalAction] = useState<JurisdictionAction>(JurisdictionAction.UPDATE);
@@ -194,10 +208,7 @@ export default function JurisdictionPage() {
     auditHash: string;
   } | null>(null);
 
-  // Lọc danh sách đơn vị tương ứng cấp hành chính (chỉ hiển thị PROVINCE hoặc COMMUNE)
-  const availableUnitsForLevel = ADMINISTRATIVE_UNITS_DATA.filter(
-    (u) => u.level === selectedLevel,
-  );
+  const availableUnitsForLevel = selectedLevel === AdministrativeLevel.PROVINCE ? ALL_PROVINCES : COMMUNES_DATA;
 
   useEffect(() => {
     if (availableUnitsForLevel.length > 0) {
@@ -219,7 +230,7 @@ export default function JurisdictionPage() {
     setIsSavingPolicy(true);
     setSaveSuccessMessage(null);
 
-    const unit = ADMINISTRATIVE_UNITS_DATA.find((u) => u.code === selectedUnitCode);
+    const unit = ALL_UNITS.find((u) => u.code === selectedUnitCode);
 
     try {
       const response = await fetch('/api/v1/jurisdiction/matrix', {
@@ -287,8 +298,8 @@ export default function JurisdictionPage() {
     setIsEvaluating(true);
     setEvalResult(null);
 
-    const userUnit = ADMINISTRATIVE_UNITS_DATA.find((u) => u.code === evalUserUnitCode);
-    const targetUnit = ADMINISTRATIVE_UNITS_DATA.find((u) => u.code === evalTargetUnitCode);
+    const userUnit = ALL_UNITS.find((u) => u.code === evalUserUnitCode);
+    const targetUnit = ALL_UNITS.find((u) => u.code === evalTargetUnitCode);
 
     try {
       const response = await fetch('/api/v1/jurisdiction/evaluate', {
@@ -357,7 +368,7 @@ export default function JurisdictionPage() {
             Phân quyền Địa giới Hành chính 2 cấp
           </h1>
           <p className="text-sm text-slate-600 leading-relaxed max-w-3xl">
-            Mô hình chính quyền địa phương 2 cấp tinh gọn (Tỉnh/Thành phố và Xã/Phường), bãi bỏ cấp trung gian Quận/Huyện theo nghị định mới. Cơ sở dữ liệu đồng bộ quản lý 34 tỉnh thành sau sắp xếp sáp nhập và kiểm soát chặt chẽ thẩm quyền địa giới theo Luật Đất đai 2024.
+            Mô hình chính quyền địa phương 2 cấp tinh gọn (Tỉnh/Thành phố và Xã/Phường), bãi bỏ cấp trung gian Quận/Huyện theo nghị định mới. Cơ sở dữ liệu đồng bộ quản lý 34 tỉnh thành (23 tỉnh sáp nhập và 11 tỉnh giữ nguyên) theo quy định Luật Đất đai 2024.
           </p>
         </div>
 
@@ -471,7 +482,7 @@ export default function JurisdictionPage() {
                           key={action}
                           className={`flex items-center gap-2 p-2.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all ${
                             selectedActions.includes(action)
-                              ? 'border-blue-500 bg-blue-50/80 text-blue-950'
+                              ? 'border-blue-500 bg-blue-50/80 text-blue-950 font-bold'
                               : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                           }`}
                         >
@@ -522,35 +533,30 @@ export default function JurisdictionPage() {
                         <th className="py-3 px-3">Vai trò</th>
                         <th className="py-3 px-3">Cấp hành chính</th>
                         <th className="py-3 px-3">Đơn vị quản lý</th>
-                        <th className="py-3 px-3">Quyền thao tác</th>
+                        <th className="py-3 px-3 min-w-[240px]">Quyền thao tác</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {policies.map((policy) => (
                         <tr key={policy.id} className="hover:bg-slate-50/60 transition-colors">
-                          <td className="py-3 px-3 font-semibold text-slate-900">
+                          <td className="py-3.5 px-3 font-semibold text-slate-900 text-sm">
                             {ROLE_LABELS[policy.role] || policy.role}
                           </td>
-                          <td className="py-3 px-3">
-                            <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                          <td className="py-3.5 px-3">
+                            <span className="inline-block px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
                               {LEVEL_LABELS[policy.level]}
                             </span>
                           </td>
-                          <td className="py-3 px-3 font-medium text-slate-900">
+                          <td className="py-3.5 px-3 font-medium text-slate-900 text-sm">
                             {policy.unitName}
                           </td>
-                          <td className="py-3 px-3">
-                            <div className="flex flex-wrap gap-1">
+                          <td className="py-3.5 px-3">
+                            {/* Cột Quyền thao tác hiển thị rõ ràng, kích thước vừa vặn, không nhỏ và không dàn trải */}
+                            <div className="flex flex-wrap gap-1.5">
                               {policy.allowedActions.map((act) => (
                                 <span
                                   key={act}
-                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                    act === JurisdictionAction.APPROVE
-                                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                                      : act === JurisdictionAction.DELETE
-                                      ? 'bg-rose-100 text-rose-900 border border-rose-300'
-                                      : 'bg-blue-50 text-blue-800 border border-blue-200'
-                                  }`}
+                                  className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border shadow-2xs whitespace-nowrap ${ACTION_BADGE_STYLES[act]}`}
                                 >
                                   {ACTION_LABELS[act]}
                                 </span>
@@ -601,7 +607,7 @@ export default function JurisdictionPage() {
                       required
                       value={evalUserUnitCode}
                       onChange={(e) => setEvalUserUnitCode(e.target.value)}
-                      options={ADMINISTRATIVE_UNITS_DATA.filter((u) => u.level !== AdministrativeLevel.DISTRICT).map((u) => ({
+                      options={ALL_UNITS.map((u) => ({
                         value: u.code,
                         label: `${u.name} (${LEVEL_LABELS[u.level]})`,
                       }))}
@@ -625,7 +631,7 @@ export default function JurisdictionPage() {
                       required
                       value={evalTargetUnitCode}
                       onChange={(e) => setEvalTargetUnitCode(e.target.value)}
-                      options={ADMINISTRATIVE_UNITS_DATA.filter((u) => u.level !== AdministrativeLevel.DISTRICT).map((u) => ({
+                      options={ALL_UNITS.map((u) => ({
                         value: u.code,
                         label: `${u.name} (${LEVEL_LABELS[u.level]})`,
                       }))}
@@ -689,23 +695,23 @@ export default function JurisdictionPage() {
           <div className="space-y-6">
             <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4 text-xs text-blue-950 leading-relaxed">
               <p>
-                <strong>Mô hình Tinh giản Bộ máy Quốc gia:</strong> Toàn quốc được tổ chức thành <strong>34 Tỉnh / Thành phố trực thuộc Trung ương</strong> sau sắp xếp sáp nhập. Toàn bộ cấp trung gian Quận / Huyện được xóa bỏ; các Xã / Phường / Thị trấn cơ sở được liên kết và quản lý trực tiếp bởi chính quyền Cấp Tỉnh / Thành phố.
+                <strong>Mô hình Tinh giản Bộ máy Quốc gia:</strong> Toàn quốc được tổ chức thành <strong>34 Tỉnh / Thành phố trực thuộc Trung ương</strong> (gồm <strong>23 Tỉnh/TP sau sáp nhập</strong> và <strong>11 Tỉnh/TP giữ nguyên</strong>). Toàn bộ cấp trung gian Quận / Huyện được xóa bỏ; các Xã / Phường / Thị trấn cơ sở được liên kết và quản lý trực tiếp bởi chính quyền Cấp Tỉnh / Thành phố.
               </p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Danh sách 34 Tỉnh/Thành phố sau sáp nhập */}
+              {/* Phần I: 23 Tỉnh, Thành phố hình thành sau sáp nhập */}
               <Card className="shadow-xs border-slate-200">
                 <CardHeader className="pb-3 border-b border-slate-100">
                   <CardTitle className="text-base font-bold text-slate-950 font-heading">
-                    Cấp 1: 34 Tỉnh / Thành phố Sau Sáp Nhập
+                    23 Tỉnh, Thành phố Hình thành Sau Sáp nhập
                   </CardTitle>
                   <CardDescription className="text-xs text-slate-600">
-                    Bao gồm 5 Thành phố trực thuộc Trung ương và 29 Tỉnh sáp nhập quy mô lớn
+                    Danh sách các tỉnh, thành phố được hợp nhất từ 2-3 tỉnh thành cũ
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-4 space-y-2.5 max-h-[560px] overflow-y-auto">
-                  {ADMINISTRATIVE_UNITS_DATA.filter((u) => u.level === AdministrativeLevel.PROVINCE).map((u, index) => (
+                  {MERGED_PROVINCES_DATA.map((u, index) => (
                     <div
                       key={u.code}
                       className="p-3 rounded-lg bg-slate-50 border border-slate-200 flex items-start justify-between gap-3 hover:bg-white hover:border-blue-300 transition-all"
@@ -718,51 +724,81 @@ export default function JurisdictionPage() {
                           <span className="font-bold text-slate-900 text-sm">{u.name}</span>
                         </div>
                         {u.formerUnits && (
-                          <p className="text-[11px] text-slate-500 mt-0.5">
-                            Sáp nhập từ: <span className="font-medium text-slate-700">{u.formerUnits.join(', ')}</span>
+                          <p className="text-xs text-slate-600 mt-1">
+                            Sáp nhập cấu thành: <span className="font-semibold text-slate-800">{u.formerUnits.join(' + ')}</span>
                           </p>
                         )}
                       </div>
-                      <span className="text-[10px] text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded font-mono font-semibold shrink-0">
-                        {u.code}
+                      <span className="text-xs font-semibold text-blue-800 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md shrink-0">
+                        Tỉnh sáp nhập
                       </span>
                     </div>
                   ))}
                 </CardContent>
               </Card>
 
-              {/* Danh sách Xã / Phường trực thuộc trực tiếp Cấp Tỉnh */}
-              <Card className="shadow-xs border-slate-200">
-                <CardHeader className="pb-3 border-b border-slate-100">
-                  <CardTitle className="text-base font-bold text-slate-950 font-heading">
-                    Cấp 2: Các Xã / Phường Cơ Sở Trực Thuộc
-                  </CardTitle>
-                  <CardDescription className="text-xs text-slate-600">
-                    Trực thuộc trực tiếp cấp Tỉnh/Thành phố, không qua cấp trung gian Quận/Huyện
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-4 space-y-2.5 max-h-[560px] overflow-y-auto">
-                  {ADMINISTRATIVE_UNITS_DATA.filter((u) => u.level === AdministrativeLevel.COMMUNE).map((u) => {
-                    const parentProvince = ADMINISTRATIVE_UNITS_DATA.find((p) => p.code === u.parentCode);
-                    return (
+              {/* Phần II: 11 Tỉnh, Thành phố giữ nguyên & Cấp Cơ sở */}
+              <div className="space-y-6">
+                {/* 11 Tỉnh giữ nguyên */}
+                <Card className="shadow-xs border-slate-200">
+                  <CardHeader className="pb-3 border-b border-slate-100">
+                    <CardTitle className="text-base font-bold text-slate-950 font-heading">
+                      11 Tỉnh, Thành phố Giữ nguyên Địa giới
+                    </CardTitle>
+                    <CardDescription className="text-xs text-slate-600">
+                      Các đơn vị hành chính cấp tỉnh được giữ nguyên trạng, không thực hiện hợp nhất
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-4 space-y-2 max-h-[260px] overflow-y-auto">
+                    {RETAINED_PROVINCES_DATA.map((u, index) => (
                       <div
                         key={u.code}
-                        className="p-3 rounded-lg bg-slate-50 border border-slate-200 flex items-start justify-between gap-3 hover:bg-white hover:border-emerald-300 transition-all"
+                        className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 hover:bg-white hover:border-emerald-300 transition-all"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-500 font-mono">
+                            {(index + 1).toString().padStart(2, '0')}.
+                          </span>
+                          <span className="font-bold text-slate-900 text-sm">{u.name}</span>
+                        </div>
+                        <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md shrink-0">
+                          Giữ nguyên
+                        </span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                {/* Danh sách Xã / Phường trực thuộc trực tiếp Cấp Tỉnh */}
+                <Card className="shadow-xs border-slate-200">
+                  <CardHeader className="pb-3 border-b border-slate-100">
+                    <CardTitle className="text-base font-bold text-slate-950 font-heading">
+                      Cấp Cơ sở: Các Xã / Phường Trực thuộc Trực tiếp
+                    </CardTitle>
+                    <CardDescription className="text-xs text-slate-600">
+                      Trực thuộc trực tiếp cấp Tỉnh/Thành phố, không qua cấp trung gian Quận/Huyện
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-4 space-y-2 max-h-[260px] overflow-y-auto">
+                    {COMMUNES_DATA.map((u) => (
+                      <div
+                        key={u.code}
+                        className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 hover:bg-white hover:border-emerald-300 transition-all"
                       >
                         <div>
                           <span className="font-bold text-slate-900 text-sm block">{u.name}</span>
-                          <span className="text-[11px] text-emerald-800 font-medium">
-                            Trực thuộc trực tiếp: {parentProvince?.name || u.parentCode}
+                          <span className="text-xs text-emerald-800 font-medium">
+                            Trực thuộc: {u.provinceName}
                           </span>
                         </div>
-                        <span className="text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-mono font-semibold shrink-0">
-                          {u.code}
+                        <span className="text-xs font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-md shrink-0">
+                          Cơ sở
                         </span>
                       </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         )}
