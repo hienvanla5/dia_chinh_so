@@ -26,43 +26,48 @@ import * as crypto from 'crypto';
 export class JurisdictionService {
   private readonly logger = new Logger(JurisdictionService.name);
 
-  // Danh mục 34 Tỉnh / Thành phố sau sáp nhập và các Xã / Phường trực thuộc trực tiếp (Mô hình 2 cấp tinh gọn)
+  // Danh mục 34 Tỉnh / Thành phố theo nghị định mới: 23 Tỉnh/TP sáp nhập và 11 Tỉnh/TP giữ nguyên
   private readonly administrativeUnits: AdministrativeUnit[] = [
-    // === 34 TỈNH / THÀNH PHỐ SAU SÁP NHẬP (CẤP 1) ===
-    { code: 'TINH_HN', name: 'Thành phố Hà Nội', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hà Nội', 'Hà Tây cũ'] },
-    { code: 'TINH_HCM', name: 'Thành phố Hồ Chí Minh', level: AdministrativeLevel.PROVINCE, formerUnits: ['TP. Hồ Chí Minh'] },
-    { code: 'TINH_HP', name: 'Thành phố Hải Phòng', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hải Phòng'] },
-    { code: 'TINH_DN', name: 'Thành phố Đà Nẵng', level: AdministrativeLevel.PROVINCE, formerUnits: ['Đà Nẵng'] },
-    { code: 'TINH_CT', name: 'Thành phố Cần Thơ', level: AdministrativeLevel.PROVINCE, formerUnits: ['Cần Thơ'] },
-    { code: 'TINH_HABAC', name: 'Tỉnh Hà Bắc', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bắc Ninh', 'Bắc Giang'] },
-    { code: 'TINH_HAIHUNG', name: 'Tỉnh Hải Hưng', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hải Dương', 'Hưng Yên'] },
-    { code: 'TINH_NAMHA', name: 'Tỉnh Nam Hà', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hà Nam', 'Nam Định'] },
-    { code: 'TINH_TB', name: 'Tỉnh Thái Bình', level: AdministrativeLevel.PROVINCE, formerUnits: ['Thái Bình'] },
-    { code: 'TINH_NB', name: 'Tỉnh Ninh Bình', level: AdministrativeLevel.PROVINCE, formerUnits: ['Ninh Bình'] },
-    { code: 'TINH_VINHPHU', name: 'Tỉnh Vĩnh Phú', level: AdministrativeLevel.PROVINCE, formerUnits: ['Vĩnh Phúc', 'Phú Thọ'] },
-    { code: 'TINH_QN', name: 'Tỉnh Quảng Ninh', level: AdministrativeLevel.PROVINCE, formerUnits: ['Quảng Ninh'] },
-    { code: 'TINH_LS', name: 'Tỉnh Lạng Sơn', level: AdministrativeLevel.PROVINCE, formerUnits: ['Lạng Sơn'] },
-    { code: 'TINH_CB', name: 'Tỉnh Cao Bằng', level: AdministrativeLevel.PROVINCE, formerUnits: ['Cao Bằng'] },
-    { code: 'TINH_BACTHAI', name: 'Tỉnh Bắc Thái', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bắc Kạn', 'Thái Nguyên'] },
-    { code: 'TINH_HATUYEN', name: 'Tỉnh Hà Tuyên', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hà Giang', 'Tuyên Quang'] },
-    { code: 'TINH_HOANGLIENSON', name: 'Tỉnh Hoàng Liên Sơn', level: AdministrativeLevel.PROVINCE, formerUnits: ['Lào Cai', 'Yên Bái'] },
-    { code: 'TINH_SL', name: 'Tỉnh Sơn La', level: AdministrativeLevel.PROVINCE, formerUnits: ['Sơn La'] },
-    { code: 'TINH_DIENBIEN_LAICHAU', name: 'Tỉnh Điện Biên - Lai Châu', level: AdministrativeLevel.PROVINCE, formerUnits: ['Điện Biên', 'Lai Châu'] },
-    { code: 'TINH_HB', name: 'Tỉnh Hòa Bình', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hòa Bình'] },
-    { code: 'TINH_TH', name: 'Tỉnh Thanh Hóa', level: AdministrativeLevel.PROVINCE, formerUnits: ['Thanh Hóa'] },
-    { code: 'TINH_NA', name: 'Tỉnh Nghệ An', level: AdministrativeLevel.PROVINCE, formerUnits: ['Nghệ An'] },
-    { code: 'TINH_HT', name: 'Tỉnh Hà Tĩnh', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hà Tĩnh'] },
-    { code: 'TINH_BINHTRITHIEN', name: 'Tỉnh Bình Trị Thiên', level: AdministrativeLevel.PROVINCE, formerUnits: ['Quảng Bình', 'Quảng Trị', 'Thừa Thiên Huế'] },
-    { code: 'TINH_QUANGNAM_NGAI', name: 'Tỉnh Quảng Nam - Quảng Ngãi', level: AdministrativeLevel.PROVINCE, formerUnits: ['Quảng Nam', 'Quảng Ngãi'] },
-    { code: 'TINH_NGHIABINH', name: 'Tỉnh Nghĩa Bình', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bình Định', 'Phú Yên'] },
-    { code: 'TINH_PHUKHANH', name: 'Tỉnh Phú Khánh', level: AdministrativeLevel.PROVINCE, formerUnits: ['Khánh Hòa', 'Ninh Thuận'] },
-    { code: 'TINH_THUANLAM', name: 'Tỉnh Thuận Lâm', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bình Thuận', 'Lâm Đồng'] },
-    { code: 'TINH_GIALAI_KONTUM', name: 'Tỉnh Gia Lai - Kon Tum', level: AdministrativeLevel.PROVINCE, formerUnits: ['Gia Lai', 'Kon Tum'] },
-    { code: 'TINH_DAKLAK_DAKNONG', name: 'Tỉnh Đắk Lắk - Đắk Nông', level: AdministrativeLevel.PROVINCE, formerUnits: ['Đắk Lắk', 'Đắk Nông'] },
-    { code: 'TINH_SONGBE', name: 'Tỉnh Sông Bé', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bình Dương', 'Bình Phước'] },
-    { code: 'TINH_DONGNAI_BRVT', name: 'Tỉnh Đồng Nai - Bà Rịa Vũng Tàu', level: AdministrativeLevel.PROVINCE, formerUnits: ['Đồng Nai', 'Bà Rịa - Vũng Tàu'] },
-    { code: 'TINH_TAYNINH_LONGAN', name: 'Tỉnh Tây Ninh - Long An', level: AdministrativeLevel.PROVINCE, formerUnits: ['Tây Ninh', 'Long An'] },
-    { code: 'TINH_CUULONG', name: 'Tỉnh Cửu Long', level: AdministrativeLevel.PROVINCE, formerUnits: ['Tiền Giang', 'Bến Tre', 'Vĩnh Long', 'Trà Vinh'] },
+    // === I. 23 TỈNH, THÀNH PHỐ HÌNH THÀNH SAU SÁP NHẬP ===
+    { code: 'TINH_TUYENQUANG', name: 'Tỉnh Tuyên Quang', level: AdministrativeLevel.PROVINCE, formerUnits: ['Tuyên Quang', 'Hà Giang'] },
+    { code: 'TINH_LAOCAI', name: 'Tỉnh Lào Cai', level: AdministrativeLevel.PROVINCE, formerUnits: ['Lào Cai', 'Yên Bái'] },
+    { code: 'TINH_THAINGUYEN', name: 'Tỉnh Thái Nguyên', level: AdministrativeLevel.PROVINCE, formerUnits: ['Thái Nguyên', 'Bắc Kạn'] },
+    { code: 'TINH_PHUTHO', name: 'Tỉnh Phú Thọ', level: AdministrativeLevel.PROVINCE, formerUnits: ['Phú Thọ', 'Vĩnh Phúc', 'Hòa Bình'] },
+    { code: 'TINH_BACNINH', name: 'Tỉnh Bắc Ninh', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bắc Ninh', 'Bắc Giang'] },
+    { code: 'TINH_HUNGYEN', name: 'Tỉnh Hưng Yên', level: AdministrativeLevel.PROVINCE, formerUnits: ['Hưng Yên', 'Thái Bình'] },
+    { code: 'TINH_HP', name: 'Thành phố Hải Phòng', level: AdministrativeLevel.PROVINCE, formerUnits: ['TP. Hải Phòng', 'Hải Dương'] },
+    { code: 'TINH_NINHBINH', name: 'Tỉnh Ninh Bình', level: AdministrativeLevel.PROVINCE, formerUnits: ['Ninh Bình', 'Hà Nam', 'Nam Định'] },
+    { code: 'TINH_QUANGTRI', name: 'Tỉnh Quảng Trị', level: AdministrativeLevel.PROVINCE, formerUnits: ['Quảng Trị', 'Quảng Bình'] },
+    { code: 'TINH_DN', name: 'Thành phố Đà Nẵng', level: AdministrativeLevel.PROVINCE, formerUnits: ['TP. Đà Nẵng', 'Quảng Nam'] },
+    { code: 'TINH_QUANGNGAI', name: 'Tỉnh Quảng Ngãi', level: AdministrativeLevel.PROVINCE, formerUnits: ['Quảng Ngãi', 'Kon Tum'] },
+    { code: 'TINH_GIALAI', name: 'Tỉnh Gia Lai', level: AdministrativeLevel.PROVINCE, formerUnits: ['Gia Lai', 'Bình Định'] },
+    { code: 'TINH_KHANHHOA', name: 'Tỉnh Khánh Hòa', level: AdministrativeLevel.PROVINCE, formerUnits: ['Khánh Hòa', 'Ninh Thuận'] },
+    { code: 'TINH_LAMDONG', name: 'Tỉnh Lâm Đồng', level: AdministrativeLevel.PROVINCE, formerUnits: ['Lâm Đồng', 'Đắk Nông', 'Bình Thuận'] },
+    { code: 'TINH_DAKLAK', name: 'Tỉnh Đắk Lắk', level: AdministrativeLevel.PROVINCE, formerUnits: ['Đắk Lắk', 'Phú Yên'] },
+    { code: 'TINH_HCM', name: 'Thành phố Hồ Chí Minh', level: AdministrativeLevel.PROVINCE, formerUnits: ['TP. Hồ Chí Minh', 'Bình Dương', 'Bà Rịa - Vũng Tàu'] },
+    { code: 'TINH_DONGNAI', name: 'Thành phố Đồng Nai', level: AdministrativeLevel.PROVINCE, formerUnits: ['Đồng Nai', 'Bình Phước'] },
+    { code: 'TINH_TAYNINH', name: 'Tỉnh Tây Ninh', level: AdministrativeLevel.PROVINCE, formerUnits: ['Tây Ninh', 'Long An'] },
+    { code: 'TINH_CT', name: 'Thành phố Cần Thơ', level: AdministrativeLevel.PROVINCE, formerUnits: ['TP. Cần Thơ', 'Sóc Trăng', 'Hậu Giang'] },
+    { code: 'TINH_VINHLONG', name: 'Tỉnh Vĩnh Long', level: AdministrativeLevel.PROVINCE, formerUnits: ['Vĩnh Long', 'Bến Tre', 'Trà Vinh'] },
+    { code: 'TINH_DONGTHAP', name: 'Tỉnh Đồng Tháp', level: AdministrativeLevel.PROVINCE, formerUnits: ['Đồng Tháp', 'Tiền Giang'] },
+    { code: 'TINH_CAMAU', name: 'Tỉnh Cà Mau', level: AdministrativeLevel.PROVINCE, formerUnits: ['Cà Mau', 'Bạc Liêu'] },
+    { code: 'TINH_ANGIANG', name: 'Tỉnh An Giang', level: AdministrativeLevel.PROVINCE, formerUnits: ['An Giang', 'Kiên Giang'] },
+
+    // === II. 11 TỈNH, THÀNH PHỐ GIỮ NGUYÊN (KHÔNG SÁP NHẬP) ===
+    { code: 'TINH_HN', name: 'Thành phố Hà Nội', level: AdministrativeLevel.PROVINCE },
+    { code: 'TINH_HUE', name: 'Thành phố Huế', level: AdministrativeLevel.PROVINCE },
+    { code: 'TINH_LAICHAU', name: 'Tỉnh Lai Châu', level: AdministrativeLevel.PROVINCE },
+    { code: 'TINH_DIENBIEN', name: 'Tỉnh Điện Biên', level: AdministrativeLevel.PROVINCE },
+    { code: 'TINH_SONLA', name: 'Tỉnh Sơn La', level: AdministrativeLevel.PROVINCE },
+    { code: 'TINH_LANGSON', name: 'Tỉnh Lạng Sơn', level: AdministrativeLevel.PROVINCE },
+    { code: 'TINH_QUANGNINH', name: 'Tỉnh Quảng Ninh', level: AdministrativeLevel.PROVINCE },
+    { code: 'TINH_THANHHOA', name: 'Tỉnh Thanh Hóa', level: AdministrativeLevel.PROVINCE },
+    { code: 'TINH_NGHEAN', name: 'Tỉnh Nghệ An', level: AdministrativeLevel.PROVINCE },
+    { code: 'TINH_HATINH', name: 'Tỉnh Hà Tĩnh', level: AdministrativeLevel.PROVINCE },
+    { code: 'TINH_CAOBANG', name: 'Tỉnh Cao Bằng', level: AdministrativeLevel.PROVINCE },
+
+    // Alias hỗ trợ tương thích ngược mã cũ
+    { code: 'TINH_HABAC', name: 'Tỉnh Bắc Ninh (Bắc Ninh - Bắc Giang)', level: AdministrativeLevel.PROVINCE, formerUnits: ['Bắc Ninh', 'Bắc Giang'] },
 
     // === CÁC XÃ / PHƯỜNG TRỰC THUỘC TRỰC TIẾP CẤP TỈNH (CẤP 2 - CƠ SỞ) ===
     // Trực thuộc Thành phố Hà Nội
@@ -208,16 +213,21 @@ export class JurisdictionService {
    */
   async getHierarchy() {
     const provinces = this.administrativeUnits.filter(
-      (u) => u.level === AdministrativeLevel.PROVINCE,
+      (u) => u.level === AdministrativeLevel.PROVINCE && u.code !== 'TINH_HABAC', // Loại bỏ duplicate alias
     );
     const communes = this.administrativeUnits.filter(
       (u) => u.level === AdministrativeLevel.COMMUNE,
     );
 
+    const mergedCount = provinces.filter((p) => p.formerUnits && p.formerUnits.length > 0).length;
+    const retainedCount = provinces.filter((p) => !p.formerUnits || p.formerUnits.length === 0).length;
+
     return {
       model: 'TWO_TIER_CONSOLIDATED',
       description: 'Mô hình chính quyền địa phương 2 cấp tinh gọn (Tỉnh/TP và Xã/Phường)',
       totalProvinces: provinces.length,
+      mergedCount,
+      retainedCount,
       totalUnits: this.administrativeUnits.length,
       provinces: provinces.map((p) => ({
         ...p,

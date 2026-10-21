@@ -25,35 +25,57 @@ describe('JurisdictionService [Mô hình 2 cấp tinh gọn & CSDL 34 Tỉnh th�
   });
 
   describe('Cây phân cấp hành chính 2 cấp tinh gọn (34 Tỉnh thành)', () => {
-    it('lấy danh mục 34 Tỉnh / Thành phố sau sáp nhập và các Xã/Phường trực thuộc trực tiếp', async () => {
+    it('lấy danh mục 34 Tỉnh / Thành phố (23 tỉnh sáp nhập + 11 tỉnh giữ nguyên)', async () => {
       const hierarchy = await service.getHierarchy();
       expect(hierarchy.model).toBe('TWO_TIER_CONSOLIDATED');
       expect(hierarchy.totalProvinces).toBe(34);
-      expect(hierarchy.provinces.length).toBe(34);
+      expect(hierarchy.mergedCount).toBe(23);
+      expect(hierarchy.retainedCount).toBe(11);
 
-      // Kiểm tra thủ đô Hà Nội
+      // Kiểm tra tỉnh giữ nguyên: Thủ đô Hà Nội
       const hanoi = hierarchy.provinces.find((p) => p.code === 'TINH_HN');
       expect(hanoi).toBeDefined();
       expect(hanoi?.name).toBe('Thành phố Hà Nội');
-      expect(hanoi?.formerUnits).toContain('Hà Nội');
       expect(hanoi?.communes.length).toBeGreaterThan(0);
 
-      // Kiểm tra xã/phường trực thuộc trực tiếp cấp Tỉnh (không qua quận/huyện)
+      // Kiểm tra xã trực thuộc trực tiếp cấp Tỉnh
       const congVi = hanoi?.communes.find((c) => c.code === 'XA_CONG_VI');
       expect(congVi).toBeDefined();
       expect(congVi?.name).toBe('Phường Cống Vị');
       expect(congVi?.parentCode).toBe('TINH_HN');
 
-      // Kiểm tra tỉnh sáp nhập (ví dụ: Hà Bắc, Hải Hưng, Bình Trị Thiên, Cửu Long)
-      const haBac = hierarchy.provinces.find((p) => p.code === 'TINH_HABAC');
-      expect(haBac).toBeDefined();
-      expect(haBac?.name).toBe('Tỉnh Hà Bắc');
-      expect(haBac?.formerUnits).toContain('Bắc Ninh');
-      expect(haBac?.formerUnits).toContain('Bắc Giang');
+      // Kiểm tra các tỉnh sáp nhập tiêu biểu theo danh sách
+      const tuyenQuang = hierarchy.provinces.find((p) => p.code === 'TINH_TUYENQUANG');
+      expect(tuyenQuang).toBeDefined();
+      expect(tuyenQuang?.name).toBe('Tỉnh Tuyên Quang');
+      expect(tuyenQuang?.formerUnits).toContain('Tuyên Quang');
+      expect(tuyenQuang?.formerUnits).toContain('Hà Giang');
 
-      const cuuLong = hierarchy.provinces.find((p) => p.code === 'TINH_CUULONG');
-      expect(cuuLong).toBeDefined();
-      expect(cuuLong?.name).toBe('Tỉnh Cửu Long');
+      const phuTho = hierarchy.provinces.find((p) => p.code === 'TINH_PHUTHO');
+      expect(phuTho).toBeDefined();
+      expect(phuTho?.name).toBe('Tỉnh Phú Thọ');
+      expect(phuTho?.formerUnits).toContain('Vĩnh Phúc');
+      expect(phuTho?.formerUnits).toContain('Hòa Bình');
+
+      const bacNinh = hierarchy.provinces.find((p) => p.code === 'TINH_BACNINH');
+      expect(bacNinh).toBeDefined();
+      expect(bacNinh?.name).toBe('Tỉnh Bắc Ninh');
+      expect(bacNinh?.formerUnits).toContain('Bắc Giang');
+
+      const vinhLong = hierarchy.provinces.find((p) => p.code === 'TINH_VINHLONG');
+      expect(vinhLong).toBeDefined();
+      expect(vinhLong?.name).toBe('Tỉnh Vĩnh Long');
+      expect(vinhLong?.formerUnits).toContain('Bến Tre');
+      expect(vinhLong?.formerUnits).toContain('Trà Vinh');
+
+      // Kiểm tra tỉnh giữ nguyên: Thừa Thiên Huế, Lai Châu, Điện Biên
+      const hue = hierarchy.provinces.find((p) => p.code === 'TINH_HUE');
+      expect(hue).toBeDefined();
+      expect(hue?.name).toBe('Thành phố Huế');
+
+      const laiChau = hierarchy.provinces.find((p) => p.code === 'TINH_LAICHAU');
+      expect(laiChau).toBeDefined();
+      expect(laiChau?.name).toBe('Tỉnh Lai Châu');
     });
   });
 
@@ -62,19 +84,19 @@ describe('JurisdictionService [Mô hình 2 cấp tinh gọn & CSDL 34 Tỉnh th�
       const result = await service.configurePolicy({
         role: UserRole.LAND_REGISTRAR,
         level: AdministrativeLevel.PROVINCE,
-        unitCode: 'TINH_HABAC',
+        unitCode: 'TINH_BACNINH',
         allowedActions: [
           JurisdictionAction.READ,
           JurisdictionAction.CREATE,
           JurisdictionAction.UPDATE,
           JurisdictionAction.APPROVE,
         ],
-        description: 'Văn phòng Đăng ký Đất đai Tỉnh Hà Bắc',
+        description: 'Văn phòng Đăng ký Đất đai Tỉnh Bắc Ninh',
       });
 
       expect(result.success).toBe(true);
-      expect(result.policy.unitCode).toBe('TINH_HABAC');
-      expect(result.policy.unitName).toBe('Tỉnh Hà Bắc');
+      expect(result.policy.unitCode).toBe('TINH_BACNINH');
+      expect(result.policy.unitName).toBe('Tỉnh Bắc Ninh');
       expect(result.policy.allowedActions).toContain(JurisdictionAction.APPROVE);
       expect(result.auditHash).toBeDefined();
       expect(result.auditHash).toHaveLength(64);
@@ -99,7 +121,7 @@ describe('JurisdictionService [Mô hình 2 cấp tinh gọn & CSDL 34 Tỉnh th�
         userRole: UserRole.LAND_REGISTRAR,
         userUnitCode: 'TINH_HN',
         action: JurisdictionAction.APPROVE,
-        targetUnitCode: 'XA_CONG_VI', // Cống Vị trực thuộc trực tiếp Hà Nội
+        targetUnitCode: 'XA_CONG_VI',
       });
 
       expect(evalResult.granted).toBe(true);
@@ -113,7 +135,7 @@ describe('JurisdictionService [Mô hình 2 cấp tinh gọn & CSDL 34 Tỉnh th�
         userRole: UserRole.ADMIN,
         userUnitCode: 'TINH_HN',
         action: JurisdictionAction.DELETE,
-        targetUnitCode: 'XA_BEN_NGHE', // TP.HCM
+        targetUnitCode: 'XA_BEN_NGHE',
       });
 
       expect(evalResult.granted).toBe(true);
@@ -149,7 +171,7 @@ describe('JurisdictionService [Mô hình 2 cấp tinh gọn & CSDL 34 Tỉnh th�
         service.configurePolicy({
           role: UserRole.COMMUNE_OFFICER,
           level: AdministrativeLevel.COMMUNE,
-          unitCode: 'TINH_HN', // Hà Nội là cấp PROVINCE, không phải COMMUNE
+          unitCode: 'TINH_HN',
           allowedActions: [JurisdictionAction.READ],
         }),
       ).rejects.toThrow(BadRequestException);
@@ -163,7 +185,7 @@ describe('JurisdictionService [Mô hình 2 cấp tinh gọn & CSDL 34 Tỉnh th�
           userRole: UserRole.COMMUNE_OFFICER,
           userUnitCode: 'XA_CONG_VI',
           action: JurisdictionAction.UPDATE,
-          targetUnitCode: 'XA_LIEU_GIAI', // Liễu Giai khác Cống Vị
+          targetUnitCode: 'XA_LIEU_GIAI',
         }),
       ).rejects.toThrow(ForbiddenException);
     });
@@ -174,7 +196,7 @@ describe('JurisdictionService [Mô hình 2 cấp tinh gọn & CSDL 34 Tỉnh th�
           userRole: UserRole.COMMUNE_OFFICER,
           userUnitCode: 'XA_CONG_VI',
           action: JurisdictionAction.READ,
-          targetUnitCode: 'XA_BEN_NGHE', // Bến Nghé thuộc TP.HCM
+          targetUnitCode: 'XA_BEN_NGHE',
         }),
       ).rejects.toThrow(ForbiddenException);
     });
@@ -183,9 +205,9 @@ describe('JurisdictionService [Mô hình 2 cấp tinh gọn & CSDL 34 Tỉnh th�
       await expect(
         service.evaluatePermission({
           userRole: UserRole.LAND_REGISTRAR,
-          userUnitCode: 'TINH_HN', // Hà Nội
+          userUnitCode: 'TINH_HN',
           action: JurisdictionAction.APPROVE,
-          targetUnitCode: 'XA_BEN_NGHE', // Bến Nghé thuộc TP.HCM
+          targetUnitCode: 'XA_BEN_NGHE',
         }),
       ).rejects.toThrow(ForbiddenException);
     });
