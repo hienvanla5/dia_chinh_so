@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { Layers, UserCheck, Shield, Stamp, LockKeyhole, UserX } from 'lucide-react';
+import { Layers, UserCheck, Shield, Stamp, LockKeyhole, UserX, KeyRound } from 'lucide-react';
 import { NavItem } from './NavItem';
 
 const mainNavigation = [
@@ -41,6 +41,12 @@ const mainNavigation = [
     label: 'Vòng đời Cán bộ',
     description: 'Điều chuyển & Bàn giao hồ sơ',
     icon: UserX,
+  },
+  {
+    href: '/password-policy',
+    label: 'Chính sách Mật khẩu',
+    description: 'Độ phức tạp & Chống Brute-force',
+    icon: KeyRound,
   },
 ];
 
