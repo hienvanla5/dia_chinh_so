@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { Layers, UserCheck, Shield, Stamp, LockKeyhole, UserX, KeyRound, FileSignature } from 'lucide-react';
+import { Layers, UserCheck, Shield, Stamp, LockKeyhole, UserX, KeyRound, FileSignature, Building2 } from 'lucide-react';
 import { NavItem } from './NavItem';
 
 const mainNavigation = [
@@ -53,6 +53,12 @@ const mainNavigation = [
     label: 'Ủy quyền Ký duyệt',
     description: 'Cấp phó ký thay có thời hạn',
     icon: FileSignature,
+  },
+  {
+    href: '/enterprise',
+    label: 'Cổng Doanh nghiệp',
+    description: 'Đất đai dự án & Phân quyền',
+    icon: Building2,
   },
 ];
 
