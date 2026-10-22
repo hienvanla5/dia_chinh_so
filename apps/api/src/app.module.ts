@@ -13,6 +13,7 @@ import { DossierModule } from './modules/dossier/dossier.module';
 import { SpatialModule } from './modules/spatial/spatial.module';
 import { JurisdictionModule } from './modules/jurisdiction/jurisdiction.module';
 import { DigitalSignatureModule } from './modules/digital-signature/digital-signature.module';
+import { SessionSecurityModule } from './modules/session-security/session-security.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { DigitalSignatureModule } from './modules/digital-signature/digital-sign
     SpatialModule,
     JurisdictionModule,
     DigitalSignatureModule,
+    SessionSecurityModule,
   ],
   controllers: [AppController],
   providers: [AppService],
