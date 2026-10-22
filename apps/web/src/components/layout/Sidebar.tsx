@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { Layers, UserCheck } from 'lucide-react';
+import { Layers, UserCheck, Shield, Stamp } from 'lucide-react';
 import { NavItem } from './NavItem';
 
 const mainNavigation = [
@@ -17,6 +17,18 @@ const mainNavigation = [
     label: 'Cổng Định danh Số',
     description: 'Xác thực CCCD & OTP SMS',
     icon: UserCheck,
+  },
+  {
+    href: '/jurisdiction',
+    label: 'Phân quyền Địa giới',
+    description: 'Mô hình 2 cấp & 34 tỉnh thành',
+    icon: Shield,
+  },
+  {
+    href: '/digital-signature',
+    label: 'Ký số Phê duyệt',
+    description: 'Chứng thư công vụ & SmartCA',
+    icon: Stamp,
   },
 ];
 

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ShieldCheck, UserCheck, Shield } from 'lucide-react';
+import { ShieldCheck, UserCheck, Shield, Stamp } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 export function Navbar() {
@@ -28,6 +28,15 @@ export function Navbar() {
 
       {/* Right Actions */}
       <div className="flex items-center gap-3">
+        <Link href="/digital-signature">
+          <Button
+            variant="outline"
+            size="sm"
+            leftIcon={<Stamp className="h-4 w-4" />}
+          >
+            <span>Ký số Phê duyệt</span>
+          </Button>
+        </Link>
         <Link href="/jurisdiction">
           <Button
             variant="outline"
