@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { Layers, UserCheck, Shield, Stamp, LockKeyhole, UserX, KeyRound } from 'lucide-react';
+import { Layers, UserCheck, Shield, Stamp, LockKeyhole, UserX, KeyRound, FileSignature } from 'lucide-react';
 import { NavItem } from './NavItem';
 
 const mainNavigation = [
@@ -47,6 +47,12 @@ const mainNavigation = [
     label: 'Chính sách Mật khẩu',
     description: 'Độ phức tạp & Chống Brute-force',
     icon: KeyRound,
+  },
+  {
+    href: '/delegation',
+    label: 'Ủy quyền Ký duyệt',
+    description: 'Cấp phó ký thay có thời hạn',
+    icon: FileSignature,
   },
 ];
 
