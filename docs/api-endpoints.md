@@ -1250,3 +1250,160 @@ sequenceDiagram
 - **Method**: `GET`
 - **Path**: `/api/v1/enterprise-idp/audit/logs`
 - **Response `200 OK`**: Danh sách lịch sử phân quyền và thu hồi quyền nhân viên của doanh nghiệp.
+
+
+---
+
+## 15. Nhóm API Nhật Ký Xác Thực & Phát Hiện Cảnh Báo Đăng Nhập Bất Thường [DCS-01-CN-010]
+
+### 15.1. [DCS-01-CN-010] Truy vấn sổ cái nhật ký xác thực liên kết chuỗi băm bất biến (QTD-20)
+- **Method**: `GET`
+- **Path**: `/api/v1/auth-audit/logs`
+- **Yêu cầu quyền (RBAC)**: `ADMIN`, `INSPECTOR`
+- **Query Params**:
+  - `actorId` (string, tùy chọn): Lọc theo mã định danh người dùng / cán bộ
+  - `role` (string, tùy chọn): Lọc theo vai trò hệ thống
+  - `status` (string, tùy chọn): `SUCCESS`, `FAILED`, `CHALLENGED`, `BLOCKED`
+  - `isAnomaly` (boolean, tùy chọn): Chỉ lấy các sự kiện bất thường (`true`/`false`)
+  - `page` (number, mặc định `1`): Số trang
+  - `limit` (number, mặc định `20`): Số lượng bản ghi trên một trang
+- **Response `200 OK`**:
+  ```json
+  {
+    "logs": [
+      {
+        "id": "LOG-2026-0003",
+        "timestamp": "2026-10-22T09:05:45.000Z",
+        "actorId": "CB-HN-VPDK-001",
+        "actorName": "Lê Hoàng Nam",
+        "actorRole": "LAND_REGISTRAR",
+        "authMethod": "OFFICER_SSO",
+        "clientIp": "42.112.50.88",
+        "location": {
+          "province": "Thành phố Hồ Chí Minh",
+          "country": "Việt Nam",
+          "latitude": 10.8231,
+          "longitude": 106.6297
+        },
+        "deviceInfo": "Chrome 122 trên Windows 11",
+        "status": "BLOCKED",
+        "failureReason": "Phát hiện đăng nhập bất thường: Di chuyển bất khả thi giữa Hà Nội và TP.HCM trong 35 phút",
+        "isAnomaly": true,
+        "anomalyType": "IMPOSSIBLE_TRAVEL",
+        "previousHash": "918ea4561b0c953a812347bcd5e3a8901b0f1242c89a71234bce091845112f4cd",
+        "auditHash": "112f4cd918ea4561b0c953a812347bcd5e3a8901b0f1242c89a71234bce091845"
+      }
+    ],
+    "total": 6,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 1
+  }
+  ```
+
+### 15.2. [DCS-01-CN-010] Truy vấn danh mục cảnh báo an ninh phát hiện dị thường
+- **Method**: `GET`
+- **Path**: `/api/v1/auth-audit/alerts`
+- **Yêu cầu quyền (RBAC)**: `ADMIN`, `INSPECTOR`
+- **Query Params**:
+  - `severity` (string, tùy chọn): `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`
+  - `status` (string, tùy chọn): `NEW`, `INVESTIGATING`, `RESOLVED`, `FALSE_POSITIVE`
+  - `detectionType` (string, tùy chọn): `IMPOSSIBLE_TRAVEL`, `OFF_HOURS_ACCESS`, `BRUTE_FORCE_BURST`, `UNTRUSTED_NETWORK`, `SUSPICIOUS_DEVICE`
+- **Response `200 OK`**:
+  ```json
+  [
+    {
+      "id": "ALT-2026-0003",
+      "timestamp": "2026-10-22T09:05:45.000Z",
+      "detectionType": "IMPOSSIBLE_TRAVEL",
+      "severity": "CRITICAL",
+      "status": "NEW",
+      "targetActorId": "CB-HN-VPDK-001",
+      "targetActorName": "Lê Hoàng Nam",
+      "targetActorRole": "LAND_REGISTRAR",
+      "clientIp": "42.112.50.88",
+      "detectedLocation": "Thành phố Hồ Chí Minh, Việt Nam",
+      "details": "Đăng nhập từ TP. Hồ Chí Minh chỉ sau 35 phút từ phiên đăng nhập tại Hà Nội",
+      "recommendedAction": "Khóa tài khoản khẩn cấp, hủy phiên công vụ hiện tại và thông báo đến Cục An toàn thông tin",
+      "isAccountLocked": true,
+      "isSessionTerminated": true,
+      "requiresStepUpVerification": true,
+      "auditHash": "e63ab9450a112f4cd918ea4561b0c953a812347bcdf9a0184b42318764fe0911"
+    }
+  ]
+  ```
+
+### 15.3. [DCS-01-CN-010] Lấy số liệu thống kê trung tâm điều hành giám sát an ninh (SOC Dashboard)
+- **Method**: `GET`
+- **Path**: `/api/v1/auth-audit/stats`
+- **Yêu cầu quyền (RBAC)**: `ADMIN`, `INSPECTOR`
+- **Response `200 OK`**:
+  ```json
+  {
+    "totalEventsCount": 6,
+    "anomaliesCount": 3,
+    "activeAlertsCount": 3,
+    "criticalAlertsCount": 1,
+    "chainIntegrityStatus": "VERIFIED",
+    "latestBlockHash": "73088d5c60105fe237482910abcdef1234567890abcdef1234567890abcdef12"
+  }
+  ```
+
+### 15.4. [DCS-01-CN-010] Kiểm tra tính toàn vẹn của chuỗi băm SHA-256 sổ cái kiểm toán (QTD-20)
+- **Method**: `GET`
+- **Path**: `/api/v1/auth-audit/verify-chain`
+- **Yêu cầu quyền (RBAC)**: `ADMIN`, `INSPECTOR`
+- **Response `200 OK`**:
+  ```json
+  {
+    "isValid": true,
+    "totalLogs": 6,
+    "latestHash": "73088d5c60105fe237482910abcdef1234567890abcdef1234567890abcdef12",
+    "message": "Chuỗi băm kiểm toán toàn vẹn 100%. Đã xác minh hợp lệ toàn bộ 6 khối dữ liệu theo quy tắc QTD-20."
+  }
+  ```
+
+### 15.5. [DCS-01-CN-010] Mô phỏng sự kiện xác thực kích hoạt thuật toán phát hiện dị thường
+- **Method**: `POST`
+- **Path**: `/api/v1/auth-audit/simulate`
+- **Request Body**:
+  ```json
+  {
+    "actorId": "CB-HN-002",
+    "actorName": "Trần Văn Mạnh",
+    "actorRole": "LAND_REGISTRAR",
+    "authMethod": "OFFICER_SSO",
+    "clientIp": "42.112.50.99",
+    "province": "Thành phố Hồ Chí Minh",
+    "isSuccess": true
+  }
+  ```
+- **Response `200 OK`**: Khối kiểm toán mới kèm cảnh báo an ninh nếu phát hiện dị thường.
+
+### 15.6. [DCS-01-CN-010] Xử lý cảnh báo an ninh (Khóa tài khoản, Bác bỏ báo động giả, Step-Up 2FA)
+- **Method**: `POST`
+- **Path**: `/api/v1/auth-audit/alerts/resolve`
+- **Request Body**:
+  ```json
+  {
+    "alertId": "ALT-2026-0003",
+    "action": "RESOLVE_LOCK",
+    "notes": "Đã xác minh qua điện thoại, tài khoản có dấu hiệu lộ lọt thông tin, tiến hành khóa vĩnh viễn",
+    "resolvedBy": "truongphong.anm"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "alert": {
+      "id": "ALT-2026-0003",
+      "status": "RESOLVED",
+      "isAccountLocked": true,
+      "resolvedBy": "truongphong.anm",
+      "auditHash": "9b1284bbcd59a0184b42318764fe0911e63ab9450a112f4cd918ea4561b0c953"
+    },
+    "auditHash": "9b1284bbcd59a0184b42318764fe0911e63ab9450a112f4cd918ea4561b0c953",
+    "message": "Đã xác nhận mối đe dọa an ninh, thực hiện khóa vĩnh viễn tài khoản và hủy phiên đăng nhập"
+  }
+  ```

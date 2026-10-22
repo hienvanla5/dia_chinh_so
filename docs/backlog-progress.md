@@ -10,12 +10,12 @@
 | Chỉ số | Số lượng | Tỷ lệ (%) | Ghi chú |
 |---|---|---|---|
 | **Tổng số User Stories** | **114** | **100%** | Toàn bộ 114 User Stories được số hóa tại `user_stories/` |
-| **Đã hoàn thành (Done)** | **9** | **7.9%** | Đã hoàn thành cả Shared, API, Web, Unit/Integration Tests & Docs |
+| **Đã hoàn thành (Done)** | **10** | **8.8%** | Đã hoàn thành 100% Epic DCS-01 (10/10 Stories) gồm Shared, API, Web, Tests & Docs |
 | **Đang thực hiện (In Progress)** | **0** | **0.0%** | Không có Story nào đang dở dang |
-| **Chưa thực hiện (Backlog)** | **105** | **92.1%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
+| **Chưa thực hiện (Backlog)** | **104** | **91.2%** | Sẵn sàng triển khai theo thứ tự ưu tiên (Bắt đầu Epic DCS-02) |
 
-- **User Story hoàn thành gần nhất**: [`DCS-01-CN-009`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-009.md) - Đăng nhập và phân quyền tài khoản tổ chức qua Cổng Định danh Doanh nghiệp.
-- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-01-CN-010`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-010.md) - Nhật ký xác thực và phát hiện cảnh báo đăng nhập bất thường.
+- **User Story hoàn thành gần nhất**: [`DCS-01-CN-010`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-010.md) - Nhật ký xác thực và phát hiện cảnh báo đăng nhập bất thường *(Hoàn tất toàn diện 10/10 Stories của Epic DCS-01)*.
+- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-02-CN-001`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-001.md) - Tra cứu quy hoạch và dữ liệu địa chính thửa đất đa lớp trên nền bản đồ số VN-2000 *(Khởi động Epic DCS-02)*.
 
 ---
 
@@ -32,6 +32,7 @@
 | [`DCS-01-CN-007`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-007.md) | Cấu hình chính sách mật khẩu và chống tấn công dò quét | 2026-10-22 | `main`<br>(feature `DCS-01-CN-007`) | `GET /api/v1/password-policy/config`<br>`PUT /api/v1/password-policy/config`<br>`POST /api/v1/password-policy/validate-password`<br>`GET /api/v1/password-policy/blocked-ips`<br>`POST /api/v1/password-policy/unblock-ip`<br>`GET /api/v1/password-policy/audit-logs` | `/password-policy` | 12 tests PASS | **Hoàn thành** |
 | [`DCS-01-CN-008`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-008.md) | Quản lý ủy quyền giải quyết hồ sơ địa chính có thời hạn | 2026-10-22 | `main`<br>(feature `DCS-01-CN-008`) | `GET /api/v1/delegation/list`<br>`GET /api/v1/delegation/:id`<br>`POST /api/v1/delegation/create`<br>`POST /api/v1/delegation/revoke`<br>`POST /api/v1/delegation/verify-access`<br>`GET /api/v1/delegation/audit/logs` | `/delegation` | 8 tests PASS | **Hoàn thành** |
 | [`DCS-01-CN-009`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-009.md) | Đăng nhập và phân quyền tài khoản tổ chức qua Cổng Định danh Doanh nghiệp | 2026-10-22 | `main`<br>(feature `DCS-01-CN-009`) | `POST /api/v1/enterprise-idp/login`<br>`GET /api/v1/enterprise-idp/profile/:taxCode`<br>`GET /api/v1/enterprise-idp/parcels/:taxCode`<br>`POST /api/v1/enterprise-idp/staff/assign`<br>`POST /api/v1/enterprise-idp/staff/remove`<br>`GET /api/v1/enterprise-idp/audit/logs` | `/enterprise` | 10 tests PASS | **Hoàn thành** |
+| [`DCS-01-CN-010`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-010.md) | Nhật ký xác thực và phát hiện cảnh báo đăng nhập bất thường | 2026-10-22 | `main`<br>(feature `DCS-01-CN-010`) | `GET /api/v1/auth-audit/logs`<br>`GET /api/v1/auth-audit/alerts`<br>`GET /api/v1/auth-audit/stats`<br>`GET /api/v1/auth-audit/verify-chain`<br>`POST /api/v1/auth-audit/simulate`<br>`POST /api/v1/auth-audit/alerts/resolve` | `/auth-audit` | 11 tests PASS | **Hoàn thành** |
 
 ---
 
@@ -191,6 +192,34 @@
   - `tests`: 10 test cases bao phủ đầy đủ 4 Tiêu chí chấp nhận (TC-01, TC-02, TC-03, TC-04).
 - **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#14-nhom-api-dang-nhap--phan-quyen-tai-khoan-to-chuc-qua-cong-dinh-danh-doanh-nghiep-dcs-01-cn-009).
 
+### 3.10. [DCS-01-CN-010] Nhật ký xác thực và phát hiện cảnh báo đăng nhập bất thường
+- **Persona**: Quản trị viên Hệ thống (`ADMIN`) / Thanh tra & Giám sát An toàn thông tin (`INSPECTOR`)
+- **Ý nghĩa cột mốc**: **Chính thức hoàn thành 100% Epic DCS-01** (10/10 User Stories) về Quản lý định danh số, xác thực đa kênh và phân quyền liên ngành.
+- **Kiến trúc triển khai**:
+  - `packages/shared`:
+    - Enums `AuthAuditLogStatus` (SUCCESS, FAILED, CHALLENGED, BLOCKED), `AuthMethodType` (CITIZEN_IDP, OFFICER_SSO, ENTERPRISE_TOKEN, SMART_CA), `AnomalyDetectionType` (IMPOSSIBLE_TRAVEL, OFF_HOURS_ACCESS, BRUTE_FORCE_BURST, UNTRUSTED_NETWORK, SUSPICIOUS_DEVICE), `AnomalySeverity` (LOW, MEDIUM, HIGH, CRITICAL), `AnomalyAlertStatus` (NEW, INVESTIGATING, RESOLVED, FALSE_POSITIVE).
+    - Interfaces `AuthAuditLogItem`, `AnomalySecurityAlert`, `QueryAuthAuditLogsRequest`, `QueryAnomalyAlertsRequest`, `ResolveAnomalyAlertRequest/Response`, `SimulateAuthEventRequest`, `VerifyAuditChainResponse`.
+    - Zod schemas `QueryAuthAuditLogsSchema`, `QueryAnomalyAlertsSchema`, `ResolveAnomalyAlertSchema`, `SimulateAuthEventSchema`.
+  - `apps/api`:
+    - Service `AuthAuditService`:
+      - Sổ cái kiểm toán bất biến liên kết chuỗi băm SHA-256 (QTD-20) liên tục xác thực tính toàn vẹn `previousHash` và `auditHash`, phát hiện tức thì các khối dữ liệu bị sửa đổi hoặc giả mạo.
+      - Thuật toán phát hiện dị thường thông minh (Anomaly Engine):
+        - *Di chuyển bất khả thi (Impossible Travel)*: Đăng nhập từ 2 địa phương cách xa nhau (> 300km hoặc khác quốc gia) trong khoảng thời gian quá ngắn (< 60 phút) -> Chặn truy cập (`BLOCKED`), phát cảnh báo `CRITICAL` và tự động khóa tài khoản.
+        - *Đăng nhập ngoài giờ hành chính (Off-hours Access)*: Cán bộ đăng nhập vào ban đêm (23:00 - 05:00) -> Chuyển trạng thái `CHALLENGED`, phát cảnh báo `MEDIUM` và yêu cầu thử thách 2FA tăng cường.
+        - *Mạng ngoài công vụ (Untrusted Network - QTD-22)*: Cán bộ đăng nhập từ IP lạ ngoài dải CPNET (`10.x.x.x` hoặc `192.168.1.x`) -> Tự động chặn và phát cảnh báo `HIGH`.
+        - *Tấn công dò quét dồn dập (Brute-Force Burst)*: Thử sai liên tục vượt ngưỡng an toàn.
+      - Xử lý cảnh báo an ninh (`resolveAnomalyAlert`): Khóa vĩnh viễn tài khoản, bác bỏ báo động giả (False Positive), hoặc yêu cầu Step-Up 2FA kèm mã băm lưu vết kiểm toán.
+    - Controller `AuthAuditController` cung cấp 6 REST endpoints chuẩn hóa.
+    - Module `AuthAuditModule` tích hợp vào `AppModule`.
+  - `apps/web`:
+    - Route `/auth-audit`: Trung tâm Giám sát Xác thực & SOC Dashboard thời gian thực, gồm 4 thẻ KPI chỉ số an ninh, 3 Tab nghiệp vụ chuyên sâu:
+      1. *Cảnh báo an ninh dị thường*: Bộ lọc mức độ nghiêm trọng, danh sách sự cố kèm mã băm SHA-256, Modal xử lý cảnh báo (khóa tài khoản, bác bỏ báo động giả, yêu cầu 2FA).
+      2. *Sổ cái kiểm toán chuỗi băm*: Bảng theo dõi các khối dữ liệu bất biến kèm công cụ kiểm tra toàn vẹn chuỗi (Chain Integrity Verification).
+      3. *Công cụ kiểm thử dị thường*: Trình mô phỏng 4 kịch bản tấn công/dị thường thực tế để kiểm tra khả năng phản ứng tự động của hệ thống.
+    - Đảm bảo 100% ẩn các ID nội bộ kỹ thuật (`VT-xx`, `QTD-xx`, `DCS-xx`, `AC-xx`).
+  - `tests`: 11 test cases bao phủ đầy đủ 4 Tiêu chí chấp nhận (TC-01, TC-02, TC-03, TC-04).
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#15-nhom-api-nhat-ky-xac-thuc--phat-hien-canh-bao-dang-nhap-bat-thuong-dcs-01-cn-010).
+
 ---
 
 ## 4. Cơ Chế Kiểm Soát Tiến Trình Dành Cho Agent (Gatekeeper Protocol)
@@ -203,9 +232,9 @@ flowchart TD
     
     CheckTable -- "ĐÃ CÓ trong bảng Đã hoàn thành" --> WarnDup["CẢNH BÁO TRÙNG LẶP (Duplicate Warning):<br>1. Thông báo Story này đã xong ngày nào, commit nào, test nào<br>2. Dừng thực thi ghi đè<br>3. Hỏi người dùng muốn chỉnh sửa chi tiết nào"]
     
-    CheckTable -- "CHƯA LÀM nhưng cách quá xa tiến trình hiện tại (Nhảy cóc)" --> WarnGap["CẢNH BÁO NHẢY CÓC (Sequence Gap Warning):<br>1. Chỉ rõ Story xong gần nhất (Anchor: DCS-01-CN-009)<br>2. Liệt kê các Story nối tiếp bị bỏ qua (DCS-01-CN-010, ...)<br>3. Cảnh báo rủi ro đứt gãy phụ thuộc dữ liệu<br>4. Đề xuất làm tuần tự Story tiếp theo hoặc chờ xác nhận"]
+    CheckTable -- "CHƯA LÀM nhưng cách quá xa tiến trình hiện tại (Nhảy cóc)" --> WarnGap["CẢNH BÁO NHẢY CÓC (Sequence Gap Warning):<br>1. Chỉ rõ Story xong gần nhất (Anchor: DCS-01-CN-010)<br>2. Liệt kê các Story nối tiếp bị bỏ qua (DCS-02-CN-001, ...)<br>3. Cảnh báo rủi ro đứt gãy phụ thuộc dữ liệu<br>4. Đề xuất làm tuần tự Story tiếp theo hoặc chờ xác nhận"]
     
-    CheckTable -- "ĐÚNG TIẾN TRÌNH TUẦN TỰ (ví dụ: DCS-01-CN-010)" --> RunStory["Thực hiện GitHub Flow theo AGENTS.md & SKILL.md"]
+    CheckTable -- "ĐÚNG TIẾN TRÌNH TUẦN TỰ (ví dụ: DCS-02-CN-001)" --> RunStory["Thực hiện GitHub Flow theo AGENTS.md & SKILL.md"]
     WarnGap -- "Người dùng vẫn xác nhận làm tiếp" --> RunStory
     
     RunStory --> Done["Kiểm thử PASS, Build PASS, Merge main, Push origin"]
