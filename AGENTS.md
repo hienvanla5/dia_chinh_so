@@ -9,7 +9,8 @@
 1. **Tuân thủ Pháp lý & Thực tế**: Mọi chức năng, thuật ngữ và luồng dữ liệu phải bám sát **Luật Đất đai 2024 (số 31/2024/QH15)**, Đề án 06, hệ quy chiếu quốc gia **VN-2000**, và cơ chế **Khóa giao dịch thời gian thực (Real-time Transaction Lock)**.
 2. **Nguồn Sự Thật Duy Nhất (Single Source of Truth)**:
    - Toàn bộ 114 User Stories được số hóa trong thư mục `user_stories/` (`user_stories/DCS-XX-YY-ZZZ.md`).
-   - Danh mục API Endpoints được chuẩn hóa tại `docs/api-endpoints.md`.
+   - Danh mục API Endpoints được chuẩn hóa tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md).
+   - Tiến trình thực hiện và lịch sử hoàn thành được theo dõi tại [`docs/backlog-progress.md`](file:///E:/personal_project/DIACHINHSO/docs/backlog-progress.md).
    - Danh mục tổng quan các Story được lập chỉ mục tại `user_stories/README.md`.
 3. **Quy Chuẩn Bắt Buộc Viết API Docs (`docs/` - Mandatory API Documentation)**:
    - Với **MỖI** User Story có liên quan đến Backend API (tạo mới endpoint, sửa đổi logic, hoặc bổ sung tham số/schema), Agent **BẮT BUỘC** phải viết hoặc cập nhật tài liệu API chi tiết tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md).
@@ -63,6 +64,16 @@
    - **Bước 1 (Branching)**: Trước khi code bất kỳ tính năng hoặc User Story nào, Agent **BẮT BUỘC** tạo nhánh mới từ nhánh `main` theo định dạng `feature/<STORY_ID>-<ten-tinh-nang>` (hoặc `feature/<ten-tinh-nang>`).
    - **Bước 2 (Verify & Commit)**: Thực hiện code, viết test và kiểm tra toàn bộ hoạt động trơn tru (`pnpm test` 100% PASS, `pnpm build` 100% PASS). Thực hiện các commit nguyên tử (Atomic Commits) trên chính nhánh feature này.
    - **Bước 3 (Merge & Push)**: Chuyển về nhánh `main`, thực hiện merge trực tiếp nhánh feature vào `main` (`git merge feature/...`), đẩy lên remote GitHub (`git push origin main`), và dọn dẹp nhánh feature cục bộ (`git branch -d feature/...`).
+8. **Kiểm Soát Tiến Trình Backlog & Cơ Chế Cảnh Báo Trùng Lặp / Nhảy Cóc (`docs/backlog-progress.md`)**:
+   - Toàn bộ tiến trình thực hiện của 114 User Stories được theo dõi thời gian thực tại file [`docs/backlog-progress.md`](file:///E:/personal_project/DIACHINHSO/docs/backlog-progress.md).
+   - **Trước khi bắt đầu thực hiện bất kỳ User Story nào**, Agent **BẮT BUỘC** tra cứu `docs/backlog-progress.md`:
+     - **Cảnh báo Trùng lặp (Duplicate Warning)**: Nếu User Story được yêu cầu **ĐÃ HOÀN THÀNH** (có tên trong bảng Đã hoàn thành), Agent **TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ Ý THỰC HIỆN LẠI TỪ ĐẦU HOẶC GHI ĐÈ BỪA BÃI**. Phải lập tức thông báo rõ cho người dùng: ngày hoàn thành, các commit ID, danh sách endpoints, route frontend và kết quả test đã đạt, đồng thời hỏi người dùng có yêu cầu điều chỉnh cụ thể nào không.
+     - **Cảnh báo Nhảy cóc / Bỏ qua công việc nối tiếp (Sequence Gap Warning)**: Nếu User Story được yêu cầu cách quá xa tiến trình đang làm (ví dụ: vừa hoàn thành `DCS-01-CN-003` nhưng người dùng yêu cầu làm `DCS-03-CN-001` hoặc `DCS-05-CN-001`, bỏ qua các story tiền đề liền kề như `DCS-01-CN-004`), Agent **BẮT BUỘC** dừng lại và đưa ra cảnh báo:
+       - Xác định rõ User Story vừa xong gần nhất (Anchor: `DCS-01-CN-003`).
+       - Liệt kê các User Story liền kề đang bị bỏ qua (khuyến nghị `DCS-01-CN-004: Tích hợp chứng thư số chuyên dùng công vụ và SmartCA`).
+       - Phân tích rủi ro kiến trúc / phụ thuộc kỹ thuật.
+       - Đề xuất người dùng làm tuần tự câu chuyện tiếp theo, hoặc chỉ triển khai tiếp khi người dùng xác nhận đã cân nhắc rủi ro.
+   - **Cập nhật Tiến trình Sau Khi Xong (Mandatory Post-Execution Logging)**: Ngay sau khi Story hoàn thành (test và build pass, merge vào `main`), Agent **BẮT BUỘC** cập nhật số liệu và bổ sung lịch sử vào [`docs/backlog-progress.md`](file:///E:/personal_project/DIACHINHSO/docs/backlog-progress.md).
 
 ---
 
@@ -72,16 +83,23 @@ Khi người dùng gửi yêu cầu chứa **Mã User Story** (ví dụ: `DCS-01
 
 ```mermaid
 flowchart TD
-    S0["1. GitHub Flow: Tạo nhánh feature/<story-id>-<ten-tinh-nang> từ main"] --> S1["2. Đọc đặc tả: user_stories/<STORY_ID>.md"]
+    S_GATE["0. Kiểm tra docs/backlog-progress.md: Cảnh báo trùng lặp hoặc nhảy cóc"] --> S0["1. GitHub Flow: Tạo nhánh feature/<story-id>-<ten-tinh-nang> từ main"]
+    S0 --> S1["2. Đọc đặc tả: user_stories/<STORY_ID>.md"]
     S1 --> S2["3. Trích xuất ACs, Tasks, Rules, Dependencies"]
     S2 --> S3["4. Code trên nhánh feature: Shared -> Backend API -> Frontend Web (Design System)"]
     S3 --> S4["5. Viết Unit Test & Integration Test (bám sát AC)"]
     S4 --> S5{"6. Kiểm tra: pnpm test & pnpm build"}
     S5 -- "FAIL (Lỗi)" --> S5_Fix["Đọc log lỗi, phân tích & tự sửa mã nguồn"]
     S5_Fix --> S5
-    S5 -- "100% PASS" --> S6["7. Viết API Docs tại docs/ & Cập nhật Story MD & Commit nguyên tử trên feature"]
+    S5 -- "100% PASS" --> S6["7. Viết API Docs, Cập nhật Story MD & Ghi nhận docs/backlog-progress.md"]
     S6 --> S7["8. GitHub Flow: Checkout main -> Merge trực tiếp feature -> git push origin main -> Xóa nhánh feature"]
 ```
+
+### Bước 0: Kiểm Tra Bảng Tiến Trình Backlog (`docs/backlog-progress.md`)
+- Mở và tra cứu file [`docs/backlog-progress.md`](file:///E:/personal_project/DIACHINHSO/docs/backlog-progress.md) để xác định trạng thái User Story được yêu cầu:
+  - **Trường hợp 1 (Trùng lặp)**: Nếu story đã có trạng thái "Hoàn thành" -> **DỪNG LẠI**, cảnh báo người dùng thông tin hoàn thành, không chạy lại làm đè hỏng mã nguồn.
+  - **Trường hợp 2 (Nhảy cóc / Khoảng cách xa)**: Nếu story yêu cầu cách quá xa story vừa hoàn tất gần nhất (Anchor: `DCS-01-CN-003`), bỏ qua story liền kề (`DCS-01-CN-004`) -> **DỪNG LẠI**, đưa ra cảnh báo rủi ro kiến trúc, hỏi xác nhận từ người dùng trước khi tiến hành.
+  - **Trường hợp 3 (Hợp lệ)**: Story nối tiếp tuần tự hoặc người dùng đã xác nhận bỏ qua -> Tiến hành Bước 1.
 
 ### Bước 1 (GitHub Flow - Tạo Nhánh): Khởi Tạo Nhánh Tính Năng
 - Đảm bảo nhánh `main` đang ở trạng thái sạch và mới nhất từ remote:
@@ -122,13 +140,17 @@ Tuân thủ thứ tự phân tầng phụ thuộc:
   - Nếu xuất hiện lỗi đỏ: Phân tích log lỗi chi tiết, sửa code/test ngay lập tức.
   - Lặp lại lệnh test cho đến khi terminal báo xanh: `Test Suites: X passed, X total. Tests: Y passed, Y total.`
 
-### Bước 6: Viết Tài Liệu API (`docs/`) & Cập Nhật Trạng Thái Story
+### Bước 6: Viết Tài Liệu API (`docs/`), Cập Nhật Story MD & Ghi Nhận Tiến Trình Backlog
 - **Bắt buộc viết/cập nhật tài liệu API**: Mở file [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md), thêm mới hoặc cập nhật thông số endpoint thuộc Story đó:
   - Gắn thẻ mã User Story: `### [DCS-XX-YY-ZZZ] Tên Endpoint`
   - Mô tả URL, HTTP Method, Role Guard, JSON Request Body & Response mẫu, các mã lỗi.
 - **Cập nhật Story MD**: Mở file `user_stories/<STORY_ID>.md`:
   - Đổi `- [ ]` thành `- [x]` cho các task đã hoàn thành.
   - Đổi `- **Trạng thái**: Chưa thực hiện` thành `- **Trạng thái**: Hoàn thành`.
+- **Bắt buộc cập nhật Bảng theo dõi tiến trình**: Mở file [`docs/backlog-progress.md`](file:///E:/personal_project/DIACHINHSO/docs/backlog-progress.md):
+  - Tăng số lượng `Đã hoàn thành`, giảm `Chưa thực hiện`, tính lại tỷ lệ `%`.
+  - Cập nhật dòng `User Story hoàn thành gần nhất` và `User Story đề xuất tiếp theo`.
+  - Bổ sung dòng mới vào bảng `Danh Sách User Stories Đã Hoàn Thành` kèm chi tiết đóng gói kỹ thuật.
 
 ### Bước 7: Kiểm Tra Biên Dịch Monorepo (Build Gate)
 - Chạy: `pnpm build`
@@ -143,6 +165,7 @@ Tuân thủ thứ tự phân tầng phụ thuộc:
    git add apps/web/ ; git commit -m "feat(web): add UI interface for <STORY_ID>"
    git add docs/ ; git commit -m "docs(api): document endpoints for <STORY_ID>"
    git add user_stories/ ; git commit -m "docs(story): mark <STORY_ID> as completed"
+   git add docs/backlog-progress.md ; git commit -m "docs(backlog): update progress tracker for <STORY_ID>"
    ```
 2. **Merge trực tiếp vào nhánh `main`**:
    ```bash
@@ -170,6 +193,7 @@ Tuân thủ thứ tự phân tầng phụ thuộc:
   - Layout & Bố cục: `apps/web/src/components/layout/` (`Navbar`, `Sidebar`, `NavItem`, `PageHeader`, `MainLayout`).
 - **Shared Package**: `@diachinhso/shared` (`packages/shared/src/index.ts`).
 - **Tài liệu API**: `docs/api-endpoints.md`.
+- **Bảng theo dõi tiến trình Product Backlog**: [`docs/backlog-progress.md`](file:///E:/personal_project/DIACHINHSO/docs/backlog-progress.md).
 - **Hệ quy chiếu GIS**: VN-2000 (kinh tuyến trục 105°00', múi chiếu 3 độ, SRID 3405/9210) chuyển đổi WGS84 (SRID 4326) để hiển thị web.
 - **Cơ chế Khóa**: Redis Redlock 90 phút (Key prefix: `diachinhso:lock:parcel:<id>`).
 - **Cổng Định Danh**: Mock Sandbox Citizen IdP (CCCD 12 số + OTP) không phụ thuộc mạng thật C06 VNeID.

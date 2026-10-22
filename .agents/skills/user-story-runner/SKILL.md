@@ -23,6 +23,23 @@ Activate this skill whenever:
 
 ## Step-by-Step Execution Runbook (GitHub Flow)
 
+### Step 0: Pre-Execution Backlog Progress Gate (`docs/backlog-progress.md`)
+Before creating any feature branch or writing any code, open and inspect [`docs/backlog-progress.md`](file:///E:/personal_project/DIACHINHSO/docs/backlog-progress.md):
+1. **Duplicate Check (Cảnh báo Trùng lặp)**:
+   - If the requested User Story is already marked as 'Hoàn thành' in `docs/backlog-progress.md`:
+     - **DO NOT re-implement or overwrite blindly**.
+     - Immediately alert the user: specify the completion date, commit hash, endpoints, frontend route, and passed tests.
+     - Ask if the user has specific adjustments or enhancements needed.
+2. **Sequence Gap Check (Cảnh báo Nhảy cóc / Bỏ qua việc nối tiếp)**:
+   - Compare the requested story with the 'User Story hoàn thành gần nhất' (Anchor: `DCS-01-CN-003`) and 'User Story đề xuất tiếp theo' (`DCS-01-CN-004`).
+   - If the requested story jumps far ahead in the backlog (e.g. from `DCS-01-CN-003` to `DCS-03-CN-001` or `DCS-05-CN-001`, skipping `DCS-01-CN-004`), immediately warn the user:
+     - Identify the anchor story completed (`DCS-01-CN-003`).
+     - List skipped prerequisite stories (especially `DCS-01-CN-004`).
+     - Explain architectural dependencies and risks (e.g., missing public digital signature SmartCA or transaction lock foundation).
+     - Recommend proceeding sequentially with `DCS-01-CN-004`, or require explicit confirmation from the user before jumping ahead.
+3. **Sequential Flow (Tiến trình Hợp lệ)**:
+   - If the story is the immediate next in sequence or the user explicitly confirms skipping ahead, proceed to Step 1.
+
 ### Step 1 (GitHub Flow): Create Feature Branch from `main`
 Before making any changes, ensure `main` is clean and updated, then create and switch to a dedicated feature branch:
 ```bash
@@ -124,7 +141,7 @@ pnpm --filter @diachinhso/api test
 
 ---
 
-### Step 6: Write API Documentation (`docs/`) & Update Story Status
+### Step 6: Write API Documentation (`docs/`), Update Story Status & Log Backlog Progress
 1. **Mandatory API Documentation**:
    - Open [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md).
    - If the story creates or modifies any backend API endpoint, you **MUST** document it clearly under the corresponding module section:
@@ -138,6 +155,13 @@ pnpm --filter @diachinhso/api test
    - Open `user_stories/<STORY_ID>.md`:
      - Mark all completed tasks as done: change `- [ ]` to `- [x]`.
      - Update metadata: change `- **Trạng thái**: Chưa thực hiện` to `- **Trạng thái**: Hoàn thành`.
+
+3. **Mandatory Backlog Progress Update**:
+   - Open [`docs/backlog-progress.md`](file:///E:/personal_project/DIACHINHSO/docs/backlog-progress.md):
+     - Increment `Đã hoàn thành` by 1, decrement `Chưa thực hiện` by 1, re-calculate `%`.
+     - Update `User Story hoàn thành gần nhất` and set `User Story đề xuất tiếp theo`.
+     - Add a new row to Section 2 (Completed Stories Audit Trail) with Story ID, title, date, commit, endpoints, web route, test count, and status.
+     - Add packaging details under Section 3.
 
 ---
 
@@ -159,6 +183,7 @@ Confirm `@diachinhso/shared`, `@diachinhso/api`, and `@diachinhso/web` all build
    git add apps/web/ ; git commit -m "feat(web): add UI interface for <STORY_ID>"
    git add docs/ ; git commit -m "docs(api): document endpoints for <STORY_ID>"
    git add user_stories/ ; git commit -m "docs(story): mark <STORY_ID> as completed"
+   git add docs/backlog-progress.md ; git commit -m "docs(backlog): update progress tracker for <STORY_ID>"
    ```
 
 2. **Merge directly into `main` branch**:
@@ -186,3 +211,4 @@ Respond to the user with:
 - Test execution output showing 100% passed test cases.
 - Commit hash and push confirmation on `main`.
 - Confirmation that the feature branch was merged directly into `main`.
+- Confirmation of updated Product Backlog metrics in `docs/backlog-progress.md`.
