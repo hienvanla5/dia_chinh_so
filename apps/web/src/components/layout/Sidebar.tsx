@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { Layers, UserCheck, Shield, Stamp } from 'lucide-react';
+import { Layers, UserCheck, Shield, Stamp, LockKeyhole } from 'lucide-react';
 import { NavItem } from './NavItem';
 
 const mainNavigation = [
@@ -29,6 +29,12 @@ const mainNavigation = [
     label: 'Ký số Phê duyệt',
     description: 'Chứng thư công vụ & SmartCA',
     icon: Stamp,
+  },
+  {
+    href: '/session-security',
+    label: 'Bảo mật Phiên & 2FA',
+    description: 'Timeout 15p & Xác thực 2 lớp',
+    icon: LockKeyhole,
   },
 ];
 
