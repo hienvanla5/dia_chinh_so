@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction } from '../types';
+import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction, DigitalSignatureProvider, SignatureStandard, OcspCertificateStatus } from '../types';
 
 // Schema xác thực Mock CCCD / Sandbox IdP
 export const CitizenAuthSchema = z.object({
@@ -113,3 +113,25 @@ export const EvaluatePermissionSchema = z.object({
 
 export type ConfigureJurisdictionPolicyInput = z.infer<typeof ConfigureJurisdictionPolicySchema>;
 export type EvaluatePermissionInput = z.infer<typeof EvaluatePermissionSchema>;
+
+
+// Schemas ký số chuyên dùng công vụ & SmartCA (DCS-01-CN-004)
+export const SignDossierApprovalSchema = z.object({
+  dossierId: z.string().min(1, 'Mã hồ sơ địa chính không được để trống'),
+  signerRole: z.nativeEnum(UserRole, { errorMap: () => ({ message: 'Vai trò người ký không hợp lệ' }) }),
+  provider: z.nativeEnum(DigitalSignatureProvider, { errorMap: () => ({ message: 'Nhà cung cấp chữ ký số không hợp lệ' }) }),
+  certificateSerial: z.string().min(6, 'Số serial chứng thư số công vụ tối thiểu 6 ký tự'),
+  reason: z.string().min(5, 'Lý do / Nội dung phê duyệt tối thiểu 5 ký tự'),
+  signaturePin: z.string().min(4, 'Mã PIN bảo mật chữ ký số tối thiểu 4 ký tự').optional(),
+  signerName: z.string().optional(),
+  documentHash: z.string().optional(),
+});
+
+export const VerifyDigitalSignatureSchema = z.object({
+  signatureValue: z.string().min(10, 'Chuỗi chữ ký số không hợp lệ'),
+  certificateSerial: z.string().min(6, 'Số serial chứng thư số không hợp lệ'),
+  documentHash: z.string().optional(),
+});
+
+export type SignDossierApprovalInput = z.infer<typeof SignDossierApprovalSchema>;
+export type VerifyDigitalSignatureInput = z.infer<typeof VerifyDigitalSignatureSchema>;

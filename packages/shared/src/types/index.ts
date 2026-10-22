@@ -254,3 +254,97 @@ export interface EvaluatePermissionResponse {
   targetLevel: AdministrativeLevel;
   auditHash: string;
 }
+
+
+// Tích hợp chứng thư số chuyên dùng công vụ và SmartCA (DCS-01-CN-004)
+export enum DigitalSignatureProvider {
+  GOVERNMENT_CA = 'GOVERNMENT_CA', // Ban Cơ yếu Chính phủ (Chuyên dùng công vụ)
+  VNPT_SMARTCA = 'VNPT_SMARTCA',   // VNPT SmartCA
+  VIETTEL_CA = 'VIETTEL_CA',       // Viettel-CA Cloud
+  FPT_SMARTCA = 'FPT_SMARTCA',     // FPT SmartCA
+  USB_TOKEN = 'USB_TOKEN',         // Thiết bị mật mã phần cứng USB Token PKCS#11
+}
+
+export enum SignatureStandard {
+  PADES = 'PADES', // Chuẩn ký tài liệu PDF (PDF Advanced Electronic Signatures)
+  CADES = 'CADES', // Chuẩn ký thông điệp dữ liệu số (CMS Advanced Electronic Signatures)
+  XADES = 'XADES', // Chuẩn ký XML (XML Advanced Electronic Signatures)
+}
+
+export enum OcspCertificateStatus {
+  VALID = 'VALID',     // Chứng thư số còn hiệu lực và tin cậy
+  REVOKED = 'REVOKED', // Đã bị thu hồi hoặc vô hiệu hóa bởi cơ quan CA
+  EXPIRED = 'EXPIRED', // Đã hết hạn sử dụng
+}
+
+export interface PublicOfficerCertificate {
+  serialNumber: string;
+  subjectName: string;
+  subjectTitle: string;
+  organization: string;
+  provider: DigitalSignatureProvider;
+  issuer: string;
+  validFrom: string;
+  validTo: string;
+  ocspStatus: OcspCertificateStatus;
+  isDefault?: boolean;
+}
+
+export interface SignDossierApprovalRequest {
+  dossierId: string;
+  signerRole: UserRole;
+  provider: DigitalSignatureProvider;
+  certificateSerial: string;
+  reason: string;
+  signaturePin?: string;
+  signerName?: string;
+  documentHash?: string;
+}
+
+export interface SignDossierApprovalResponse {
+  success: boolean;
+  dossierId: string;
+  documentId: string;
+  signatureValue: string;
+  certificateSerial: string;
+  signerName: string;
+  provider: DigitalSignatureProvider;
+  signatureStandard: SignatureStandard;
+  timestamp: string; // RFC 3161 TSA
+  ocspVerified: boolean;
+  auditHash: string;
+  dossierStatus: DossierStatus;
+  message: string;
+}
+
+export interface VerifyDigitalSignatureRequest {
+  signatureValue: string;
+  certificateSerial: string;
+  documentHash?: string;
+}
+
+export interface VerifyDigitalSignatureResponse {
+  valid: boolean;
+  signerName: string;
+  issuer: string;
+  provider: DigitalSignatureProvider;
+  ocspStatus: OcspCertificateStatus;
+  timestamp: string;
+  auditHash: string;
+  message: string;
+}
+
+export interface PendingDossierForSigning {
+  id: string;
+  dossierCode: string;
+  parcelId: string;
+  parcelNationalCode: string;
+  applicantName: string;
+  applicantCitizenId: string;
+  fluctuationType: FluctuationType;
+  status: DossierStatus;
+  submittedAt: string;
+  communeName: string;
+  provinceName: string;
+  isParcelLocked: boolean;
+}
