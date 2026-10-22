@@ -18,6 +18,7 @@ import { OfficerLifecycleModule } from './modules/officer-lifecycle/officer-life
 import { PasswordPolicyModule } from './modules/password-policy/password-policy.module';
 import { DelegationModule } from './modules/delegation/delegation.module';
 import { EnterpriseIdpModule } from './modules/enterprise-idp/enterprise-idp.module';
+import { AuthAuditModule } from './modules/auth-audit/auth-audit.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { EnterpriseIdpModule } from './modules/enterprise-idp/enterprise-idp.mod
     PasswordPolicyModule,
     DelegationModule,
     EnterpriseIdpModule,
+    AuthAuditModule,
   ],
   controllers: [AppController],
   providers: [AppService],
