@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction, DigitalSignatureProvider, SignatureStandard, OcspCertificateStatus } from '../types';
+import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction, DigitalSignatureProvider, SignatureStandard, OcspCertificateStatus, SessionStatus, SensitiveOperationType } from '../types';
 
 // Schema xác thực Mock CCCD / Sandbox IdP
 export const CitizenAuthSchema = z.object({
@@ -135,3 +135,32 @@ export const VerifyDigitalSignatureSchema = z.object({
 
 export type SignDossierApprovalInput = z.infer<typeof SignDossierApprovalSchema>;
 export type VerifyDigitalSignatureInput = z.infer<typeof VerifyDigitalSignatureSchema>;
+
+
+// Schemas Quản lý phiên làm việc & Xác thực 2FA nâng cao (DCS-01-CN-005)
+export const StepUp2FaChallengeSchema = z.object({
+  sessionId: z.string().min(1, 'Mã phiên làm việc không được để trống'),
+  operation: z.nativeEnum(SensitiveOperationType, { errorMap: () => ({ message: 'Thao tác nhạy cảm không hợp lệ' }) }),
+  targetEntityId: z.string().min(1, 'Mã đối tượng mục tiêu không được để trống'),
+});
+
+export const VerifyStepUp2FaSchema = z.object({
+  challengeId: z.string().min(1, 'Mã yêu cầu xác thực 2FA không được để trống'),
+  sessionId: z.string().min(1, 'Mã phiên làm việc không được để trống'),
+  code: z.string().length(6, 'Mã xác thực 2FA phải gồm đúng 6 chữ số').regex(/^\d{6}$/, 'Mã 2FA chỉ chứa ký tự số'),
+});
+
+export const UnlockSessionSchema = z.object({
+  sessionId: z.string().min(1, 'Mã phiên làm việc không được để trống'),
+  unlockCode: z.string().min(4, 'Mã mở khóa phiên tối thiểu 4 ký tự'),
+});
+
+export const TerminateSessionSchema = z.object({
+  sessionId: z.string().min(1, 'Mã phiên làm việc không được để trống'),
+  reason: z.string().optional(),
+});
+
+export type StepUp2FaChallengeInput = z.infer<typeof StepUp2FaChallengeSchema>;
+export type VerifyStepUp2FaInput = z.infer<typeof VerifyStepUp2FaSchema>;
+export type UnlockSessionInput = z.infer<typeof UnlockSessionSchema>;
+export type TerminateSessionInput = z.infer<typeof TerminateSessionSchema>;

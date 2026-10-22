@@ -348,3 +348,103 @@ export interface PendingDossierForSigning {
   provinceName: string;
   isParcelLocked: boolean;
 }
+
+
+// Quản lý phiên làm việc và bảo mật xác thực 2FA (DCS-01-CN-005)
+export enum SessionStatus {
+  ACTIVE = 'ACTIVE',                         // Đang hoạt động bình thường
+  LOCKED = 'LOCKED',                         // Tạm khóa màn hình sau 15 phút không tương tác
+  TERMINATED = 'TERMINATED',                 // Đã đăng xuất / Kết thúc phiên an toàn
+  SUSPENDED_SECURITY = 'SUSPENDED_SECURITY', // Bị tạm khóa an ninh thông tin (QTD-22)
+}
+
+export enum SensitiveOperationType {
+  APPROVE_CERTIFICATE = 'APPROVE_CERTIFICATE',     // Ký số phê duyệt cấp Sổ Đỏ Số
+  ALTER_PARCEL_BOUNDARY = 'ALTER_PARCEL_BOUNDARY', // Hiệu chỉnh tọa độ ranh giới thửa đất
+  BULK_DATA_EXPORT = 'BULK_DATA_EXPORT',           // Trích xuất dữ liệu CSDL thửa đất hàng loạt
+  REVOKE_DOCUMENT = 'REVOKE_DOCUMENT',             // Thu hồi Giấy chứng nhận / Hủy hồ sơ
+}
+
+export interface UserSession {
+  id: string;
+  userId: string;
+  username: string;
+  fullName: string;
+  role: UserRole;
+  deviceInfo: string;
+  ipAddress: string;
+  isTrustedIp: boolean;
+  status: SessionStatus;
+  createdAt: string;
+  lastActiveAt: string;
+  expiresAt: string;
+  inactivityTimeoutSeconds: number; // Mặc định 900 giây (15 phút)
+}
+
+export interface StepUp2FaChallengeRequest {
+  sessionId: string;
+  operation: SensitiveOperationType;
+  targetEntityId: string;
+}
+
+export interface StepUp2FaChallengeResponse {
+  challengeId: string;
+  operation: SensitiveOperationType;
+  method: 'TOTP' | 'SMS_OTP';
+  expiresInSeconds: number;
+  maskedPhone?: string;
+  mockOtp?: string;
+}
+
+export interface VerifyStepUp2FaRequest {
+  challengeId: string;
+  sessionId: string;
+  code: string;
+}
+
+export interface VerifyStepUp2FaResponse {
+  success: boolean;
+  stepUpToken: string;
+  operation: SensitiveOperationType;
+  expiresAt: string;
+  auditHash: string;
+  message: string;
+}
+
+export interface UnlockSessionRequest {
+  sessionId: string;
+  unlockCode: string;
+}
+
+export interface UnlockSessionResponse {
+  success: boolean;
+  sessionId: string;
+  status: SessionStatus;
+  refreshedExpiry: string;
+  auditHash: string;
+  message: string;
+}
+
+export interface TerminateSessionRequest {
+  sessionId: string;
+  reason?: string;
+}
+
+export interface TerminateSessionResponse {
+  success: boolean;
+  sessionId: string;
+  status: SessionStatus;
+  auditHash: string;
+  message: string;
+}
+
+export interface SecurityViolationAlert {
+  id: string;
+  sessionId: string;
+  username: string;
+  ipAddress: string;
+  violationType: 'IP_NOT_IN_WHITELIST' | 'RATE_LIMIT_EXCEEDED' | 'FAILED_2FA_ATTEMPTS';
+  description: string;
+  timestamp: string;
+  auditHash: string;
+}
