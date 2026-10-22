@@ -718,3 +718,152 @@ sequenceDiagram
     "message": "Chữ ký số hợp pháp, toàn vẹn, được xác thực trực tuyến qua cổng OCSP của Ban Cơ yếu Chính phủ."
   }
   ```
+
+
+---
+
+## 10. Nhóm API Quản Lý Phiên Làm Việc & Bảo Mật Xác Thực 2FA (Session Security & Step-Up 2FA)
+**Prefix**: `/api/v1/session-security` | **Tags**: `Quản lý Phiên làm việc & Bảo mật Xác thực 2FA (DCS-01-CN-005)`
+
+### 10.1. [DCS-01-CN-005] Tra cứu danh sách các phiên làm việc đang hoạt động
+- **Method**: `GET`
+- **Path**: `/api/v1/session-security/sessions`
+- **Query Params**: `userId?: string`
+- **Response `200 OK`**:
+  ```json
+  [
+    {
+      "id": "SES-HN-ADMIN-001",
+      "userId": "USR-ADMIN-001",
+      "username": "admin.hanoi@diachinh.gov.vn",
+      "fullName": "Nguyễn Văn An",
+      "role": "ADMIN",
+      "deviceInfo": "Chrome 122 on Windows 11 (Máy trạm công vụ VP ĐKĐĐ)",
+      "ipAddress": "10.12.34.56",
+      "isTrustedIp": true,
+      "status": "ACTIVE",
+      "createdAt": "2026-10-22T09:30:00.000Z",
+      "lastActiveAt": "2026-10-22T10:05:00.000Z",
+      "expiresAt": "2026-10-22T10:20:00.000Z",
+      "inactivityTimeoutSeconds": 900
+    }
+  ]
+  ```
+
+### 10.2. [DCS-01-CN-005] Tự động hoặc chủ động khóa màn hình làm việc (Timeout 15 phút)
+- **Method**: `POST`
+- **Path**: `/api/v1/session-security/lock`
+- **Request Body**:
+  ```json
+  {
+    "sessionId": "SES-HN-ADMIN-001"
+  }
+  ```
+- **Response `200 OK`**: Chuyển trạng thái phiên sang `LOCKED`.
+
+### 10.3. [DCS-01-CN-005] Mở khóa phiên làm việc bằng mã PIN/2FA (Làm mới phiên 15 phút, QTD-22)
+- **Method**: `POST`
+- **Path**: `/api/v1/session-security/unlock`
+- **Request Body**:
+  ```json
+  {
+    "sessionId": "SES-HN-REGISTRAR-002",
+    "unlockCode": "123456"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "sessionId": "SES-HN-REGISTRAR-002",
+    "status": "ACTIVE",
+    "refreshedExpiry": "2026-10-22T10:35:00.000Z",
+    "auditHash": "e8c4b92f7d1a5e30...",
+    "message": "Mở khóa phiên làm việc thành công. Phiên đã được làm mới thời gian bảo vệ 15 phút."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Mã mở khóa sai hoặc dữ liệu thiếu trường bắt buộc.
+  - `403 Forbidden`: Nhập sai quá 3 lần liên tiếp, phiên bị tạm khóa theo quy tắc an toàn thông tin (QTD-22).
+
+### 10.4. [DCS-01-CN-005] Yêu cầu xác thực 2 lớp nâng cao (Step-Up 2FA Challenge)
+- **Method**: `POST`
+- **Path**: `/api/v1/session-security/step-up/challenge`
+- **Request Body**:
+  ```json
+  {
+    "sessionId": "SES-HN-ADMIN-001",
+    "operation": "APPROVE_CERTIFICATE",
+    "targetEntityId": "DOC-2026-CERT-001"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "challengeId": "CHL_121372fd6fada2cd",
+    "operation": "APPROVE_CERTIFICATE",
+    "method": "TOTP",
+    "expiresInSeconds": 300,
+    "maskedPhone": "09*****678",
+    "mockOtp": "123456"
+  }
+  ```
+- **Mã lỗi**:
+  - `403 Forbidden`: Phát hiện truy cập thao tác nhạy cảm từ IP ngoài mạng công vụ (QTD-22) hoặc phiên không ở trạng thái `ACTIVE`.
+
+### 10.5. [DCS-01-CN-005] Xác nhận mã 2FA nâng cao và cấp Token ủy quyền (5 phút)
+- **Method**: `POST`
+- **Path**: `/api/v1/session-security/step-up/verify`
+- **Request Body**:
+  ```json
+  {
+    "challengeId": "CHL_121372fd6fada2cd",
+    "sessionId": "SES-HN-ADMIN-001",
+    "code": "123456"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "stepUpToken": "STEPUP_a1b2c3d4e5f6...",
+    "operation": "APPROVE_CERTIFICATE",
+    "expiresAt": "2026-10-22T10:40:00.000Z",
+    "auditHash": "3a8f9c1b2d4e6f80...",
+    "message": "Xác thực 2FA nâng cao thành công. Đã cấp mã ủy quyền thực hiện thao tác nhạy cảm trong vòng 5 phút."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Mã 2FA sai, mã thử thách đã được dùng trước đó (Single-use), hoặc đã quá hạn 5 phút.
+  - `403 Forbidden`: Xác thực sai quá 3 lần liên tiếp, phiên bị tạm khóa theo QTD-22.
+
+### 10.6. [DCS-01-CN-005] Chấm dứt phiên làm việc từ xa (Remote Session Termination)
+- **Method**: `POST`
+- **Path**: `/api/v1/session-security/terminate`
+- **Request Body**:
+  ```json
+  {
+    "sessionId": "SES-HN-ADMIN-001",
+    "reason": "Cán bộ đăng xuất phiên làm việc"
+  }
+  ```
+- **Response `200 OK`**: Chuyển trạng thái phiên sang `TERMINATED`.
+
+### 10.7. [DCS-01-CN-005] Tra cứu danh sách cảnh báo vi phạm an toàn thông tin (QTD-22)
+- **Method**: `GET`
+- **Path**: `/api/v1/session-security/alerts`
+- **Response `200 OK`**:
+  ```json
+  [
+    {
+      "id": "ALT-2026-001",
+      "sessionId": "SES-SUSPICIOUS-003",
+      "username": "lehoangnam@diachinh.gov.vn",
+      "ipAddress": "198.51.100.99",
+      "violationType": "IP_NOT_IN_WHITELIST",
+      "description": "Phát hiện đăng nhập tài khoản công chức từ địa chỉ IP ngoài mạng công vụ. Kích hoạt tạm khóa phiên bảo vệ hệ thống.",
+      "timestamp": "2026-10-22T10:00:00.000Z",
+      "auditHash": "a7b3c2d1e0f9..."
+    }
+  ]
+  ```

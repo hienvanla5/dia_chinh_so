@@ -10,12 +10,12 @@
 | Chỉ số | Số lượng | Tỷ lệ (%) | Ghi chú |
 |---|---|---|---|
 | **Tổng số User Stories** | **114** | **100%** | Toàn bộ 114 User Stories được số hóa tại `user_stories/` |
-| **Đã hoàn thành (Done)** | **4** | **3.5%** | Đã hoàn thành cả Shared, API, Web, Unit/Integration Tests & Docs |
+| **Đã hoàn thành (Done)** | **5** | **4.4%** | Đã hoàn thành cả Shared, API, Web, Unit/Integration Tests & Docs |
 | **Đang thực hiện (In Progress)** | **0** | **0.0%** | Không có Story nào đang dở dang |
-| **Chưa thực hiện (Backlog)** | **110** | **96.5%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
+| **Chưa thực hiện (Backlog)** | **109** | **95.6%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
 
-- **User Story hoàn thành gần nhất**: [`DCS-01-CN-004`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-004.md) - Tích hợp chứng thư số chuyên dùng công vụ và SmartCA (Văn phòng Đăng ký Đất đai ký số phê duyệt).
-- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-01-CN-005`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-005.md) - Phân quyền truy cập theo vai trò người dùng (RBAC) trên CSDL Thửa đất.
+- **User Story hoàn thành gần nhất**: [`DCS-01-CN-005`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-005.md) - Quản lý phiên làm việc và bảo mật xác thực 2FA.
+- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-01-CN-006`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-006.md) - Khóa và vô hiệu hóa tài khoản công vụ khi điều chuyển công tác.
 
 ---
 
@@ -27,6 +27,7 @@
 | [`DCS-01-CN-002`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-002.md) | Đăng nhập SSO tài khoản công vụ cho cán bộ ngành | 2026-10-21 | `main`<br>(`7bbcaba`, `e3024de`, `f623330`, `76a44f8`) | `POST /api/v1/auth/officer/login`<br>`POST /api/v1/auth/officer/verify-mfa` | `/login`<br>(Tab Cán bộ công vụ) | 9 tests PASS | **Hoàn thành** |
 | [`DCS-01-CN-003`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-003.md) | Phân quyền truy cập dữ liệu địa chính theo cấp hành chính (2 cấp: Tỉnh & Xã, 34 tỉnh thành) | 2026-10-21<br>*(Cập nhật 2 cấp: 2026-10-22)* | `main`<br>(`d9a5c1f`, `a4cccf3`, `65dc1ef`, `883f27d`, `da0cb46`, `655e4a0`, `b19c191`) | `GET /api/v1/jurisdiction/provinces`<br>`GET /api/v1/jurisdiction/communes`<br>`POST /api/v1/jurisdiction/verify-access`<br>`GET /api/v1/jurisdiction/officers/:id` | `/jurisdiction` | 14 tests PASS | **Hoàn thành** |
 | [`DCS-01-CN-004`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-004.md) | Tích hợp chứng thư số chuyên dùng công vụ và SmartCA | 2026-10-22 | `main`<br>(feature `DCS-01-CN-004`) | `GET /api/v1/digital-signature/certificates`<br>`GET /api/v1/digital-signature/ocsp-check/:serialNumber`<br>`GET /api/v1/digital-signature/pending-dossiers`<br>`POST /api/v1/digital-signature/sign-approval`<br>`POST /api/v1/digital-signature/verify` | `/digital-signature` | 17 tests PASS | **Hoàn thành** |
+| [`DCS-01-CN-005`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-005.md) | Quản lý phiên làm việc và bảo mật xác thực 2FA | 2026-10-22 | `main`<br>(feature `DCS-01-CN-005`) | `POST /api/v1/session-security/step-up/challenge`<br>`POST /api/v1/session-security/step-up/verify`<br>`POST /api/v1/session-security/unlock`<br>`POST /api/v1/session-security/terminate`<br>`POST /api/v1/session-security/heartbeat`<br>`GET /api/v1/session-security/active`<br>`GET /api/v1/session-security/alerts` | `/session-security` | 16 tests PASS | **Hoàn thành** |
 
 ---
 
@@ -79,6 +80,28 @@
   - `tests`: 17 test cases bao phủ đầy đủ 4 Tiêu chí chấp nhận (TC-01, TC-02, TC-03, TC-04).
 - **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#9-nhom-api-ky-so-chuyen-dung-cong-vu--smartca-digital-signature--smartca).
 
+### 3.5. [DCS-01-CN-005] Quản lý phiên làm việc và bảo mật xác thực 2FA
+- **Persona**: Quản trị viên Hệ thống (`ADMIN`) / Cán bộ công vụ
+- **Kiến trúc triển khai**:
+  - `packages/shared`:
+    - Enums `SessionStatus` (ACTIVE, LOCKED_INACTIVITY, SUSPENDED_SECURITY, TERMINATED), `SensitiveOperationType` (APPROVE_CERTIFICATE, ALTER_PARCEL_BOUNDARY, BULK_DATA_EXPORT, REVOKE_DOCUMENT).
+    - Interfaces `UserSession`, `StepUp2FaChallengeRequest/Response`, `VerifyStepUp2FaRequest/Response`, `UnlockSessionRequest/Response`, `TerminateSessionRequest/Response`, `SecurityViolationAlert`.
+    - Zod schemas `StepUp2FaChallengeSchema`, `VerifyStepUp2FaSchema`, `UnlockSessionSchema`, `TerminateSessionSchema`.
+  - `apps/api`:
+    - Service `SessionSecurityService`:
+      - Quản lý phiên công vụ, tự động khóa sau 15 phút (900s) không tương tác (inactivity timeout).
+      - Mở khóa phiên làm việc bằng PIN hoặc 2FA, đếm số lần sai; mở khóa thành công gia hạn phiên làm việc thêm 15 phút.
+      - Thử thách bảo mật 2 lớp (Step-Up 2FA Challenge) khi thao tác nhạy cảm (duyệt cấp GCN, thay đổi ranh giới thửa đất, xuất dữ liệu hàng loạt, thu hồi hồ sơ), cấp `stepUpToken` dùng một lần có hạn 5 phút.
+      - Tự động phát hiện vi phạm bảo mật theo quy tắc an toàn thông tin (QTD-22): đình chỉ phiên ngay lập tức (`SUSPENDED_SECURITY`) khi truy cập từ IP ngoài mạng công vụ hoặc nhập sai mã quá 3 lần liên tiếp.
+      - Ghi vết kiểm toán bất biến kèm mã băm SHA-256 cho toàn bộ vòng đời phiên làm việc.
+    - Controller `SessionSecurityController` cung cấp 7 REST endpoints chuẩn hóa.
+    - Module `SessionSecurityModule` tích hợp vào `AppModule`.
+  - `apps/web`:
+    - Route `/session-security` hiển thị bảng điều khiển bảo mật phiên làm việc: giám sát phiên công vụ đang hoạt động, bộ đếm ngược tự động khóa 15 phút, thao tác kiểm tra cơ chế mở khóa phiên (Unlock Modal), chạy giả lập thử thách Step-Up 2FA cho thao tác nhạy cảm, và bảng ghi nhật ký cảnh báo an ninh thời gian thực.
+    - Đảm bảo 100% ẩn các ID nội bộ kỹ thuật (`VT-xx`, `QTD-xx`, `DCS-xx`, `AC-xx`).
+  - `tests`: 16 test cases bao phủ đầy đủ 4 Tiêu chí chấp nhận (TC-01, TC-02, TC-03, TC-04).
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#10-nhom-api-quan-ly-phien-lam-viec-va-bao-mat-xac-thuc-2fa-session-security--2fa).
+
 ---
 
 ## 4. Cơ Chế Kiểm Soát Tiến Trình Dành Cho Agent (Gatekeeper Protocol)
@@ -91,9 +114,9 @@ flowchart TD
     
     CheckTable -- "ĐÃ CÓ trong bảng Đã hoàn thành" --> WarnDup["CẢNH BÁO TRÙNG LẶP (Duplicate Warning):<br>1. Thông báo Story này đã xong ngày nào, commit nào, test nào<br>2. Dừng thực thi ghi đè<br>3. Hỏi người dùng muốn chỉnh sửa chi tiết nào"]
     
-    CheckTable -- "CHƯA LÀM nhưng cách quá xa tiến trình hiện tại (Nhảy cóc)" --> WarnGap["CẢNH BÁO NHẢY CÓC (Sequence Gap Warning):<br>1. Chỉ rõ Story xong gần nhất (Anchor: DCS-01-CN-004)<br>2. Liệt kê các Story nối tiếp bị bỏ qua (DCS-01-CN-005, ...)<br>3. Cảnh báo rủi ro đứt gãy phụ thuộc dữ liệu<br>4. Đề xuất làm tuần tự Story tiếp theo hoặc chờ xác nhận"]
+    CheckTable -- "CHƯA LÀM nhưng cách quá xa tiến trình hiện tại (Nhảy cóc)" --> WarnGap["CẢNH BÁO NHẢY CÓC (Sequence Gap Warning):<br>1. Chỉ rõ Story xong gần nhất (Anchor: DCS-01-CN-005)<br>2. Liệt kê các Story nối tiếp bị bỏ qua (DCS-01-CN-006, ...)<br>3. Cảnh báo rủi ro đứt gãy phụ thuộc dữ liệu<br>4. Đề xuất làm tuần tự Story tiếp theo hoặc chờ xác nhận"]
     
-    CheckTable -- "ĐÚNG TIẾN TRÌNH TUẦN TỰ (ví dụ: DCS-01-CN-005)" --> RunStory["Thực hiện GitHub Flow theo AGENTS.md & SKILL.md"]
+    CheckTable -- "ĐÚNG TIẾN TRÌNH TUẦN TỰ (ví dụ: DCS-01-CN-006)" --> RunStory["Thực hiện GitHub Flow theo AGENTS.md & SKILL.md"]
     WarnGap -- "Người dùng vẫn xác nhận làm tiếp" --> RunStory
     
     RunStory --> Done["Kiểm thử PASS, Build PASS, Merge main, Push origin"]
@@ -112,8 +135,8 @@ flowchart TD
 - **Hành động của Agent**:
   - Không tự tiện thực thi ngay lập tức mà gửi cảnh báo phân tích cấu trúc:
     > "⚠️ **Cảnh báo tiến trình Product Backlog**:
-    > - Tiến trình hiện tại vừa hoàn thành: `[MÃ_STORY_GẦN_NHẤT]` (`DCS-01-CN-004`).
-    > - User Story tiếp theo liền kề theo thiết kế hệ thống là: `[MÃ_STORY_TIẾP_THEO]` (`DCS-01-CN-005`: Phân quyền truy cập theo vai trò người dùng RBAC trên CSDL Thửa đất).
+    > - Tiến trình hiện tại vừa hoàn thành: `[MÃ_STORY_GẦN_NHẤT]` (`DCS-01-CN-005`).
+    > - User Story tiếp theo liền kề theo thiết kế hệ thống là: `[MÃ_STORY_TIẾP_THEO]` (`DCS-01-CN-006`: Khóa và vô hiệu hóa tài khoản công vụ khi điều chuyển công tác).
     > - Yêu cầu hiện tại của bạn là `[MÃ_STORY_YÊU_CẦU]` - đang bỏ qua các bước tiền đề liền trước: `[DANH_SÁCH_STORIES_BỊ_BỎ_QUA]`.
     > - **Rủi ro kiến trúc**: `[Giải thích rõ lý do phân quyền / luồng dữ liệu...]`.
     > 
