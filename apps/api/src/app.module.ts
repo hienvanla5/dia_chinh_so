@@ -17,6 +17,7 @@ import { SessionSecurityModule } from './modules/session-security/session-securi
 import { OfficerLifecycleModule } from './modules/officer-lifecycle/officer-lifecycle.module';
 import { PasswordPolicyModule } from './modules/password-policy/password-policy.module';
 import { DelegationModule } from './modules/delegation/delegation.module';
+import { EnterpriseIdpModule } from './modules/enterprise-idp/enterprise-idp.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { DelegationModule } from './modules/delegation/delegation.module';
     OfficerLifecycleModule,
     PasswordPolicyModule,
     DelegationModule,
+    EnterpriseIdpModule,
   ],
   controllers: [AppController],
   providers: [AppService],
