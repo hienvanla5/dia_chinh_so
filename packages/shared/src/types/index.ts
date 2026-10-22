@@ -555,3 +555,74 @@ export interface ReactivateOfficerAccountResponse {
   auditHash: string;
   message: string;
 }
+
+
+// ==========================================
+// Cấu hình chính sách mật khẩu và chống tấn công dò quét (DCS-01-CN-007)
+// ==========================================
+
+export interface PasswordPolicyConfig {
+  minLength: number;                  // Độ dài tối thiểu (8 - 32 ký tự, mặc định 10)
+  requireUppercase: boolean;          // Bắt buộc chứa chữ in hoa (A-Z)
+  requireLowercase: boolean;          // Bắt buộc chứa chữ in thường (a-z)
+  requireNumbers: boolean;            // Bắt buộc chứa chữ số (0-9)
+  requireSpecialChars: boolean;       // Bắt buộc chứa ký tự đặc biệt (!@#$%^&*...)
+  passwordExpiryDays: number;         // Thời hạn đổi mật khẩu bắt buộc (ngày, ví dụ 90)
+  preventPasswordReuseCount: number;  // Số lượng mật khẩu cũ không được tái sử dụng (ví dụ 5)
+  maxFailedAttempts: number;          // Số lần đăng nhập sai tối đa trước khi khóa (ví dụ 5)
+  lockoutDurationMinutes: number;     // Thời gian khóa tài khoản & chặn IP (phút, ví dụ 30)
+  trustedIpRanges: string[];          // Dải IP công vụ tin cậy (VD: ['10.0.0.0/8', '192.168.1.0/24'])
+  updatedAt: string;
+  updatedBy: string;
+  auditHash: string;
+}
+
+export interface BlockedIpItem {
+  id: string;
+  ipAddress: string;
+  failedAttempts: number;
+  targetedUsername: string;
+  blockedAt: string;
+  expiresAt: string;
+  reason: string;
+  isPermanent: boolean;
+  auditHash: string;
+}
+
+export interface UpdatePasswordPolicyRequest {
+  minLength: number;
+  requireUppercase: boolean;
+  requireLowercase: boolean;
+  requireNumbers: boolean;
+  requireSpecialChars: boolean;
+  passwordExpiryDays: number;
+  preventPasswordReuseCount: number;
+  maxFailedAttempts: number;
+  lockoutDurationMinutes: number;
+  trustedIpRanges?: string[];
+}
+
+export interface ValidatePasswordRequest {
+  password: string;
+  username?: string;
+}
+
+export interface ValidatePasswordResponse {
+  valid: boolean;
+  score: number; // 0 - 100
+  strength: 'VERY_WEAK' | 'WEAK' | 'MEDIUM' | 'STRONG' | 'VERY_STRONG';
+  errors: string[];
+}
+
+export interface UnblockIpRequest {
+  ipAddress: string;
+  reason: string;
+}
+
+export interface UnblockIpResponse {
+  success: boolean;
+  ipAddress: string;
+  unblockedAt: string;
+  auditHash: string;
+  message: string;
+}

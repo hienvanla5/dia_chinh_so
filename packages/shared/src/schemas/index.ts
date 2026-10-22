@@ -196,3 +196,35 @@ export const ReactivateOfficerAccountSchema = z.object({
 export type DeactivateOfficerAccountInput = z.infer<typeof DeactivateOfficerAccountSchema>;
 export type TransferDossiersInput = z.infer<typeof TransferDossiersSchema>;
 export type ReactivateOfficerAccountInput = z.infer<typeof ReactivateOfficerAccountSchema>;
+
+
+// ==========================================
+// Schemas Cấu hình chính sách mật khẩu và chống tấn công dò quét (DCS-01-CN-007)
+// ==========================================
+
+export const UpdatePasswordPolicySchema = z.object({
+  minLength: z.number().int().min(8, 'Độ dài tối thiểu của mật khẩu không được nhỏ hơn 8 ký tự').max(32, 'Độ dài tối đa của mật khẩu không được vượt quá 32 ký tự'),
+  requireUppercase: z.boolean(),
+  requireLowercase: z.boolean(),
+  requireNumbers: z.boolean(),
+  requireSpecialChars: z.boolean(),
+  passwordExpiryDays: z.number().int().min(15, 'Thời hạn đổi mật khẩu tối thiểu 15 ngày').max(365, 'Thời hạn đổi mật khẩu tối đa 365 ngày'),
+  preventPasswordReuseCount: z.number().int().min(1, 'Số mật khẩu cũ không được tái sử dụng tối thiểu là 1').max(24, 'Tối đa lưu 24 mật khẩu cũ'),
+  maxFailedAttempts: z.number().int().min(3, 'Số lần đăng nhập sai tối đa từ 3 đến 10 lần').max(10, 'Số lần đăng nhập sai tối đa không quá 10 lần'),
+  lockoutDurationMinutes: z.number().int().min(5, 'Thời gian khóa tối thiểu 5 phút').max(1440, 'Thời gian khóa tối đa 1440 phút (24 giờ)'),
+  trustedIpRanges: z.array(z.string()).optional(),
+});
+
+export const ValidatePasswordSchema = z.object({
+  password: z.string().min(1, 'Mật khẩu không được để trống'),
+  username: z.string().optional(),
+});
+
+export const UnblockIpSchema = z.object({
+  ipAddress: z.string().min(7, 'Địa chỉ IP không hợp lệ'),
+  reason: z.string().min(5, 'Lý do mở khóa địa chỉ IP tối thiểu 5 ký tự'),
+});
+
+export type UpdatePasswordPolicyInput = z.infer<typeof UpdatePasswordPolicySchema>;
+export type ValidatePasswordInput = z.infer<typeof ValidatePasswordSchema>;
+export type UnblockIpInput = z.infer<typeof UnblockIpSchema>;
