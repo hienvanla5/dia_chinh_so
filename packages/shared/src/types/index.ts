@@ -802,3 +802,120 @@ export interface AssignEnterpriseStaffResponse {
   auditHash: string;
   message: string;
 }
+
+
+// ==========================================
+// Nhật ký xác thực và phát hiện cảnh báo đăng nhập bất thường (DCS-01-CN-010)
+// ==========================================
+
+export type AuthAuditLogStatus = 'SUCCESS' | 'FAILED' | 'CHALLENGED' | 'BLOCKED';
+
+export type AuthMethodType = 'CITIZEN_IDP' | 'OFFICER_SSO' | 'ENTERPRISE_TOKEN' | 'SMART_CA';
+
+export type AnomalyDetectionType = 
+  | 'IMPOSSIBLE_TRAVEL'     // Đăng nhập từ vị trí cách xa trong thời gian ngắn (ví dụ: Hà Nội -> TP.HCM trong 15 phút)
+  | 'OFF_HOURS_ACCESS'      // Đăng nhập ngoài giờ hành chính (23:00 - 05:00) đối với tài khoản công vụ
+  | 'BRUTE_FORCE_BURST'     // Dồn dập thử sai mật khẩu/OTP (>5 lần / 2 phút)
+  | 'UNTRUSTED_NETWORK'     // Đăng nhập từ IP/dải mạng ngoài mạng công vụ chuyên dùng CPNET
+  | 'SUSPICIOUS_DEVICE';    // Thiết bị truy cập lạ / User-Agent bất thường
+
+export type AnomalySeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+export type AnomalyAlertStatus = 'NEW' | 'INVESTIGATING' | 'RESOLVED' | 'FALSE_POSITIVE';
+
+export interface AuthAuditLogItem {
+  id: string;
+  timestamp: string;
+  actorId: string;
+  actorName: string;
+  actorRole: string;
+  authMethod: AuthMethodType;
+  clientIp: string;
+  location: {
+    province: string;
+    country: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  deviceInfo: string;
+  status: AuthAuditLogStatus;
+  failureReason?: string;
+  isAnomaly: boolean;
+  anomalyType?: AnomalyDetectionType;
+  previousHash: string;
+  auditHash: string;
+}
+
+export interface AnomalySecurityAlert {
+  id: string;
+  timestamp: string;
+  detectionType: AnomalyDetectionType;
+  severity: AnomalySeverity;
+  status: AnomalyAlertStatus;
+  targetActorId: string;
+  targetActorName: string;
+  targetActorRole: string;
+  clientIp: string;
+  detectedLocation: string;
+  details: string;
+  recommendedAction: string;
+  isAccountLocked: boolean;
+  isSessionTerminated: boolean;
+  requiresStepUpVerification: boolean;
+  resolvedBy?: string;
+  resolvedAt?: string;
+  resolutionNotes?: string;
+  auditHash: string;
+}
+
+export interface QueryAuthAuditLogsRequest {
+  actorId?: string;
+  role?: string;
+  status?: AuthAuditLogStatus;
+  isAnomaly?: boolean;
+  fromDate?: string;
+  toDate?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface QueryAnomalyAlertsRequest {
+  severity?: AnomalySeverity;
+  status?: AnomalyAlertStatus;
+  detectionType?: AnomalyDetectionType;
+}
+
+export interface ResolveAnomalyAlertRequest {
+  alertId: string;
+  action: 'RESOLVE_LOCK' | 'DISMISS_FALSE_POSITIVE' | 'REQUIRE_STEP_UP';
+  notes: string;
+  resolvedBy: string;
+}
+
+export interface ResolveAnomalyAlertResponse {
+  success: boolean;
+  alert: AnomalySecurityAlert;
+  auditHash: string;
+  message: string;
+}
+
+export interface SimulateAuthEventRequest {
+  actorId: string;
+  actorName: string;
+  actorRole: string;
+  authMethod: AuthMethodType;
+  clientIp: string;
+  province: string;
+  country?: string;
+  deviceInfo?: string;
+  isSuccess: boolean;
+  isOfficeHours?: boolean;
+}
+
+export interface VerifyAuditChainResponse {
+  isValid: boolean;
+  totalLogs: number;
+  brokenLogId?: string;
+  latestHash: string;
+  message: string;
+}

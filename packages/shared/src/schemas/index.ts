@@ -284,3 +284,52 @@ export const AssignEnterpriseStaffSchema = z.object({
 
 export type EnterpriseLoginInput = z.infer<typeof EnterpriseLoginSchema>;
 export type AssignEnterpriseStaffInput = z.infer<typeof AssignEnterpriseStaffSchema>;
+
+
+// ==========================================
+// Schemas Nhật ký xác thực và phát hiện cảnh báo đăng nhập bất thường (DCS-01-CN-010)
+// ==========================================
+
+export const QueryAuthAuditLogsSchema = z.object({
+  actorId: z.string().optional(),
+  role: z.string().optional(),
+  status: z.enum(['SUCCESS', 'FAILED', 'CHALLENGED', 'BLOCKED']).optional(),
+  isAnomaly: z.boolean().optional(),
+  fromDate: z.string().optional(),
+  toDate: z.string().optional(),
+  page: z.number().int().min(1).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+});
+
+export const QueryAnomalyAlertsSchema = z.object({
+  severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
+  status: z.enum(['NEW', 'INVESTIGATING', 'RESOLVED', 'FALSE_POSITIVE']).optional(),
+  detectionType: z.enum(['IMPOSSIBLE_TRAVEL', 'OFF_HOURS_ACCESS', 'BRUTE_FORCE_BURST', 'UNTRUSTED_NETWORK', 'SUSPICIOUS_DEVICE']).optional(),
+});
+
+export const ResolveAnomalyAlertSchema = z.object({
+  alertId: z.string().min(1, 'Mã cảnh báo không được để trống'),
+  action: z.enum(['RESOLVE_LOCK', 'DISMISS_FALSE_POSITIVE', 'REQUIRE_STEP_UP'], {
+    errorMap: () => ({ message: 'Hành động xử lý cảnh báo không hợp lệ' })
+  }),
+  notes: z.string().min(5, 'Ghi chú xử lý cảnh báo tối thiểu 5 ký tự'),
+  resolvedBy: z.string().min(1, 'Người xử lý cảnh báo không được để trống'),
+});
+
+export const SimulateAuthEventSchema = z.object({
+  actorId: z.string().min(1, 'Mã người dùng không được để trống'),
+  actorName: z.string().min(2, 'Tên người dùng tối thiểu 2 ký tự'),
+  actorRole: z.string().min(1, 'Vai trò không được để trống'),
+  authMethod: z.enum(['CITIZEN_IDP', 'OFFICER_SSO', 'ENTERPRISE_TOKEN', 'SMART_CA']),
+  clientIp: z.string().min(7, 'Địa chỉ IP không hợp lệ'),
+  province: z.string().min(2, 'Tên tỉnh thành không được để trống'),
+  country: z.string().optional(),
+  deviceInfo: z.string().optional(),
+  isSuccess: z.boolean(),
+  isOfficeHours: z.boolean().optional(),
+});
+
+export type QueryAuthAuditLogsInput = z.infer<typeof QueryAuthAuditLogsSchema>;
+export type QueryAnomalyAlertsInput = z.infer<typeof QueryAnomalyAlertsSchema>;
+export type ResolveAnomalyAlertInput = z.infer<typeof ResolveAnomalyAlertSchema>;
+export type SimulateAuthEventInput = z.infer<typeof SimulateAuthEventSchema>;
