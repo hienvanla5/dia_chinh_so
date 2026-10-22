@@ -10,12 +10,12 @@
 | Chỉ số | Số lượng | Tỷ lệ (%) | Ghi chú |
 |---|---|---|---|
 | **Tổng số User Stories** | **114** | **100%** | Toàn bộ 114 User Stories được số hóa tại `user_stories/` |
-| **Đã hoàn thành (Done)** | **8** | **7.0%** | Đã hoàn thành cả Shared, API, Web, Unit/Integration Tests & Docs |
+| **Đã hoàn thành (Done)** | **9** | **7.9%** | Đã hoàn thành cả Shared, API, Web, Unit/Integration Tests & Docs |
 | **Đang thực hiện (In Progress)** | **0** | **0.0%** | Không có Story nào đang dở dang |
-| **Chưa thực hiện (Backlog)** | **106** | **93.0%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
+| **Chưa thực hiện (Backlog)** | **105** | **92.1%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
 
-- **User Story hoàn thành gần nhất**: [`DCS-01-CN-008`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-008.md) - Quản lý ủy quyền giải quyết hồ sơ địa chính có thời hạn.
-- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-01-CN-009`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-009.md) - Đăng nhập và phân quyền tài khoản tổ chức qua Cổng Định danh Doanh nghiệp.
+- **User Story hoàn thành gần nhất**: [`DCS-01-CN-009`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-009.md) - Đăng nhập và phân quyền tài khoản tổ chức qua Cổng Định danh Doanh nghiệp.
+- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-01-CN-010`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-010.md) - Nhật ký xác thực và phát hiện cảnh báo đăng nhập bất thường.
 
 ---
 
@@ -31,6 +31,7 @@
 | [`DCS-01-CN-006`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-006.md) | Khóa và vô hiệu hóa tài khoản công vụ khi điều chuyển công tác | 2026-10-22 | `main`<br>(feature `DCS-01-CN-006`) | `GET /api/v1/officer-lifecycle/officers`<br>`GET /api/v1/officer-lifecycle/officers/:id`<br>`GET /api/v1/officer-lifecycle/officers/:id/eligible-transferees`<br>`POST /api/v1/officer-lifecycle/deactivate`<br>`POST /api/v1/officer-lifecycle/transfer-dossiers`<br>`POST /api/v1/officer-lifecycle/reactivate`<br>`GET /api/v1/officer-lifecycle/audit-logs` | `/officer-lifecycle` | 15 tests PASS | **Hoàn thành** |
 | [`DCS-01-CN-007`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-007.md) | Cấu hình chính sách mật khẩu và chống tấn công dò quét | 2026-10-22 | `main`<br>(feature `DCS-01-CN-007`) | `GET /api/v1/password-policy/config`<br>`PUT /api/v1/password-policy/config`<br>`POST /api/v1/password-policy/validate-password`<br>`GET /api/v1/password-policy/blocked-ips`<br>`POST /api/v1/password-policy/unblock-ip`<br>`GET /api/v1/password-policy/audit-logs` | `/password-policy` | 12 tests PASS | **Hoàn thành** |
 | [`DCS-01-CN-008`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-008.md) | Quản lý ủy quyền giải quyết hồ sơ địa chính có thời hạn | 2026-10-22 | `main`<br>(feature `DCS-01-CN-008`) | `GET /api/v1/delegation/list`<br>`GET /api/v1/delegation/:id`<br>`POST /api/v1/delegation/create`<br>`POST /api/v1/delegation/revoke`<br>`POST /api/v1/delegation/verify-access`<br>`GET /api/v1/delegation/audit/logs` | `/delegation` | 8 tests PASS | **Hoàn thành** |
+| [`DCS-01-CN-009`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-009.md) | Đăng nhập và phân quyền tài khoản tổ chức qua Cổng Định danh Doanh nghiệp | 2026-10-22 | `main`<br>(feature `DCS-01-CN-009`) | `POST /api/v1/enterprise-idp/login`<br>`GET /api/v1/enterprise-idp/profile/:taxCode`<br>`GET /api/v1/enterprise-idp/parcels/:taxCode`<br>`POST /api/v1/enterprise-idp/staff/assign`<br>`POST /api/v1/enterprise-idp/staff/remove`<br>`GET /api/v1/enterprise-idp/audit/logs` | `/enterprise` | 10 tests PASS | **Hoàn thành** |
 
 ---
 
@@ -169,6 +170,27 @@
   - `tests`: 8 test cases bao phủ đầy đủ 4 Tiêu chí chấp nhận (TC-01, TC-02, TC-03, TC-04).
 - **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#13-nhom-api-quan-ly-uy-quyen-giai-quyet-ho-so-dia-chinh-co-thoi-han-timed-delegation).
 
+### 3.9. [DCS-01-CN-009] Đăng nhập và phân quyền tài khoản tổ chức qua Cổng Định danh Doanh nghiệp
+- **Persona**: Chủ sử dụng đất (Doanh nghiệp, Tổ chức kinh tế)
+- **Kiến trúc triển khai**:
+  - `packages/shared`:
+    - Enums `EnterpriseStaffPermission` (SUBMIT_DOSSIER, TRACK_PROGRESS, VIEW_LAND_DATA, REQUEST_CERTIFICATE_EXTRACT, PAY_LAND_TAX), `EnterpriseAuthMethod` (USB_TOKEN, HSM_CLOUD).
+    - Interfaces `EnterpriseStaffMember`, `EnterpriseProjectParcel`, `EnterpriseAccount`, `EnterpriseLoginRequest/Response`, `AssignEnterpriseStaffRequest/Response`, `RemoveEnterpriseStaffRequest/Response`.
+    - Zod schemas `EnterpriseLoginSchema`, `AssignEnterpriseStaffSchema`, `RemoveEnterpriseStaffSchema`.
+  - `apps/api`:
+    - Service `EnterpriseIdpService`:
+      - Xác thực đăng nhập doanh nghiệp bằng Mã số thuế và Chữ ký số USB Token / HSM (PKCS#11).
+      - Tra cứu danh mục các thửa đất dự án do doanh nghiệp đứng tên quyền sử dụng hợp pháp (chặn truy cập thửa đất ngoài phạm vi dự án).
+      - Phân quyền cho nhân sự nội bộ (Chuyên viên Pháp lý Dự án, Giám đốc Phát triển Dự án) nộp và theo dõi tiến độ hồ sơ địa chính kèm thời hạn phân quyền.
+      - Thu hồi quyền nhân sự và ghi nhận nhật ký kiểm toán bất biến SHA-256.
+    - Controller `EnterpriseIdpController` cung cấp 6 REST endpoints chuẩn hóa.
+    - Module `EnterpriseIdpModule` tích hợp vào `AppModule`.
+  - `apps/web`:
+    - Route `/enterprise`: Cổng thông tin đất đai doanh nghiệp trực tuyến, xác thực chứng thư số doanh nghiệp, thẻ thông tin đại diện pháp luật, bảng danh mục thửa đất dự án, giao diện phân quyền nhân sự kèm bộ chọn quyền hạn, và bảng nhật ký kiểm toán bất biến.
+    - Đảm bảo 100% ẩn các ID nội bộ kỹ thuật (`VT-xx`, `QTD-xx`, `DCS-xx`, `AC-xx`).
+  - `tests`: 10 test cases bao phủ đầy đủ 4 Tiêu chí chấp nhận (TC-01, TC-02, TC-03, TC-04).
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#14-nhom-api-dang-nhap--phan-quyen-tai-khoan-to-chuc-qua-cong-dinh-danh-doanh-nghiep-dcs-01-cn-009).
+
 ---
 
 ## 4. Cơ Chế Kiểm Soát Tiến Trình Dành Cho Agent (Gatekeeper Protocol)
@@ -181,9 +203,9 @@ flowchart TD
     
     CheckTable -- "ĐÃ CÓ trong bảng Đã hoàn thành" --> WarnDup["CẢNH BÁO TRÙNG LẶP (Duplicate Warning):<br>1. Thông báo Story này đã xong ngày nào, commit nào, test nào<br>2. Dừng thực thi ghi đè<br>3. Hỏi người dùng muốn chỉnh sửa chi tiết nào"]
     
-    CheckTable -- "CHƯA LÀM nhưng cách quá xa tiến trình hiện tại (Nhảy cóc)" --> WarnGap["CẢNH BÁO NHẢY CÓC (Sequence Gap Warning):<br>1. Chỉ rõ Story xong gần nhất (Anchor: DCS-01-CN-008)<br>2. Liệt kê các Story nối tiếp bị bỏ qua (DCS-01-CN-009, ...)<br>3. Cảnh báo rủi ro đứt gãy phụ thuộc dữ liệu<br>4. Đề xuất làm tuần tự Story tiếp theo hoặc chờ xác nhận"]
+    CheckTable -- "CHƯA LÀM nhưng cách quá xa tiến trình hiện tại (Nhảy cóc)" --> WarnGap["CẢNH BÁO NHẢY CÓC (Sequence Gap Warning):<br>1. Chỉ rõ Story xong gần nhất (Anchor: DCS-01-CN-009)<br>2. Liệt kê các Story nối tiếp bị bỏ qua (DCS-01-CN-010, ...)<br>3. Cảnh báo rủi ro đứt gãy phụ thuộc dữ liệu<br>4. Đề xuất làm tuần tự Story tiếp theo hoặc chờ xác nhận"]
     
-    CheckTable -- "ĐÚNG TIẾN TRÌNH TUẦN TỰ (ví dụ: DCS-01-CN-009)" --> RunStory["Thực hiện GitHub Flow theo AGENTS.md & SKILL.md"]
+    CheckTable -- "ĐÚNG TIẾN TRÌNH TUẦN TỰ (ví dụ: DCS-01-CN-010)" --> RunStory["Thực hiện GitHub Flow theo AGENTS.md & SKILL.md"]
     WarnGap -- "Người dùng vẫn xác nhận làm tiếp" --> RunStory
     
     RunStory --> Done["Kiểm thử PASS, Build PASS, Merge main, Push origin"]

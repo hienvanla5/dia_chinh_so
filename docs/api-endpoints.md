@@ -1150,3 +1150,103 @@ sequenceDiagram
 - **Method**: `GET`
 - **Path**: `/api/v1/delegation/audit/logs`
 - **Response `200 OK`**: Danh sách lịch sử ban hành và thu hồi ủy quyền kèm mã băm SHA-256.
+
+
+---
+
+## 14. Nhóm API Đăng Nhập & Phân Quyền Tài Khoản Tổ Chức Qua Cổng Định Danh Doanh Nghiệp [DCS-01-CN-009]
+
+### 14.1. [DCS-01-CN-009] Đăng nhập Cổng Định danh Doanh nghiệp qua Mã số thuế và USB Token / HSM
+- **Method**: `POST`
+- **Path**: `/api/v1/enterprise-idp/login`
+- **Yêu cầu quyền (RBAC)**: Public / Doanh nghiệp
+- **Request Body**:
+  ```json
+  {
+    "taxCode": "0101234567",
+    "authMethod": "USB_TOKEN",
+    "tokenSerial": "VNP-CA-ENT-001928",
+    "signature": "SIG_RSA2048_ENT_0101234567_SAMPLE_HASH_APPROVED"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "accessToken": "ey...",
+    "enterprise": {
+      "id": "ENT-0101234567",
+      "taxCode": "0101234567",
+      "enterpriseName": "Tập đoàn Đầu tư Phát triển Đô thị Thủ Đô",
+      "legalRepresentativeName": "Nguyễn Thế Hưng",
+      "legalRepresentativeCitizenId": "001080009988",
+      "headquartersAddress": "Số 18 Hoàng Diệu, Phường Điện Biên, Tỉnh Hà Nội",
+      "authMethod": "USB_TOKEN",
+      "tokenSerial": "VNP-CA-ENT-001928",
+      "isVerifiedTaxAuthority": true
+    },
+    "projectParcels": [
+      {
+        "id": "EP-01",
+        "parcelCode": "01001-0025-0010",
+        "projectName": "Khu đô thị sinh thái Sông Hồng",
+        "areaSquareMeters": 45200.5,
+        "purposeOfUse": "Đất thương mại, dịch vụ",
+        "legalStatus": "Đã cấp Giấy chứng nhận quyền sử dụng đất",
+        "isLocked": false
+      }
+    ],
+    "message": "Đăng nhập Cổng Định danh Doanh nghiệp thành công"
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Mã số thuế không đúng định dạng (10 hoặc 13 chữ số), hoặc thiếu chữ ký số xác thực.
+  - `404 Not Found`: Không tìm thấy doanh nghiệp trong cơ sở dữ liệu quốc gia đăng ký doanh nghiệp.
+
+### 14.2. [DCS-01-CN-009] Lấy thông tin hồ sơ doanh nghiệp & danh sách nhân viên được phân quyền
+- **Method**: `GET`
+- **Path**: `/api/v1/enterprise-idp/profile/:taxCode`
+- **Response `200 OK`**: Thông tin doanh nghiệp, danh sách nhân viên ủy quyền và danh sách thửa đất dự án.
+
+### 14.3. [DCS-01-CN-009] Lấy danh sách thửa đất thuộc quyền sử dụng hợp pháp của doanh nghiệp
+- **Method**: `GET`
+- **Path**: `/api/v1/enterprise-idp/parcels/:taxCode`
+- **Response `200 OK`**: Danh mục các thửa đất dự án do doanh nghiệp đứng tên kèm diện tích và tình trạng pháp lý (không hiển thị thửa đất ngoài phạm vi dự án).
+
+### 14.4. [DCS-01-CN-009] Phân quyền cho nhân sự nội bộ nộp/tra cứu hồ sơ địa chính dự án
+- **Method**: `POST`
+- **Path**: `/api/v1/enterprise-idp/staff/assign`
+- **Request Body**:
+  ```json
+  {
+    "taxCode": "0101234567",
+    "staffCitizenId": "001095001234",
+    "staffFullName": "Trần Thị Thu Trang",
+    "staffRole": "Chuyên viên Pháp lý Dự án",
+    "assignedParcelIds": ["EP-01"],
+    "permissions": ["SUBMIT_DOSSIER", "TRACK_PROGRESS", "VIEW_LAND_DATA"],
+    "validUntil": "2027-12-31T23:59:59.000Z"
+  }
+  ```
+- **Response `200 OK`**: Phân quyền nhân sự thành công kèm mã băm SHA-256 bất biến.
+- **Mã lỗi**:
+  - `400 Bad Request`: Số CCCD không hợp lệ hoặc thời hạn phân quyền đã qua.
+  - `404 Not Found`: Doanh nghiệp không tồn tại.
+
+### 14.5. [DCS-01-CN-009] Thu hồi quyền nộp/tra cứu hồ sơ địa chính của nhân sự
+- **Method**: `POST`
+- **Path**: `/api/v1/enterprise-idp/staff/remove`
+- **Request Body**:
+  ```json
+  {
+    "taxCode": "0101234567",
+    "staffCitizenId": "001095001234",
+    "reason": "Điều chuyển nhân sự sang dự án khác"
+  }
+  ```
+- **Response `200 OK`**: Thu hồi quyền nhân viên thành công kèm mã băm SHA-256 ghi nhận vào nhật ký kiểm toán.
+
+### 14.6. [DCS-01-CN-009] Tra cứu nhật ký kiểm toán phân quyền doanh nghiệp
+- **Method**: `GET`
+- **Path**: `/api/v1/enterprise-idp/audit/logs`
+- **Response `200 OK`**: Danh sách lịch sử phân quyền và thu hồi quyền nhân viên của doanh nghiệp.
