@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import Navbar from '@/components/layout/Navbar';
+
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -311,11 +311,11 @@ export default function DigitalSignaturePage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      <Navbar />
+    <div className="space-y-6">
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Banner tiêu đề trang trang trọng */}
+
+
+      {/* Banner tiêu đề trang trang trọng */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs">
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-950 font-heading tracking-tight">
             Ký Số Chuyên Dùng Công Vụ & SmartCA
@@ -545,7 +545,7 @@ export default function DigitalSignaturePage() {
             )}
           </CardContent>
         </Card>
-      </main>
+
 
       {/* MODAL KÝ SỐ PHÊ DUYỆT */}
       {isSignModalOpen && selectedDossier && (

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Navbar from '@/components/layout/Navbar';
+
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
@@ -358,11 +358,11 @@ export default function JurisdictionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
-      <Navbar />
+    <div className="space-y-6">
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* Tiêu đề trang */}
+
+
+      {/* Tiêu đề trang */}
         <div className="space-y-1">
           <h1 className="text-2xl font-extrabold text-slate-950 tracking-tight font-heading">
             Phân quyền Địa giới Hành chính 2 cấp
@@ -802,7 +802,7 @@ export default function JurisdictionPage() {
             </div>
           </div>
         )}
-      </main>
+
     </div>
   );
 }
