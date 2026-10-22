@@ -867,3 +867,97 @@ sequenceDiagram
     }
   ]
   ```
+
+
+---
+
+## 11. Nhóm API Quản Lý Vòng Đời & Điều Chuyển Cán Bộ Công Vụ (Officer Lifecycle & Account Deactivation)
+**Prefix**: `/api/v1/officer-lifecycle` | **Tags**: `Quản lý Vòng đời & Điều chuyển Cán bộ Công vụ (DCS-01-CN-006)`
+
+### 11.1. [DCS-01-CN-006] Tra cứu danh sách tài khoản cán bộ công vụ
+- **Method**: `GET`
+- **Path**: `/api/v1/officer-lifecycle/officers`
+- **Query Params**:
+  - `unitCode?: string`: Mã đơn vị hành chính
+  - `role?: UserRole`: Vai trò nghiệp vụ
+  - `status?: OfficerAccountStatus`: Trạng thái (`ACTIVE`, `TRANSFERRED`, `SUSPENDED_DISCIPLINE`, `DISMISSED`, `RESIGNED`)
+  - `search?: string`: Từ khóa tìm kiếm họ tên, mã cán bộ, email
+- **Response `200 OK`**: Danh sách cán bộ kèm số lượng hồ sơ dở dang và thông tin quyết định điều chuyển nếu có.
+
+### 11.2. [DCS-01-CN-006] Tra cứu chi tiết một hồ sơ cán bộ công vụ
+- **Method**: `GET`
+- **Path**: `/api/v1/officer-lifecycle/officers/:id`
+- **Response `200 OK`**: Chi tiết thông tin công tác, đơn vị hành chính và lịch sử điều chuyển.
+
+### 11.3. [DCS-01-CN-006] Lấy danh sách cán bộ đủ điều kiện nhận bàn giao hồ sơ
+- **Method**: `GET`
+- **Path**: `/api/v1/officer-lifecycle/officers/:id/eligible-transferees`
+- **Response `200 OK`**: Danh sách các cán bộ cùng cấp hoặc cùng đơn vị đang ở trạng thái hoạt động bình thường (`ACTIVE`).
+
+### 11.4. [DCS-01-CN-006] Khóa và vô hiệu hóa tài khoản công vụ khi điều chuyển, kỷ luật, thôi việc
+- **Method**: `POST`
+- **Path**: `/api/v1/officer-lifecycle/deactivate`
+- **Header**: `Authorization: Bearer <Admin_Token>`
+- **Request Body**:
+  ```json
+  {
+    "officerId": "OFF-HN-001",
+    "decisionNumber": "QĐ-2026/088/UBND-HN",
+    "decisionDate": "2026-10-22",
+    "issuingAuthority": "UBND Thành phố Hà Nội",
+    "reasonType": "TRANSFER",
+    "reasonDetail": "Điều động công tác sang Sở Xây dựng theo đề án luân chuyển",
+    "transfereeOfficerId": "OFF-HN-002"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "officerId": "OFF-HN-001",
+    "officerName": "Nguyễn Văn An",
+    "newStatus": "TRANSFERRED",
+    "terminatedSessionsCount": 1,
+    "reassignedDossiersCount": 4,
+    "transfereeOfficerName": "Trần Thị Bích",
+    "auditHash": "463eb3edcaa50d4a6bf2025bc3aa3691d908afeab76efaaa1533cc91b0286544",
+    "deactivatedAt": "2026-10-22T10:30:00.000Z",
+    "message": "Đã vô hiệu hóa tài khoản cán bộ công vụ thành công theo quyết định QĐ-2026/088/UBND-HN"
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Thiếu thông tin quyết định hành chính, ngày sai định dạng, hoặc cán bộ đang giữ hồ sơ dở dang nhưng không chỉ định cán bộ bàn giao. Quản trị viên tự khóa tài khoản của chính mình (Self-lockout).
+  - `403 Forbidden`: Người gửi không có vai trò Quản trị viên Hệ thống (`ADMIN`).
+  - `404 Not Found`: Không tìm thấy mã cán bộ hoặc cán bộ tiếp nhận.
+  - `409 Conflict`: Tài khoản đã ở trạng thái mục tiêu.
+
+### 11.5. [DCS-01-CN-006] Chuyển giao hồ sơ địa chính giữa 2 cán bộ công vụ
+- **Method**: `POST`
+- **Path**: `/api/v1/officer-lifecycle/transfer-dossiers`
+- **Request Body**:
+  ```json
+  {
+    "fromOfficerId": "OFF-HN-001",
+    "toOfficerId": "OFF-HN-002",
+    "reason": "Bàn giao hồ sơ theo quyết định điều động công tác"
+  }
+  ```
+- **Response `200 OK`**: Chuyển giao hồ sơ thành công kèm mã băm SHA-256.
+
+### 11.6. [DCS-01-CN-006] Khôi phục tài khoản cán bộ công vụ
+- **Method**: `POST`
+- **Path**: `/api/v1/officer-lifecycle/reactivate`
+- **Request Body**:
+  ```json
+  {
+    "officerId": "OFF-NB-001",
+    "decisionNumber": "QĐ-2026/999/UBND-NB-TIEP-NHAN",
+    "reinstatementReason": "Quyết định tiếp nhận cán bộ trở lại vị trí công tác"
+  }
+  ```
+- **Response `200 OK`**: Khôi phục trạng thái `ACTIVE` kèm mã băm SHA-256.
+
+### 11.7. [DCS-01-CN-006] Tra cứu nhật ký kiểm toán điều chuyển nhân sự
+- **Method**: `GET`
+- **Path**: `/api/v1/officer-lifecycle/audit-logs`
+- **Response `200 OK`**: Danh sách lịch sử điều chuyển, vô hiệu hóa, bàn giao hồ sơ kèm mã băm SHA-256.
