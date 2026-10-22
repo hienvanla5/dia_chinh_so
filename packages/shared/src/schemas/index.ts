@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction, DigitalSignatureProvider, SignatureStandard, OcspCertificateStatus, SessionStatus, SensitiveOperationType, OfficerAccountStatus, DeactivationReasonType, DelegationScope, DelegationStatus } from '../types';
+import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction, DigitalSignatureProvider, SignatureStandard, OcspCertificateStatus, SessionStatus, SensitiveOperationType, OfficerAccountStatus, DeactivationReasonType, DelegationScope, DelegationStatus, EnterpriseStaffPermission } from '../types';
 
 // Schema xác thực Mock CCCD / Sandbox IdP
 export const CitizenAuthSchema = z.object({
@@ -257,3 +257,30 @@ export const VerifyDelegationAccessSchema = z.object({
 export type CreateDelegationInput = z.infer<typeof CreateDelegationSchema>;
 export type RevokeDelegationInput = z.infer<typeof RevokeDelegationSchema>;
 export type VerifyDelegationAccessInput = z.infer<typeof VerifyDelegationAccessSchema>;
+
+
+// ==========================================
+// Schemas Đăng nhập và phân quyền tài khoản tổ chức qua Cổng Định danh Doanh nghiệp (DCS-01-CN-009)
+// ==========================================
+
+export const EnterpriseLoginSchema = z.object({
+  taxId: z.string().regex(/^\d{10}(-\d{3})?$/, 'Mã số thuế doanh nghiệp phải gồm 10 hoặc 13 chữ số'),
+  authMethod: z.enum(['DIGITAL_SIGNATURE', 'REPRESENTATIVE_OTP']),
+  digitalSignatureCertSerial: z.string().optional(),
+  otpCode: z.string().optional(),
+});
+
+export const AssignEnterpriseStaffSchema = z.object({
+  enterpriseId: z.string().min(1, 'Mã doanh nghiệp không được để trống'),
+  fullName: z.string().min(2, 'Họ tên nhân viên tối thiểu 2 ký tự'),
+  citizenId: z.string().length(12, 'Số CCCD nhân viên phải gồm đúng 12 chữ số').regex(/^\d{12}$/, 'CCCD chỉ chứa ký tự số'),
+  email: z.string().email('Địa chỉ email không hợp lệ'),
+  phoneNumber: z.string().regex(/^(0|\+84)\d{9,10}$/, 'Số điện thoại không hợp lệ'),
+  department: z.string().min(2, 'Phòng ban công tác tối thiểu 2 ký tự'),
+  position: z.string().min(2, 'Chức vụ tối thiểu 2 ký tự'),
+  permissions: z.array(z.nativeEnum(EnterpriseStaffPermission, { errorMap: () => ({ message: 'Quyền hạn không hợp lệ' }) }))
+    .min(1, 'Phải phân công ít nhất một quyền hạn xử lý hồ sơ'),
+});
+
+export type EnterpriseLoginInput = z.infer<typeof EnterpriseLoginSchema>;
+export type AssignEnterpriseStaffInput = z.infer<typeof AssignEnterpriseStaffSchema>;

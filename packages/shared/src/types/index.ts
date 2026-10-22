@@ -710,3 +710,95 @@ export interface VerifyDelegationAccessResponse {
   signingTitle: string;
   message: string;
 }
+
+
+// ==========================================
+// Đăng nhập và phân quyền tài khoản tổ chức qua Cổng Định danh Doanh nghiệp (DCS-01-CN-009)
+// ==========================================
+
+export enum EnterpriseStaffPermission {
+  SUBMIT_DOSSIER = 'SUBMIT_DOSSIER',           // Nộp hồ sơ thủ tục đất đai dự án
+  VIEW_PARCELS = 'VIEW_PARCELS',               // Tra cứu CSDL thửa đất dự án
+  SUPPLEMENT_DOCS = 'SUPPLEMENT_DOCS',         // Bổ sung hồ sơ tài liệu theo yêu cầu
+  MANAGE_PAYMENTS = 'MANAGE_PAYMENTS',         // Nộp phí, lệ phí & nghĩa vụ tài chính đất đai
+}
+
+export interface EnterpriseStaffMember {
+  id: string;
+  fullName: string;
+  citizenId: string;
+  email: string;
+  phoneNumber: string;
+  department: string;
+  position: string;
+  permissions: EnterpriseStaffPermission[];
+  status: 'ACTIVE' | 'INACTIVE';
+  assignedAt: string;
+}
+
+export interface EnterpriseProjectParcel {
+  parcelId: string;
+  nationalCode: string;
+  projectName: string;
+  areaM2: number;
+  purposeCode: string;
+  location: string;
+  landAllocationDecision: string;
+  landUseTerm: string;
+  certificateNumber?: string;
+  status: 'ALLOCATED' | 'LEASED' | 'PENDING_APPROVAL';
+}
+
+export interface EnterpriseAccount {
+  id: string;
+  taxId: string;                        // Mã số thuế doanh nghiệp (10 hoặc 13 số)
+  enterpriseName: string;               // Tên doanh nghiệp
+  representativeName: string;           // Người đại diện theo pháp luật
+  representativeCitizenId: string;      // CCCD người đại diện
+  headquartersAddress: string;          // Địa chỉ trụ sở chính
+  phoneNumber: string;
+  email: string;
+  digitalCertificateSerial?: string;
+  projectParcels: EnterpriseProjectParcel[];
+  staffMembers: EnterpriseStaffMember[];
+}
+
+export interface EnterpriseLoginRequest {
+  taxId: string;
+  authMethod: 'DIGITAL_SIGNATURE' | 'REPRESENTATIVE_OTP';
+  digitalSignatureCertSerial?: string;
+  otpCode?: string;
+}
+
+export interface EnterpriseLoginResponse {
+  accessToken: string;
+  enterprise: {
+    id: string;
+    taxId: string;
+    enterpriseName: string;
+    representativeName: string;
+    headquartersAddress: string;
+    parcelCount: number;
+    staffCount: number;
+  };
+  auditHash: string;
+  message: string;
+}
+
+export interface AssignEnterpriseStaffRequest {
+  enterpriseId: string;
+  fullName: string;
+  citizenId: string;
+  email: string;
+  phoneNumber: string;
+  department: string;
+  position: string;
+  permissions: EnterpriseStaffPermission[];
+}
+
+export interface AssignEnterpriseStaffResponse {
+  success: boolean;
+  staff: EnterpriseStaffMember;
+  auditHash: string;
+  message: string;
+}
