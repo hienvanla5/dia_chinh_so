@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction, DigitalSignatureProvider, SignatureStandard, OcspCertificateStatus, SessionStatus, SensitiveOperationType, OfficerAccountStatus, DeactivationReasonType } from '../types';
+import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction, DigitalSignatureProvider, SignatureStandard, OcspCertificateStatus, SessionStatus, SensitiveOperationType, OfficerAccountStatus, DeactivationReasonType, DelegationScope, DelegationStatus } from '../types';
 
 // Schema xác thực Mock CCCD / Sandbox IdP
 export const CitizenAuthSchema = z.object({
@@ -228,3 +228,32 @@ export const UnblockIpSchema = z.object({
 export type UpdatePasswordPolicyInput = z.infer<typeof UpdatePasswordPolicySchema>;
 export type ValidatePasswordInput = z.infer<typeof ValidatePasswordSchema>;
 export type UnblockIpInput = z.infer<typeof UnblockIpSchema>;
+
+
+// ==========================================
+// Schemas Quản lý ủy quyền giải quyết hồ sơ địa chính có thời hạn (DCS-01-CN-008)
+// ==========================================
+
+export const CreateDelegationSchema = z.object({
+  documentNumber: z.string().min(3, 'Số văn bản ủy quyền tối thiểu 3 ký tự'),
+  title: z.string().min(5, 'Trích yếu văn bản ủy quyền tối thiểu 5 ký tự'),
+  delegateeId: z.string().min(1, 'Mã cán bộ được ủy quyền không được để trống'),
+  scope: z.nativeEnum(DelegationScope, { errorMap: () => ({ message: 'Phạm vi ủy quyền không hợp lệ' }) }),
+  startDate: z.string().min(10, 'Thời điểm bắt đầu ủy quyền không được để trống'),
+  endDate: z.string().min(10, 'Thời điểm kết thúc ủy quyền không được để trống'),
+  notes: z.string().optional(),
+});
+
+export const RevokeDelegationSchema = z.object({
+  delegationId: z.string().min(1, 'Mã văn bản ủy quyền không được để trống'),
+  reason: z.string().min(5, 'Lý do thu hồi ủy quyền tối thiểu 5 ký tự'),
+});
+
+export const VerifyDelegationAccessSchema = z.object({
+  officerId: z.string().min(1, 'Mã cán bộ không được để trống'),
+  requiredScope: z.nativeEnum(DelegationScope, { errorMap: () => ({ message: 'Phạm vi thẩm quyền yêu cầu không hợp lệ' }) }),
+});
+
+export type CreateDelegationInput = z.infer<typeof CreateDelegationSchema>;
+export type RevokeDelegationInput = z.infer<typeof RevokeDelegationSchema>;
+export type VerifyDelegationAccessInput = z.infer<typeof VerifyDelegationAccessSchema>;

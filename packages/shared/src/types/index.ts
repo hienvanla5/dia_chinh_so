@@ -626,3 +626,87 @@ export interface UnblockIpResponse {
   auditHash: string;
   message: string;
 }
+
+
+// ==========================================
+// Quản lý ủy quyền giải quyết hồ sơ địa chính có thời hạn (DCS-01-CN-008)
+// ==========================================
+
+export enum DelegationScope {
+  ALL_DOSSIERS = 'ALL_DOSSIERS',                   // Toàn bộ thẩm quyền giải quyết hồ sơ địa chính
+  APPROVE_CERTIFICATE = 'APPROVE_CERTIFICATE',     // Duyệt ký Giấy chứng nhận (Sổ Đỏ Số)
+  SIGN_TRANSFER = 'SIGN_TRANSFER',                 // Ký biến động chuyển nhượng / thế chấp
+  SIGN_SURVEY_EXTRACT = 'SIGN_SURVEY_EXTRACT',     // Ký trích lục / trích đo bản đồ địa chính
+}
+
+export enum DelegationStatus {
+  ACTIVE = 'ACTIVE',       // Đang có hiệu lực
+  PENDING = 'PENDING',     // Chưa đến thời điểm bắt đầu
+  EXPIRED = 'EXPIRED',     // Đã hết thời hạn ủy quyền
+  REVOKED = 'REVOKED',     // Thu hồi trước thời hạn
+}
+
+export interface DelegationDocument {
+  id: string;
+  documentNumber: string;               // Số văn bản ủy quyền (VD: QĐ-UQ-2026/015/VPDKDD)
+  title: string;                        // Trích yếu văn bản
+  delegatorId: string;                  // Cán bộ ủy quyền (Lãnh đạo cấp trưởng)
+  delegatorName: string;
+  delegatorTitle: string;
+  delegateeId: string;                  // Cán bộ được ủy quyền (Cấp phó)
+  delegateeName: string;
+  delegateeTitle: string;
+  signingPrefix: string;                // Tiêu đề ký (Mặc định: 'KT. GIÁM ĐỐC - PHÓ GIÁM ĐỐC')
+  scope: DelegationScope;               // Phạm vi ủy quyền
+  startDate: string;                    // Thời điểm bắt đầu (ISO string)
+  endDate: string;                      // Thời điểm kết thúc (ISO string)
+  status: DelegationStatus;
+  notes?: string;
+  revocationReason?: string;
+  revokedAt?: string;
+  revokedBy?: string;
+  auditHash: string;
+  createdAt: string;
+}
+
+export interface CreateDelegationRequest {
+  documentNumber: string;
+  title: string;
+  delegateeId: string;
+  scope: DelegationScope;
+  startDate: string;
+  endDate: string;
+  notes?: string;
+}
+
+export interface CreateDelegationResponse {
+  success: boolean;
+  delegation: DelegationDocument;
+  auditHash: string;
+  message: string;
+}
+
+export interface RevokeDelegationRequest {
+  delegationId: string;
+  reason: string;
+}
+
+export interface RevokeDelegationResponse {
+  success: boolean;
+  delegationId: string;
+  revokedAt: string;
+  auditHash: string;
+  message: string;
+}
+
+export interface VerifyDelegationAccessRequest {
+  officerId: string;
+  requiredScope: DelegationScope;
+}
+
+export interface VerifyDelegationAccessResponse {
+  hasDelegation: boolean;
+  delegation?: DelegationDocument;
+  signingTitle: string;
+  message: string;
+}
