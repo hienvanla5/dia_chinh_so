@@ -12,6 +12,7 @@ import { CertificateModule } from './modules/certificate/certificate.module';
 import { DossierModule } from './modules/dossier/dossier.module';
 import { SpatialModule } from './modules/spatial/spatial.module';
 import { JurisdictionModule } from './modules/jurisdiction/jurisdiction.module';
+import { DigitalSignatureModule } from './modules/digital-signature/digital-signature.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { JurisdictionModule } from './modules/jurisdiction/jurisdiction.module';
     DossierModule,
     SpatialModule,
     JurisdictionModule,
+    DigitalSignatureModule,
   ],
   controllers: [AppController],
   providers: [AppService],
