@@ -572,3 +572,149 @@ sequenceDiagram
     API->>DB: UPDATE parcels SET legalStatus = 'AVAILABLE'
     API-->>Notary: 200 OK
 ```
+
+
+---
+
+## 9. Nhóm API Ký Số Chuyên Dùng Công Vụ & SmartCA (Digital Signature & SmartCA)
+**Prefix**: `/api/v1/digital-signature` | **Tags**: `Tích hợp Chữ ký số Chuyên dùng Công vụ & SmartCA (DCS-01-CN-004)`
+
+### 9.1. [DCS-01-CN-004] Tra cứu danh sách chứng thư số chuyên dùng công vụ & SmartCA
+- **Method**: `GET`
+- **Path**: `/api/v1/digital-signature/certificates`
+- **Yêu cầu quyền (RBAC)**: `LAND_REGISTRAR`, `ADMIN`
+- **Query Params**: `role?: UserRole`
+- **Response `200 OK`**:
+  ```json
+  [
+    {
+      "serialNumber": "GOV-CA-VPDKDD-001",
+      "subjectName": "Nguyễn Văn An",
+      "subjectTitle": "Giám đốc Văn phòng Đăng ký Đất đai",
+      "organization": "Văn phòng Đăng ký Đất đai - Sở Tài nguyên và Môi trường",
+      "provider": "GOVERNMENT_CA",
+      "issuer": "Ban Cơ yếu Chính phủ - Cục Chứng thực số và Bảo mật thông tin",
+      "validFrom": "2024-01-01T00:00:00Z",
+      "validTo": "2027-12-31T23:59:59Z",
+      "ocspStatus": "VALID",
+      "isDefault": true
+    }
+  ]
+  ```
+- **Mã lỗi**:
+  - `403 Forbidden`: Tài khoản không đủ quyền truy cập danh bạ chứng thư công vụ chuyên dùng.
+
+### 9.2. [DCS-01-CN-004] Kiểm tra trực tuyến trạng thái thu hồi chứng thư số qua OCSP (QTD-28)
+- **Method**: `GET`
+- **Path**: `/api/v1/digital-signature/ocsp-check/:serialNumber`
+- **Yêu cầu quyền (RBAC)**: `LAND_REGISTRAR`, `ADMIN`
+- **Response `200 OK` (Chứng thư số hợp lệ)**:
+  ```json
+  {
+    "serialNumber": "GOV-CA-VPDKDD-001",
+    "status": "VALID",
+    "checkedAt": "2026-10-22T09:40:00.000Z",
+    "responderUrl": "https://ocsp.ca.gov.vn",
+    "isValid": true,
+    "reason": "Chứng thư số công vụ hợp lệ, danh sách thu hồi CRL và phản hồi OCSP an toàn."
+  }
+  ```
+- **Response `200 OK` (Chứng thư số đã bị thu hồi)**:
+  ```json
+  {
+    "serialNumber": "GOV-CA-REVOKED-009",
+    "status": "REVOKED",
+    "checkedAt": "2026-10-22T09:40:00.000Z",
+    "responderUrl": "https://ocsp.ca.gov.vn",
+    "isValid": false,
+    "reason": "Chứng thư số đã bị thu hồi trực tuyến theo yêu cầu của đơn vị quản lý cán bộ."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Số serial rỗng hoặc không tồn tại trong danh bạ quản lý CA.
+
+### 9.3. [DCS-01-CN-004] Lấy danh sách hồ sơ địa chính chờ ký số phê duyệt
+- **Method**: `GET`
+- **Path**: `/api/v1/digital-signature/pending-dossiers`
+- **Yêu cầu quyền (RBAC)**: `LAND_REGISTRAR`, `ADMIN`
+- **Response `200 OK`**:
+  ```json
+  [
+    {
+      "id": "DOSSIER-2026-HN-001",
+      "dossierCode": "HS-2026-001-HN",
+      "parcelId": "PARCEL-HN-001",
+      "parcelNationalCode": "01001-0012-0045",
+      "applicantName": "Trần Văn Hoàng",
+      "applicantCitizenId": "001090123456",
+      "fluctuationType": "TRANSFER",
+      "status": "APPRAISED",
+      "submittedAt": "2026-10-20T08:30:00Z",
+      "communeName": "Phường Điện Biên",
+      "provinceName": "Thành phố Hà Nội",
+      "isParcelLocked": false
+    }
+  ]
+  ```
+
+### 9.4. [DCS-01-CN-004] Ký số phê duyệt hồ sơ địa chính bằng chứng thư số công vụ hoặc SmartCA (QTD-05, QTD-28)
+- **Method**: `POST`
+- **Path**: `/api/v1/digital-signature/sign-approval`
+- **Yêu cầu quyền (RBAC)**: `LAND_REGISTRAR`, `ADMIN` (QTD-05)
+- **Request Body**:
+  ```json
+  {
+    "dossierId": "DOSSIER-2026-HN-001",
+    "signerRole": "LAND_REGISTRAR",
+    "provider": "GOVERNMENT_CA",
+    "certificateSerial": "GOV-CA-VPDKDD-001",
+    "reason": "Phê duyệt hồ sơ đăng ký biến động chuyển nhượng quyền sử dụng đất",
+    "signaturePin": "123456"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "dossierId": "DOSSIER-2026-HN-001",
+    "documentId": "DOC_HS-2026-001-HN_APPROVED",
+    "signatureValue": "SIG_PADES_RSA2048_e8c4b92f7d1a5e30894b1592c68f1234567890abcdef",
+    "certificateSerial": "GOV-CA-VPDKDD-001",
+    "signerName": "Nguyễn Văn An",
+    "provider": "GOVERNMENT_CA",
+    "signatureStandard": "PADES",
+    "timestamp": "2026-10-22T09:40:00.000Z",
+    "ocspVerified": true,
+    "auditHash": "e8c4b92f7d1a5e30894b1592c68f1234567890abcdef1234567890abcdef1234",
+    "dossierStatus": "SIGNED",
+    "message": "Ký số chuyên dùng công vụ phê duyệt hồ sơ địa chính thành công. Văn bản điện tử đã được gắn chữ ký số hợp lệ và dấu thời gian TSA."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Dữ liệu đầu vào sai định dạng, thiếu trường bắt buộc, hoặc không tìm thấy hồ sơ.
+  - `403 Forbidden`: Tài khoản không thuộc Văn phòng ĐKĐĐ (QTD-05) hoặc chứng thư số bị thu hồi/hết hạn qua OCSP (QTD-28).
+  - `409 Conflict`: Thửa đất liên quan đến hồ sơ đang bị khóa giao dịch (90 phút) hoặc đang trong thụ lý tranh chấp ranh giới.
+
+### 9.5. [DCS-01-CN-004] Xác minh tính hợp pháp và toàn vẹn của chữ ký số
+- **Method**: `POST`
+- **Path**: `/api/v1/digital-signature/verify`
+- **Request Body**:
+  ```json
+  {
+    "signatureValue": "SIG_PADES_RSA2048_e8c4b92f7d1a5e30894b1592c68f1234567890abcdef",
+    "certificateSerial": "GOV-CA-VPDKDD-001"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "valid": true,
+    "signerName": "Nguyễn Văn An",
+    "issuer": "Ban Cơ yếu Chính phủ - Cục Chứng thực số và Bảo mật thông tin",
+    "provider": "GOVERNMENT_CA",
+    "ocspStatus": "VALID",
+    "timestamp": "2026-10-22T09:40:00.000Z",
+    "auditHash": "d8e3f2a1b0c9...",
+    "message": "Chữ ký số hợp pháp, toàn vẹn, được xác thực trực tuyến qua cổng OCSP của Ban Cơ yếu Chính phủ."
+  }
+  ```

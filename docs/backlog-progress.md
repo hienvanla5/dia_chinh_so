@@ -10,12 +10,12 @@
 | Chỉ số | Số lượng | Tỷ lệ (%) | Ghi chú |
 |---|---|---|---|
 | **Tổng số User Stories** | **114** | **100%** | Toàn bộ 114 User Stories được số hóa tại `user_stories/` |
-| **Đã hoàn thành (Done)** | **3** | **2.6%** | Đã hoàn thành cả Shared, API, Web, Unit/Integration Tests & Docs |
+| **Đã hoàn thành (Done)** | **4** | **3.5%** | Đã hoàn thành cả Shared, API, Web, Unit/Integration Tests & Docs |
 | **Đang thực hiện (In Progress)** | **0** | **0.0%** | Không có Story nào đang dở dang |
-| **Chưa thực hiện (Backlog)** | **111** | **97.4%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
+| **Chưa thực hiện (Backlog)** | **110** | **96.5%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
 
-- **User Story hoàn thành gần nhất**: [`DCS-01-CN-003`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-003.md) - Phân quyền truy cập dữ liệu địa chính theo cấp hành chính (mô hình 2 cấp: Tỉnh/TP và Xã/Phường, 34 tỉnh thành sau sáp nhập).
-- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-01-CN-004`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-004.md) - Tích hợp chứng thư số chuyên dùng công vụ và SmartCA (Văn phòng Đăng ký Đất đai ký số phê duyệt).
+- **User Story hoàn thành gần nhất**: [`DCS-01-CN-004`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-004.md) - Tích hợp chứng thư số chuyên dùng công vụ và SmartCA (Văn phòng Đăng ký Đất đai ký số phê duyệt).
+- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-01-CN-005`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-005.md) - Phân quyền truy cập theo vai trò người dùng (RBAC) trên CSDL Thửa đất.
 
 ---
 
@@ -26,6 +26,7 @@
 | [`DCS-01-CN-001`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-001.md) | Đăng nhập Cổng Định danh Số công dân qua CCCD và OTP SMS | 2026-10-19 | `main`<br>(`666d6b0`, `22c895f`, `e9f5b4e`, `1861544`) | `POST /api/v1/auth/citizen/send-otp`<br>`POST /api/v1/auth/citizen/verify-otp` | `/login`<br>(Tab Công dân) | 13 tests PASS | **Hoàn thành** |
 | [`DCS-01-CN-002`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-002.md) | Đăng nhập SSO tài khoản công vụ cho cán bộ ngành | 2026-10-21 | `main`<br>(`7bbcaba`, `e3024de`, `f623330`, `76a44f8`) | `POST /api/v1/auth/officer/login`<br>`POST /api/v1/auth/officer/verify-mfa` | `/login`<br>(Tab Cán bộ công vụ) | 9 tests PASS | **Hoàn thành** |
 | [`DCS-01-CN-003`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-003.md) | Phân quyền truy cập dữ liệu địa chính theo cấp hành chính (2 cấp: Tỉnh & Xã, 34 tỉnh thành) | 2026-10-21<br>*(Cập nhật 2 cấp: 2026-10-22)* | `main`<br>(`d9a5c1f`, `a4cccf3`, `65dc1ef`, `883f27d`, `da0cb46`, `655e4a0`, `b19c191`) | `GET /api/v1/jurisdiction/provinces`<br>`GET /api/v1/jurisdiction/communes`<br>`POST /api/v1/jurisdiction/verify-access`<br>`GET /api/v1/jurisdiction/officers/:id` | `/jurisdiction` | 14 tests PASS | **Hoàn thành** |
+| [`DCS-01-CN-004`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-004.md) | Tích hợp chứng thư số chuyên dùng công vụ và SmartCA | 2026-10-22 | `main`<br>(feature `DCS-01-CN-004`) | `GET /api/v1/digital-signature/certificates`<br>`GET /api/v1/digital-signature/ocsp-check/:serialNumber`<br>`GET /api/v1/digital-signature/pending-dossiers`<br>`POST /api/v1/digital-signature/sign-approval`<br>`POST /api/v1/digital-signature/verify` | `/digital-signature` | 17 tests PASS | **Hoàn thành** |
 
 ---
 
@@ -61,6 +62,23 @@
   - `tests`: 14 test cases bao phủ 4 Tiêu chí chấp nhận (TC-01, TC-02, TC-03, TC-04).
 - **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#dcs-01-cn-003-tra-cuu-danh-sach-tinh-thanh-pho-2-cap-hanh-chinh).
 
+### 3.4. [DCS-01-CN-004] Tích hợp chứng thư số chuyên dùng công vụ và SmartCA
+- **Persona**: Văn phòng Đăng ký Đất đai (`LAND_REGISTRAR`)
+- **Kiến trúc triển khai**:
+  - `packages/shared`:
+    - Enums `DigitalSignatureProvider` (Ban Cơ yếu Chính phủ, VNPT SmartCA, Viettel-CA, FPT SmartCA, USB Token PKCS#11), `SignatureStandard` (PADES, CADES, XADES), `OcspCertificateStatus` (VALID, REVOKED, EXPIRED).
+    - Interfaces `PublicOfficerCertificate`, `SignDossierApprovalRequest`, `SignDossierApprovalResponse`, `VerifyDigitalSignatureRequest`, `PendingDossierForSigning`.
+    - Zod schemas `SignDossierApprovalSchema`, `VerifyDigitalSignatureSchema`.
+  - `apps/api`:
+    - Service `DigitalSignatureService` cung cấp kiểm tra trực tuyến trạng thái thu hồi chứng thư số qua giao thức OCSP (QTD-28), kiểm soát thẩm quyền ký duyệt của Lãnh đạo Văn phòng ĐKĐĐ (QTD-05), chặn ký duyệt hồ sơ khi thửa đất đang bị khóa hoặc có tranh chấp ranh giới, sinh chữ ký số PAdES kèm dấu thời gian TSA RFC 3161 và lưu nhật ký kiểm toán bất biến SHA-256.
+    - Controller `DigitalSignatureController` cung cấp 5 REST endpoints chuẩn hóa.
+    - Module `DigitalSignatureModule` tích hợp vào `AppModule`.
+  - `apps/web`:
+    - Route `/digital-signature` với giao diện chuyên biệt cho Văn phòng ĐKĐĐ: Tra cứu & lọc hồ sơ địa chính chờ ký duyệt, modal ký số chuyên dùng công vụ kèm live OCSP status indicator, nhập mã PIN, mô phỏng 4 bước ký số trực tuyến, và modal hiển thị con dấu số điện tử trang trọng kèm chức năng xác minh chữ ký số trực tuyến.
+    - Đảm bảo 100% ẩn các ID nội bộ kỹ thuật (`VT-xx`, `QTD-xx`, `DCS-xx`, `AC-xx`).
+  - `tests`: 17 test cases bao phủ đầy đủ 4 Tiêu chí chấp nhận (TC-01, TC-02, TC-03, TC-04).
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#9-nhom-api-ky-so-chuyen-dung-cong-vu--smartca-digital-signature--smartca).
+
 ---
 
 ## 4. Cơ Chế Kiểm Soát Tiến Trình Dành Cho Agent (Gatekeeper Protocol)
@@ -73,9 +91,9 @@ flowchart TD
     
     CheckTable -- "ĐÃ CÓ trong bảng Đã hoàn thành" --> WarnDup["CẢNH BÁO TRÙNG LẶP (Duplicate Warning):<br>1. Thông báo Story này đã xong ngày nào, commit nào, test nào<br>2. Dừng thực thi ghi đè<br>3. Hỏi người dùng muốn chỉnh sửa chi tiết nào"]
     
-    CheckTable -- "CHƯA LÀM nhưng cách quá xa tiến trình hiện tại (Nhảy cóc)" --> WarnGap["CẢNH BÁO NHẢY CÓC (Sequence Gap Warning):<br>1. Chỉ rõ Story xong gần nhất (Anchor: DCS-01-CN-003)<br>2. Liệt kê các Story nối tiếp bị bỏ qua (DCS-01-CN-004, ...)<br>3. Cảnh báo rủi ro đứt gãy phụ thuộc dữ liệu<br>4. Đề xuất làm tuần tự Story tiếp theo hoặc chờ xác nhận"]
+    CheckTable -- "CHƯA LÀM nhưng cách quá xa tiến trình hiện tại (Nhảy cóc)" --> WarnGap["CẢNH BÁO NHẢY CÓC (Sequence Gap Warning):<br>1. Chỉ rõ Story xong gần nhất (Anchor: DCS-01-CN-004)<br>2. Liệt kê các Story nối tiếp bị bỏ qua (DCS-01-CN-005, ...)<br>3. Cảnh báo rủi ro đứt gãy phụ thuộc dữ liệu<br>4. Đề xuất làm tuần tự Story tiếp theo hoặc chờ xác nhận"]
     
-    CheckTable -- "ĐÚNG TIẾN TRÌNH TUẦN TỰ (ví dụ: DCS-01-CN-004)" --> RunStory["Thực hiện GitHub Flow theo AGENTS.md & SKILL.md"]
+    CheckTable -- "ĐÚNG TIẾN TRÌNH TUẦN TỰ (ví dụ: DCS-01-CN-005)" --> RunStory["Thực hiện GitHub Flow theo AGENTS.md & SKILL.md"]
     WarnGap -- "Người dùng vẫn xác nhận làm tiếp" --> RunStory
     
     RunStory --> Done["Kiểm thử PASS, Build PASS, Merge main, Push origin"]
@@ -90,14 +108,14 @@ flowchart TD
     > "User Story `[MÃ_STORY]` đã được hoàn thành trước đó vào ngày `[NGÀY]`, commit `[COMMIT_ID]`, với `[X]` test cases đã PASS và giao diện tại `[ROUTE]`. Nếu bạn muốn cập nhật logic hoặc bổ sung chức năng mới cho Story này, vui lòng nêu rõ yêu cầu cụ thể thay vì chạy lại từ đầu."
 
 ### 4.2. Quy tắc 2: Cảnh báo Nhảy cóc / Bỏ qua công việc nối tiếp (Sequence Gap Detection)
-- **Điều kiện kích hoạt**: Khi User Story được yêu cầu không phải là story kế tiếp nối dài luồng nghiệp vụ hiện tại (ví dụ: đang ở `DCS-01-CN-003` nhưng người dùng yêu cầu làm `DCS-03-CN-001` hoặc `DCS-05-CN-001`, nhảy qua `DCS-01-CN-004`, `DCS-01-CN-005`...).
+- **Điều kiện kích hoạt**: Khi User Story được yêu cầu không phải là story kế tiếp nối dài luồng nghiệp vụ hiện tại (ví dụ: đang ở `DCS-01-CN-004` nhưng người dùng yêu cầu làm `DCS-03-CN-001` hoặc `DCS-05-CN-001`, nhảy qua `DCS-01-CN-005`...).
 - **Hành động của Agent**:
   - Không tự tiện thực thi ngay lập tức mà gửi cảnh báo phân tích cấu trúc:
     > "⚠️ **Cảnh báo tiến trình Product Backlog**:
-    > - Tiến trình hiện tại vừa hoàn thành: `[MÃ_STORY_GẦN_NHẤT]` (`DCS-01-CN-003`).
-    > - User Story tiếp theo liền kề theo thiết kế hệ thống là: `[MÃ_STORY_TIẾP_THEO]` (`DCS-01-CN-004`: Tích hợp chứng thư số chuyên dùng công vụ và SmartCA).
+    > - Tiến trình hiện tại vừa hoàn thành: `[MÃ_STORY_GẦN_NHẤT]` (`DCS-01-CN-004`).
+    > - User Story tiếp theo liền kề theo thiết kế hệ thống là: `[MÃ_STORY_TIẾP_THEO]` (`DCS-01-CN-005`: Phân quyền truy cập theo vai trò người dùng RBAC trên CSDL Thửa đất).
     > - Yêu cầu hiện tại của bạn là `[MÃ_STORY_YÊU_CẦU]` - đang bỏ qua các bước tiền đề liền trước: `[DANH_SÁCH_STORIES_BỊ_BỎ_QUA]`.
-    > - **Rủi ro kiến trúc**: `[Giải thích rõ lý do, ví dụ: cần chứng thư số DCS-01-CN-004 để ký duyệt hồ sơ hoặc khóa thửa đất trước khi thực hiện các giao dịch nâng cao...]`.
+    > - **Rủi ro kiến trúc**: `[Giải thích rõ lý do phân quyền / luồng dữ liệu...]`.
     > 
     > **Đề xuất**: Bạn có muốn thực hiện tuần tự `[MÃ_STORY_TIẾP_THEO]` trước để đảm bảo tính toàn vẹn hệ thống, hay bạn vẫn muốn ưu tiên thực hiện trước `[MÃ_STORY_YÊU_CẦU]`?"
   - Chỉ khi người dùng xác nhận rõ ràng muốn làm câu chuyện đó trước, Agent mới bắt đầu triển khai.
