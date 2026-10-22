@@ -16,6 +16,7 @@ import { DigitalSignatureModule } from './modules/digital-signature/digital-sign
 import { SessionSecurityModule } from './modules/session-security/session-security.module';
 import { OfficerLifecycleModule } from './modules/officer-lifecycle/officer-lifecycle.module';
 import { PasswordPolicyModule } from './modules/password-policy/password-policy.module';
+import { DelegationModule } from './modules/delegation/delegation.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { PasswordPolicyModule } from './modules/password-policy/password-policy.
     SessionSecurityModule,
     OfficerLifecycleModule,
     PasswordPolicyModule,
+    DelegationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
