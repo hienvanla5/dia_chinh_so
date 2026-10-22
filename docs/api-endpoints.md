@@ -961,3 +961,100 @@ sequenceDiagram
 - **Method**: `GET`
 - **Path**: `/api/v1/officer-lifecycle/audit-logs`
 - **Response `200 OK`**: Danh sách lịch sử điều chuyển, vô hiệu hóa, bàn giao hồ sơ kèm mã băm SHA-256.
+
+
+---
+
+## 12. Nhóm API Cấu Hình Chính Sách Mật Khẩu & Chống Tấn Công Dò Quét (Password Policy & Brute-Force Protection)
+**Prefix**: `/api/v1/password-policy` | **Tags**: `Chính sách Mật khẩu & Chống Dò quét (DCS-01-CN-007)`
+
+### 12.1. [DCS-01-CN-007] Lấy cấu hình chính sách mật khẩu công vụ hiện hành
+- **Method**: `GET`
+- **Path**: `/api/v1/password-policy/config`
+- **Response `200 OK`**:
+  ```json
+  {
+    "minLength": 10,
+    "requireUppercase": true,
+    "requireLowercase": true,
+    "requireNumbers": true,
+    "requireSpecialChars": true,
+    "passwordExpiryDays": 90,
+    "preventPasswordReuseCount": 5,
+    "maxFailedAttempts": 5,
+    "lockoutDurationMinutes": 30,
+    "trustedIpRanges": ["10.0.0.0/8", "192.168.1.0/24"],
+    "updatedAt": "2026-10-22T10:40:00.000Z",
+    "updatedBy": "quantri.hethong",
+    "auditHash": "9179e9deef37e7b4f4ce4e58b84faea392350ec055c965552ef4b7f08b5aa99d"
+  }
+  ```
+
+### 12.2. [DCS-01-CN-007] Cập nhật cấu hình chính sách mật khẩu và chống brute-force
+- **Method**: `PUT`
+- **Path**: `/api/v1/password-policy/config`
+- **Header**: `Authorization: Bearer <Admin_Token>`
+- **Request Body**:
+  ```json
+  {
+    "minLength": 12,
+    "requireUppercase": true,
+    "requireLowercase": true,
+    "requireNumbers": true,
+    "requireSpecialChars": true,
+    "passwordExpiryDays": 60,
+    "preventPasswordReuseCount": 6,
+    "maxFailedAttempts": 5,
+    "lockoutDurationMinutes": 45
+  }
+  ```
+- **Response `200 OK`**: Cấu hình mới cập nhật kèm mã băm SHA-256.
+- **Mã lỗi**:
+  - `400 Bad Request`: `minLength < 8` hoặc `> 32`, `maxFailedAttempts < 3`, `lockoutDurationMinutes < 5`.
+  - `403 Forbidden`: Người gửi không phải Quản trị viên Hệ thống (`ADMIN`).
+
+### 12.3. [DCS-01-CN-007] Kiểm tra độ mạnh và tính hợp lệ của mật khẩu
+- **Method**: `POST`
+- **Path**: `/api/v1/password-policy/validate-password`
+- **Request Body**:
+  ```json
+  {
+    "password": "DiaChinhSo@2026!Vn",
+    "username": "canbo.hanoi"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "valid": true,
+    "score": 95,
+    "strength": "VERY_STRONG",
+    "errors": []
+  }
+  ```
+
+### 12.4. [DCS-01-CN-007] Lấy danh sách địa chỉ IP đang bị khóa do tấn công brute-force
+- **Method**: `GET`
+- **Path**: `/api/v1/password-policy/blocked-ips`
+- **Response `200 OK`**: Danh sách IP bị khóa kèm lý do, thời gian hết hạn và mã băm SHA-256.
+
+### 12.5. [DCS-01-CN-007] Mở khóa thủ công cho một địa chỉ IP
+- **Method**: `POST`
+- **Path**: `/api/v1/password-policy/unblock-ip`
+- **Header**: `Authorization: Bearer <Admin_Token>`
+- **Request Body**:
+  ```json
+  {
+    "ipAddress": "203.0.113.45",
+    "reason": "Cán bộ xác nhận quên mật khẩu và đã được cấp lại thông tin"
+  }
+  ```
+- **Response `200 OK`**: Mở khóa thành công kèm mã băm SHA-256.
+- **Mã lỗi**:
+  - `403 Forbidden`: Người gửi không phải Quản trị viên.
+  - `404 Not Found`: Địa chỉ IP không nằm trong danh sách bị khóa.
+
+### 12.6. [DCS-01-CN-007] Tra cứu nhật ký kiểm toán cấu hình bảo mật
+- **Method**: `GET`
+- **Path**: `/api/v1/password-policy/audit-logs`
+- **Response `200 OK`**: Danh sách lịch sử thay đổi cấu hình bảo mật kèm mã băm SHA-256.

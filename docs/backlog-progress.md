@@ -10,12 +10,12 @@
 | Chỉ số | Số lượng | Tỷ lệ (%) | Ghi chú |
 |---|---|---|---|
 | **Tổng số User Stories** | **114** | **100%** | Toàn bộ 114 User Stories được số hóa tại `user_stories/` |
-| **Đã hoàn thành (Done)** | **6** | **5.3%** | Đã hoàn thành cả Shared, API, Web, Unit/Integration Tests & Docs |
+| **Đã hoàn thành (Done)** | **7** | **6.1%** | Đã hoàn thành cả Shared, API, Web, Unit/Integration Tests & Docs |
 | **Đang thực hiện (In Progress)** | **0** | **0.0%** | Không có Story nào đang dở dang |
-| **Chưa thực hiện (Backlog)** | **108** | **94.7%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
+| **Chưa thực hiện (Backlog)** | **107** | **93.9%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
 
-- **User Story hoàn thành gần nhất**: [`DCS-01-CN-006`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-006.md) - Khóa và vô hiệu hóa tài khoản công vụ khi điều chuyển công tác.
-- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-01-CN-007`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-007.md) - Cấu hình chính sách mật khẩu và chống tấn công dò quét.
+- **User Story hoàn thành gần nhất**: [`DCS-01-CN-007`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-007.md) - Cấu hình chính sách mật khẩu và chống tấn công dò quét.
+- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-01-CN-008`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-008.md) - Quản lý ủy quyền giải quyết hồ sơ địa chính có thời hạn.
 
 ---
 
@@ -29,6 +29,7 @@
 | [`DCS-01-CN-004`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-004.md) | Tích hợp chứng thư số chuyên dùng công vụ và SmartCA | 2026-10-22 | `main`<br>(feature `DCS-01-CN-004`) | `GET /api/v1/digital-signature/certificates`<br>`GET /api/v1/digital-signature/ocsp-check/:serialNumber`<br>`GET /api/v1/digital-signature/pending-dossiers`<br>`POST /api/v1/digital-signature/sign-approval`<br>`POST /api/v1/digital-signature/verify` | `/digital-signature` | 17 tests PASS | **Hoàn thành** |
 | [`DCS-01-CN-005`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-005.md) | Quản lý phiên làm việc và bảo mật xác thực 2FA | 2026-10-22 | `main`<br>(feature `DCS-01-CN-005`) | `POST /api/v1/session-security/step-up/challenge`<br>`POST /api/v1/session-security/step-up/verify`<br>`POST /api/v1/session-security/unlock`<br>`POST /api/v1/session-security/terminate`<br>`POST /api/v1/session-security/heartbeat`<br>`GET /api/v1/session-security/active`<br>`GET /api/v1/session-security/alerts` | `/session-security` | 16 tests PASS | **Hoàn thành** |
 | [`DCS-01-CN-006`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-006.md) | Khóa và vô hiệu hóa tài khoản công vụ khi điều chuyển công tác | 2026-10-22 | `main`<br>(feature `DCS-01-CN-006`) | `GET /api/v1/officer-lifecycle/officers`<br>`GET /api/v1/officer-lifecycle/officers/:id`<br>`GET /api/v1/officer-lifecycle/officers/:id/eligible-transferees`<br>`POST /api/v1/officer-lifecycle/deactivate`<br>`POST /api/v1/officer-lifecycle/transfer-dossiers`<br>`POST /api/v1/officer-lifecycle/reactivate`<br>`GET /api/v1/officer-lifecycle/audit-logs` | `/officer-lifecycle` | 15 tests PASS | **Hoàn thành** |
+| [`DCS-01-CN-007`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-007.md) | Cấu hình chính sách mật khẩu và chống tấn công dò quét | 2026-10-22 | `main`<br>(feature `DCS-01-CN-007`) | `GET /api/v1/password-policy/config`<br>`PUT /api/v1/password-policy/config`<br>`POST /api/v1/password-policy/validate-password`<br>`GET /api/v1/password-policy/blocked-ips`<br>`POST /api/v1/password-policy/unblock-ip`<br>`GET /api/v1/password-policy/audit-logs` | `/password-policy` | 12 tests PASS | **Hoàn thành** |
 
 ---
 
@@ -126,6 +127,26 @@
   - `tests`: 15 test cases bao phủ đầy đủ 4 Tiêu chí chấp nhận (TC-01, TC-02, TC-03, TC-04).
 - **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#11-nhom-api-quan-ly-vong-doi--dieu-chuyen-can-bo-cong-vu-officer-lifecycle--account-deactivation).
 
+### 3.7. [DCS-01-CN-007] Cấu hình chính sách mật khẩu và chống tấn công dò quét
+- **Persona**: Quản trị viên Hệ thống (`ADMIN`)
+- **Kiến trúc triển khai**:
+  - `packages/shared`:
+    - Interfaces `PasswordPolicyConfig`, `BlockedIpItem`, `UpdatePasswordPolicyRequest`, `ValidatePasswordRequest/Response`, `UnblockIpRequest/Response`.
+    - Zod schemas `UpdatePasswordPolicySchema`, `ValidatePasswordSchema`, `UnblockIpSchema`.
+  - `apps/api`:
+    - Service `PasswordPolicyService`:
+      - Thiết lập và cập nhật chính sách độ phức tạp mật khẩu công vụ (độ dài 8-32, 4 nhóm ký tự, hạn đổi mật khẩu 15-365 ngày, lưu lịch sử 1-24 mật khẩu cũ).
+      - Đánh giá độ mạnh mật khẩu theo thời gian thực (Password Strength Validator).
+      - Cơ chế chống tấn công dò quét (Brute-Force & Rate Limiting): tự động khóa IP và tài khoản khi nhập sai liên tiếp vượt ngưỡng `maxFailedAttempts` trong `lockoutDurationMinutes`.
+      - Mở khóa thủ công địa chỉ IP bị chặn và ghi nhận nhật ký kiểm toán bất biến SHA-256.
+    - Controller `PasswordPolicyController` cung cấp 6 REST endpoints chuẩn hóa.
+    - Module `PasswordPolicyModule` tích hợp vào `AppModule`.
+  - `apps/web`:
+    - Route `/password-policy`: Form cấu hình chính sách mật khẩu và hạn ngạch thử sai, công cụ kiểm tra độ mạnh mật khẩu trực quan với thanh điểm an toàn, bảng danh sách địa chỉ IP bị khóa tự động kèm thao tác mở khóa (Unblock Modal), và bảng nhật ký kiểm toán thay đổi cấu hình.
+    - Đảm bảo 100% ẩn các ID nội bộ kỹ thuật (`VT-xx`, `QTD-xx`, `DCS-xx`, `AC-xx`).
+  - `tests`: 12 test cases bao phủ đầy đủ 4 Tiêu chí chấp nhận (TC-01, TC-02, TC-03, TC-04).
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#12-nhom-api-cau-hinh-chinh-sach-mat-khau--chong-tan-cong-do-quet-password-policy--brute-force-protection).
+
 ---
 
 ## 4. Cơ Chế Kiểm Soát Tiến Trình Dành Cho Agent (Gatekeeper Protocol)
@@ -138,9 +159,9 @@ flowchart TD
     
     CheckTable -- "ĐÃ CÓ trong bảng Đã hoàn thành" --> WarnDup["CẢNH BÁO TRÙNG LẶP (Duplicate Warning):<br>1. Thông báo Story này đã xong ngày nào, commit nào, test nào<br>2. Dừng thực thi ghi đè<br>3. Hỏi người dùng muốn chỉnh sửa chi tiết nào"]
     
-    CheckTable -- "CHƯA LÀM nhưng cách quá xa tiến trình hiện tại (Nhảy cóc)" --> WarnGap["CẢNH BÁO NHẢY CÓC (Sequence Gap Warning):<br>1. Chỉ rõ Story xong gần nhất (Anchor: DCS-01-CN-006)<br>2. Liệt kê các Story nối tiếp bị bỏ qua (DCS-01-CN-007, ...)<br>3. Cảnh báo rủi ro đứt gãy phụ thuộc dữ liệu<br>4. Đề xuất làm tuần tự Story tiếp theo hoặc chờ xác nhận"]
+    CheckTable -- "CHƯA LÀM nhưng cách quá xa tiến trình hiện tại (Nhảy cóc)" --> WarnGap["CẢNH BÁO NHẢY CÓC (Sequence Gap Warning):<br>1. Chỉ rõ Story xong gần nhất (Anchor: DCS-01-CN-007)<br>2. Liệt kê các Story nối tiếp bị bỏ qua (DCS-01-CN-008, ...)<br>3. Cảnh báo rủi ro đứt gãy phụ thuộc dữ liệu<br>4. Đề xuất làm tuần tự Story tiếp theo hoặc chờ xác nhận"]
     
-    CheckTable -- "ĐÚNG TIẾN TRÌNH TUẦN TỰ (ví dụ: DCS-01-CN-007)" --> RunStory["Thực hiện GitHub Flow theo AGENTS.md & SKILL.md"]
+    CheckTable -- "ĐÚNG TIẾN TRÌNH TUẦN TỰ (ví dụ: DCS-01-CN-008)" --> RunStory["Thực hiện GitHub Flow theo AGENTS.md & SKILL.md"]
     WarnGap -- "Người dùng vẫn xác nhận làm tiếp" --> RunStory
     
     RunStory --> Done["Kiểm thử PASS, Build PASS, Merge main, Push origin"]
@@ -159,8 +180,8 @@ flowchart TD
 - **Hành động của Agent**:
   - Không tự tiện thực thi ngay lập tức mà gửi cảnh báo phân tích cấu trúc:
     > "⚠️ **Cảnh báo tiến trình Product Backlog**:
-    > - Tiến trình hiện tại vừa hoàn thành: `[MÃ_STORY_GẦN_NHẤT]` (`DCS-01-CN-006`).
-    > - User Story tiếp theo liền kề theo thiết kế hệ thống là: `[MÃ_STORY_TIẾP_THEO]` (`DCS-01-CN-007`: Cấu hình chính sách mật khẩu và chống tấn công dò quét).
+    > - Tiến trình hiện tại vừa hoàn thành: `[MÃ_STORY_GẦN_NHẤT]` (`DCS-01-CN-007`).
+    > - User Story tiếp theo liền kề theo thiết kế hệ thống là: `[MÃ_STORY_TIẾP_THEO]` (`DCS-01-CN-008`: Quản lý ủy quyền giải quyết hồ sơ địa chính có thời hạn).
     > - Yêu cầu hiện tại của bạn là `[MÃ_STORY_YÊU_CẦU]` - đang bỏ qua các bước tiền đề liền trước: `[DANH_SÁCH_STORIES_BỊ_BỎ_QUA]`.
     > - **Rủi ro kiến trúc**: `[Giải thích rõ lý do phân quyền / luồng dữ liệu...]`.
     > 
