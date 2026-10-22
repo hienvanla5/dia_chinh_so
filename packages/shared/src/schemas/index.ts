@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction, DigitalSignatureProvider, SignatureStandard, OcspCertificateStatus, SessionStatus, SensitiveOperationType } from '../types';
+import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction, DigitalSignatureProvider, SignatureStandard, OcspCertificateStatus, SessionStatus, SensitiveOperationType, OfficerAccountStatus, DeactivationReasonType } from '../types';
 
 // Schema xác thực Mock CCCD / Sandbox IdP
 export const CitizenAuthSchema = z.object({
@@ -164,3 +164,35 @@ export type StepUp2FaChallengeInput = z.infer<typeof StepUp2FaChallengeSchema>;
 export type VerifyStepUp2FaInput = z.infer<typeof VerifyStepUp2FaSchema>;
 export type UnlockSessionInput = z.infer<typeof UnlockSessionSchema>;
 export type TerminateSessionInput = z.infer<typeof TerminateSessionSchema>;
+
+
+// ==========================================
+// Schemas Khóa và vô hiệu hóa tài khoản công vụ khi điều chuyển công tác (DCS-01-CN-006)
+// ==========================================
+
+export const DeactivateOfficerAccountSchema = z.object({
+  officerId: z.string().min(1, 'Mã tài khoản cán bộ không được để trống'),
+  decisionNumber: z.string().min(3, 'Số quyết định hành chính tối thiểu 3 ký tự'),
+  decisionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày quyết định phải theo định dạng YYYY-MM-DD'),
+  issuingAuthority: z.string().min(3, 'Cơ quan ban hành quyết định tối thiểu 3 ký tự'),
+  reasonType: z.nativeEnum(DeactivationReasonType, { errorMap: () => ({ message: 'Loại căn cứ thu hồi quyền không hợp lệ' }) }),
+  reasonDetail: z.string().min(5, 'Lý do thu hồi quyền tối thiểu 5 ký tự'),
+  transfereeOfficerId: z.string().optional(),
+});
+
+export const TransferDossiersSchema = z.object({
+  fromOfficerId: z.string().min(1, 'Mã cán bộ bàn giao không được để trống'),
+  toOfficerId: z.string().min(1, 'Mã cán bộ tiếp nhận không được để trống'),
+  dossierIds: z.array(z.string()).optional(),
+  reason: z.string().min(5, 'Lý do chuyển giao hồ sơ tối thiểu 5 ký tự'),
+});
+
+export const ReactivateOfficerAccountSchema = z.object({
+  officerId: z.string().min(1, 'Mã tài khoản cán bộ không được để trống'),
+  decisionNumber: z.string().min(3, 'Số quyết định tiếp nhận / khôi phục tối thiểu 3 ký tự'),
+  reinstatementReason: z.string().min(5, 'Lý do khôi phục quyền công vụ tối thiểu 5 ký tự'),
+});
+
+export type DeactivateOfficerAccountInput = z.infer<typeof DeactivateOfficerAccountSchema>;
+export type TransferDossiersInput = z.infer<typeof TransferDossiersSchema>;
+export type ReactivateOfficerAccountInput = z.infer<typeof ReactivateOfficerAccountSchema>;

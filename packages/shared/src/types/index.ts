@@ -448,3 +448,110 @@ export interface SecurityViolationAlert {
   timestamp: string;
   auditHash: string;
 }
+
+
+// ==========================================
+// Khóa và vô hiệu hóa tài khoản công vụ khi điều chuyển công tác (DCS-01-CN-006)
+// ==========================================
+
+export enum OfficerAccountStatus {
+  ACTIVE = 'ACTIVE',                             // Đang công tác bình thường
+  TRANSFERRED = 'TRANSFERRED',                   // Đã điều chuyển công tác sang đơn vị khác
+  SUSPENDED_DISCIPLINE = 'SUSPENDED_DISCIPLINE', // Đình chỉ công tác do kỷ luật
+  DISMISSED = 'DISMISSED',                       // Miễn nhiệm chức vụ
+  RESIGNED = 'RESIGNED',                         // Thôi việc / Nghỉ hưu
+}
+
+export enum DeactivationReasonType {
+  TRANSFER = 'TRANSFER',           // Điều chuyển công tác
+  DISMISSAL = 'DISMISSAL',         // Miễn nhiệm chức vụ
+  DISCIPLINE = 'DISCIPLINE',       // Kỷ luật / Đình chỉ
+  RESIGNATION = 'RESIGNATION',     // Thôi việc / Nghỉ chế độ
+}
+
+export interface DeactivationInfo {
+  decisionNumber: string;          // Số quyết định hành chính (ví dụ: QĐ-2026/045/UBND)
+  decisionDate: string;            // Ngày ban hành quyết định (YYYY-MM-DD)
+  issuingAuthority: string;        // Cơ quan ban hành quyết định
+  reasonType: DeactivationReasonType; // Loại căn cứ thu hồi
+  reasonDetail: string;            // Lý do chi tiết
+  deactivatedAt: string;           // Thời điểm hệ thống vô hiệu hóa
+  deactivatedByAdminId: string;    // Quản trị viên thực hiện
+  transfereeOfficerId?: string;    // Cán bộ nhận bàn giao hồ sơ
+  transfereeOfficerName?: string;  // Tên cán bộ nhận bàn giao
+  reassignedDossierCount: number;  // Số lượng hồ sơ đã chuyển giao
+  auditHash: string;               // Mã băm SHA-256 nhật ký kiểm toán bất biến
+}
+
+export interface OfficerAccountItem {
+  id: string;
+  officerCode: string;
+  username: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  role: UserRole;
+  administrativeUnitCode: string;
+  administrativeUnitName: string;
+  department: string;
+  status: OfficerAccountStatus;
+  pendingDossierCount: number;
+  lastActiveAt: string;
+  deactivationInfo?: DeactivationInfo;
+}
+
+export interface DeactivateOfficerAccountRequest {
+  officerId: string;
+  decisionNumber: string;
+  decisionDate: string;
+  issuingAuthority: string;
+  reasonType: DeactivationReasonType;
+  reasonDetail: string;
+  transfereeOfficerId?: string;
+}
+
+export interface DeactivateOfficerAccountResponse {
+  success: boolean;
+  officerId: string;
+  officerName: string;
+  newStatus: OfficerAccountStatus;
+  terminatedSessionsCount: number;
+  reassignedDossiersCount: number;
+  transfereeOfficerName?: string;
+  auditHash: string;
+  deactivatedAt: string;
+  message: string;
+}
+
+export interface TransferDossiersRequest {
+  fromOfficerId: string;
+  toOfficerId: string;
+  dossierIds?: string[];
+  reason: string;
+}
+
+export interface TransferDossiersResponse {
+  success: boolean;
+  fromOfficerId: string;
+  toOfficerId: string;
+  toOfficerName: string;
+  transferredCount: number;
+  auditHash: string;
+  message: string;
+}
+
+export interface ReactivateOfficerAccountRequest {
+  officerId: string;
+  decisionNumber: string;
+  reinstatementReason: string;
+}
+
+export interface ReactivateOfficerAccountResponse {
+  success: boolean;
+  officerId: string;
+  officerName: string;
+  newStatus: OfficerAccountStatus;
+  reactivatedAt: string;
+  auditHash: string;
+  message: string;
+}
