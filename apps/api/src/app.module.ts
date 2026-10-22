@@ -15,6 +15,7 @@ import { JurisdictionModule } from './modules/jurisdiction/jurisdiction.module';
 import { DigitalSignatureModule } from './modules/digital-signature/digital-signature.module';
 import { SessionSecurityModule } from './modules/session-security/session-security.module';
 import { OfficerLifecycleModule } from './modules/officer-lifecycle/officer-lifecycle.module';
+import { PasswordPolicyModule } from './modules/password-policy/password-policy.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { OfficerLifecycleModule } from './modules/officer-lifecycle/officer-life
     DigitalSignatureModule,
     SessionSecurityModule,
     OfficerLifecycleModule,
+    PasswordPolicyModule,
   ],
   controllers: [AppController],
   providers: [AppService],
