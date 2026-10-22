@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { Layers, UserCheck, Shield, Stamp, LockKeyhole } from 'lucide-react';
+import { Layers, UserCheck, Shield, Stamp, LockKeyhole, UserX } from 'lucide-react';
 import { NavItem } from './NavItem';
 
 const mainNavigation = [
@@ -35,6 +35,12 @@ const mainNavigation = [
     label: 'Bảo mật Phiên & 2FA',
     description: 'Timeout 15p & Xác thực 2 lớp',
     icon: LockKeyhole,
+  },
+  {
+    href: '/officer-lifecycle',
+    label: 'Vòng đời Cán bộ',
+    description: 'Điều chuyển & Bàn giao hồ sơ',
+    icon: UserX,
   },
 ];
 
