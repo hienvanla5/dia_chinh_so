@@ -1058,3 +1058,95 @@ sequenceDiagram
 - **Method**: `GET`
 - **Path**: `/api/v1/password-policy/audit-logs`
 - **Response `200 OK`**: Danh sách lịch sử thay đổi cấu hình bảo mật kèm mã băm SHA-256.
+
+
+---
+
+## 13. Nhóm API Quản Lý Ủy Quyền Giải Quyết Hồ Sơ Địa Chính Có Thời Hạn (Timed Delegation)
+**Prefix**: `/api/v1/delegation` | **Tags**: `Quản lý Ủy quyền Ký duyệt Hồ sơ (DCS-01-CN-008)`
+
+### 13.1. [DCS-01-CN-008] Lấy danh sách văn bản ủy quyền giải quyết hồ sơ
+- **Method**: `GET`
+- **Path**: `/api/v1/delegation/list`
+- **Query Params**:
+  - `status?: DelegationStatus`: Trạng thái (`ACTIVE`, `PENDING`, `EXPIRED`, `REVOKED`)
+  - `delegateeId?: string`: Mã cán bộ nhận ủy quyền
+- **Response `200 OK`**: Danh sách các văn bản ủy quyền.
+
+### 13.2. [DCS-01-CN-008] Lấy thông tin chi tiết một văn bản ủy quyền
+- **Method**: `GET`
+- **Path**: `/api/v1/delegation/:id`
+- **Response `200 OK`**: Chi tiết văn bản ủy quyền.
+
+### 13.3. [DCS-01-CN-008] Ban hành văn bản ủy quyền giải quyết hồ sơ có thời hạn
+- **Method**: `POST`
+- **Path**: `/api/v1/delegation/create`
+- **Header**: `Authorization: Bearer <Leader_Token>`
+- **Request Body**:
+  ```json
+  {
+    "documentNumber": "QĐ-UQ-2026/015/VPDKDD-HN",
+    "title": "Ủy quyền ký số phê duyệt Giấy chứng nhận quyền sử dụng đất trong thời gian Giám đốc đi công tác",
+    "delegateeId": "OFF-HN-VPDK-001",
+    "scope": "APPROVE_CERTIFICATE",
+    "startDate": "2026-10-20T00:00:00.000Z",
+    "endDate": "2026-10-30T23:59:59.000Z",
+    "notes": "Ủy quyền ký phê duyệt hồ sơ địa chính và sổ đỏ số"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "delegation": {
+      "id": "DEL-2026-001",
+      "documentNumber": "QĐ-UQ-2026/015/VPDKDD-HN",
+      "delegateeName": "Lê Văn Cường",
+      "signingPrefix": "KT. GIÁM ĐỐC - PHÓ GIÁM ĐỐC",
+      "status": "ACTIVE",
+      "auditHash": "1987c3331c95c63db72288fbec4b75d7192bd90fe8a3855a86d1bfb52774e660"
+    },
+    "auditHash": "1987c3331c95c63db72288fbec4b75d7192bd90fe8a3855a86d1bfb52774e660",
+    "message": "Đã thiết lập văn bản ủy quyền 'QĐ-UQ-2026/015/VPDKDD-HN' thành công"
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: `startDate >= endDate`, hoặc người ủy quyền trùng người được ủy quyền.
+  - `403 Forbidden`: Người tạo không thuộc vai trò Lãnh đạo Văn phòng ĐKĐĐ (`LAND_REGISTRAR`) hoặc Quản trị viên (`ADMIN`).
+  - `404 Not Found`: Không tìm thấy cán bộ được ủy quyền.
+
+### 13.4. [DCS-01-CN-008] Thu hồi văn bản ủy quyền trước thời hạn
+- **Method**: `POST`
+- **Path**: `/api/v1/delegation/revoke`
+- **Request Body**:
+  ```json
+  {
+    "delegationId": "DEL-2026-001",
+    "reason": "Giám đốc đã hoàn thành chuyến công tác sớm hơn dự kiến và trở lại điều hành"
+  }
+  ```
+- **Response `200 OK`**: Thu hồi ủy quyền thành công kèm mã băm SHA-256.
+
+### 13.5. [DCS-01-CN-008] Kiểm tra thẩm quyền ủy quyền của cán bộ khi thực hiện ký duyệt
+- **Method**: `POST`
+- **Path**: `/api/v1/delegation/verify-access`
+- **Request Body**:
+  ```json
+  {
+    "officerId": "OFF-HN-VPDK-001",
+    "requiredScope": "APPROVE_CERTIFICATE"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "hasDelegation": true,
+    "signingTitle": "KT. GIÁM ĐỐC - PHÓ GIÁM ĐỐC",
+    "message": "Cán bộ có văn bản ủy quyền hợp lệ 'QĐ-UQ-2026/015/VPDKDD-HN' để ký thay Giám đốc"
+  }
+  ```
+
+### 13.6. [DCS-01-CN-008] Tra cứu nhật ký kiểm toán ủy quyền
+- **Method**: `GET`
+- **Path**: `/api/v1/delegation/audit/logs`
+- **Response `200 OK`**: Danh sách lịch sử ban hành và thu hồi ủy quyền kèm mã băm SHA-256.

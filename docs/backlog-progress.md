@@ -10,12 +10,12 @@
 | Chỉ số | Số lượng | Tỷ lệ (%) | Ghi chú |
 |---|---|---|---|
 | **Tổng số User Stories** | **114** | **100%** | Toàn bộ 114 User Stories được số hóa tại `user_stories/` |
-| **Đã hoàn thành (Done)** | **7** | **6.1%** | Đã hoàn thành cả Shared, API, Web, Unit/Integration Tests & Docs |
+| **Đã hoàn thành (Done)** | **8** | **7.0%** | Đã hoàn thành cả Shared, API, Web, Unit/Integration Tests & Docs |
 | **Đang thực hiện (In Progress)** | **0** | **0.0%** | Không có Story nào đang dở dang |
-| **Chưa thực hiện (Backlog)** | **107** | **93.9%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
+| **Chưa thực hiện (Backlog)** | **106** | **93.0%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
 
-- **User Story hoàn thành gần nhất**: [`DCS-01-CN-007`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-007.md) - Cấu hình chính sách mật khẩu và chống tấn công dò quét.
-- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-01-CN-008`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-008.md) - Quản lý ủy quyền giải quyết hồ sơ địa chính có thời hạn.
+- **User Story hoàn thành gần nhất**: [`DCS-01-CN-008`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-008.md) - Quản lý ủy quyền giải quyết hồ sơ địa chính có thời hạn.
+- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-01-CN-009`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-009.md) - Đăng nhập và phân quyền tài khoản tổ chức qua Cổng Định danh Doanh nghiệp.
 
 ---
 
@@ -30,6 +30,7 @@
 | [`DCS-01-CN-005`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-005.md) | Quản lý phiên làm việc và bảo mật xác thực 2FA | 2026-10-22 | `main`<br>(feature `DCS-01-CN-005`) | `POST /api/v1/session-security/step-up/challenge`<br>`POST /api/v1/session-security/step-up/verify`<br>`POST /api/v1/session-security/unlock`<br>`POST /api/v1/session-security/terminate`<br>`POST /api/v1/session-security/heartbeat`<br>`GET /api/v1/session-security/active`<br>`GET /api/v1/session-security/alerts` | `/session-security` | 16 tests PASS | **Hoàn thành** |
 | [`DCS-01-CN-006`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-006.md) | Khóa và vô hiệu hóa tài khoản công vụ khi điều chuyển công tác | 2026-10-22 | `main`<br>(feature `DCS-01-CN-006`) | `GET /api/v1/officer-lifecycle/officers`<br>`GET /api/v1/officer-lifecycle/officers/:id`<br>`GET /api/v1/officer-lifecycle/officers/:id/eligible-transferees`<br>`POST /api/v1/officer-lifecycle/deactivate`<br>`POST /api/v1/officer-lifecycle/transfer-dossiers`<br>`POST /api/v1/officer-lifecycle/reactivate`<br>`GET /api/v1/officer-lifecycle/audit-logs` | `/officer-lifecycle` | 15 tests PASS | **Hoàn thành** |
 | [`DCS-01-CN-007`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-007.md) | Cấu hình chính sách mật khẩu và chống tấn công dò quét | 2026-10-22 | `main`<br>(feature `DCS-01-CN-007`) | `GET /api/v1/password-policy/config`<br>`PUT /api/v1/password-policy/config`<br>`POST /api/v1/password-policy/validate-password`<br>`GET /api/v1/password-policy/blocked-ips`<br>`POST /api/v1/password-policy/unblock-ip`<br>`GET /api/v1/password-policy/audit-logs` | `/password-policy` | 12 tests PASS | **Hoàn thành** |
+| [`DCS-01-CN-008`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-008.md) | Quản lý ủy quyền giải quyết hồ sơ địa chính có thời hạn | 2026-10-22 | `main`<br>(feature `DCS-01-CN-008`) | `GET /api/v1/delegation/list`<br>`GET /api/v1/delegation/:id`<br>`POST /api/v1/delegation/create`<br>`POST /api/v1/delegation/revoke`<br>`POST /api/v1/delegation/verify-access`<br>`GET /api/v1/delegation/audit/logs` | `/delegation` | 8 tests PASS | **Hoàn thành** |
 
 ---
 
@@ -147,6 +148,27 @@
   - `tests`: 12 test cases bao phủ đầy đủ 4 Tiêu chí chấp nhận (TC-01, TC-02, TC-03, TC-04).
 - **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#12-nhom-api-cau-hinh-chinh-sach-mat-khau--chong-tan-cong-do-quet-password-policy--brute-force-protection).
 
+### 3.8. [DCS-01-CN-008] Quản lý ủy quyền giải quyết hồ sơ địa chính có thời hạn
+- **Persona**: Văn phòng Đăng ký Đất đai (`LAND_REGISTRAR`)
+- **Kiến trúc triển khai**:
+  - `packages/shared`:
+    - Enums `DelegationScope` (ALL_DOSSIERS, APPROVE_CERTIFICATE, SIGN_TRANSFER, SIGN_SURVEY_EXTRACT), `DelegationStatus` (ACTIVE, PENDING, EXPIRED, REVOKED).
+    - Interfaces `DelegationDocument`, `CreateDelegationRequest/Response`, `RevokeDelegationRequest/Response`, `VerifyDelegationAccessRequest/Response`.
+    - Zod schemas `CreateDelegationSchema`, `RevokeDelegationSchema`, `VerifyDelegationAccessSchema`.
+  - `apps/api`:
+    - Service `DelegationService`:
+      - Ban hành quyết định ủy quyền giải quyết hồ sơ có thời hạn cho cấp phó ký thay khi Lãnh đạo đi công tác.
+      - Tự động kiểm tra thời hạn và cập nhật vòng đời (`ACTIVE`, `PENDING`, `EXPIRED`).
+      - Xác thực thẩm quyền ủy quyền trực tuyến khi cán bộ thực hiện ký duyệt (`verifyDelegationAccess`), tự động gắn chức danh ký thay "KT. GIÁM ĐỐC - PHÓ GIÁM ĐỐC".
+      - Hỗ trợ thu hồi ủy quyền trước thời hạn kèm mã băm SHA-256 lưu vết kiểm toán bất biến.
+    - Controller `DelegationController` cung cấp 6 REST endpoints chuẩn hóa.
+    - Module `DelegationModule` tích hợp vào `AppModule`.
+  - `apps/web`:
+    - Route `/delegation`: Quản lý danh mục văn bản ủy quyền, modal tạo mới quyết định ủy quyền kèm chọn cấp phó và phạm vi nghiệp vụ, modal thu hồi ủy quyền, và mô phỏng ký thay duyệt hồ sơ có gắn con dấu điện tử "KT. GIÁM ĐỐC".
+    - Đảm bảo 100% ẩn các ID nội bộ kỹ thuật (`VT-xx`, `QTD-xx`, `DCS-xx`, `AC-xx`).
+  - `tests`: 8 test cases bao phủ đầy đủ 4 Tiêu chí chấp nhận (TC-01, TC-02, TC-03, TC-04).
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#13-nhom-api-quan-ly-uy-quyen-giai-quyet-ho-so-dia-chinh-co-thoi-han-timed-delegation).
+
 ---
 
 ## 4. Cơ Chế Kiểm Soát Tiến Trình Dành Cho Agent (Gatekeeper Protocol)
@@ -159,9 +181,9 @@ flowchart TD
     
     CheckTable -- "ĐÃ CÓ trong bảng Đã hoàn thành" --> WarnDup["CẢNH BÁO TRÙNG LẶP (Duplicate Warning):<br>1. Thông báo Story này đã xong ngày nào, commit nào, test nào<br>2. Dừng thực thi ghi đè<br>3. Hỏi người dùng muốn chỉnh sửa chi tiết nào"]
     
-    CheckTable -- "CHƯA LÀM nhưng cách quá xa tiến trình hiện tại (Nhảy cóc)" --> WarnGap["CẢNH BÁO NHẢY CÓC (Sequence Gap Warning):<br>1. Chỉ rõ Story xong gần nhất (Anchor: DCS-01-CN-007)<br>2. Liệt kê các Story nối tiếp bị bỏ qua (DCS-01-CN-008, ...)<br>3. Cảnh báo rủi ro đứt gãy phụ thuộc dữ liệu<br>4. Đề xuất làm tuần tự Story tiếp theo hoặc chờ xác nhận"]
+    CheckTable -- "CHƯA LÀM nhưng cách quá xa tiến trình hiện tại (Nhảy cóc)" --> WarnGap["CẢNH BÁO NHẢY CÓC (Sequence Gap Warning):<br>1. Chỉ rõ Story xong gần nhất (Anchor: DCS-01-CN-008)<br>2. Liệt kê các Story nối tiếp bị bỏ qua (DCS-01-CN-009, ...)<br>3. Cảnh báo rủi ro đứt gãy phụ thuộc dữ liệu<br>4. Đề xuất làm tuần tự Story tiếp theo hoặc chờ xác nhận"]
     
-    CheckTable -- "ĐÚNG TIẾN TRÌNH TUẦN TỰ (ví dụ: DCS-01-CN-008)" --> RunStory["Thực hiện GitHub Flow theo AGENTS.md & SKILL.md"]
+    CheckTable -- "ĐÚNG TIẾN TRÌNH TUẦN TỰ (ví dụ: DCS-01-CN-009)" --> RunStory["Thực hiện GitHub Flow theo AGENTS.md & SKILL.md"]
     WarnGap -- "Người dùng vẫn xác nhận làm tiếp" --> RunStory
     
     RunStory --> Done["Kiểm thử PASS, Build PASS, Merge main, Push origin"]
@@ -180,8 +202,8 @@ flowchart TD
 - **Hành động của Agent**:
   - Không tự tiện thực thi ngay lập tức mà gửi cảnh báo phân tích cấu trúc:
     > "⚠️ **Cảnh báo tiến trình Product Backlog**:
-    > - Tiến trình hiện tại vừa hoàn thành: `[MÃ_STORY_GẦN_NHẤT]` (`DCS-01-CN-007`).
-    > - User Story tiếp theo liền kề theo thiết kế hệ thống là: `[MÃ_STORY_TIẾP_THEO]` (`DCS-01-CN-008`: Quản lý ủy quyền giải quyết hồ sơ địa chính có thời hạn).
+    > - Tiến trình hiện tại vừa hoàn thành: `[MÃ_STORY_GẦN_NHẤT]` (`DCS-01-CN-008`).
+    > - User Story tiếp theo liền kề theo thiết kế hệ thống là: `[MÃ_STORY_TIẾP_THEO]` (`DCS-01-CN-009`: Đăng nhập và phân quyền tài khoản tổ chức qua Cổng Định danh Doanh nghiệp).
     > - Yêu cầu hiện tại của bạn là `[MÃ_STORY_YÊU_CẦU]` - đang bỏ qua các bước tiền đề liền trước: `[DANH_SÁCH_STORIES_BỊ_BỎ_QUA]`.
     > - **Rủi ro kiến trúc**: `[Giải thích rõ lý do phân quyền / luồng dữ liệu...]`.
     > 
