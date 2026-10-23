@@ -1360,3 +1360,77 @@ export interface GetParcelPropertiesResponse {
   parcelNationalCode: string;
   properties: PropertyOnLandItem[];
 }
+
+
+// ==========================================
+// Đồng bộ thời gian thực với CSDL Đất đai Quốc gia (DCS-02-CN-007)
+// ==========================================
+
+export enum NationalSyncStatus {
+  SYNCED = 'SYNCED',       // Đã đồng bộ thành công về CSDL Quốc gia
+  PENDING = 'PENDING',     // Đang trong hàng đợi đồng bộ NDXP
+  FAILED = 'FAILED',       // Lỗi kết nối / xác thực (đang chờ retry)
+  CONFLICT = 'CONFLICT',   // Phát hiện xung đột phiên bản dữ liệu
+}
+
+export enum NationalSyncEventType {
+  PARCEL_DECLARED = 'PARCEL_DECLARED',           // Khai báo thửa đất mới
+  PARCEL_SUBDIVIDED = 'PARCEL_SUBDIVIDED',       // Tách thửa đất
+  PARCEL_MERGED = 'PARCEL_MERGED',               // Hợp thửa đất
+  ORIGIN_UPDATED = 'ORIGIN_UPDATED',             // Cập nhật nguồn gốc sử dụng đất
+  TERM_UPDATED = 'TERM_UPDATED',                 // Cập nhật thời hạn sử dụng đất
+  PROPERTY_REGISTERED = 'PROPERTY_REGISTERED',   // Đăng ký tài sản gắn liền với đất
+  TRANSACTION_LOCKED = 'TRANSACTION_LOCKED',     // Khóa giao dịch 90 phút
+  TRANSACTION_UNLOCKED = 'TRANSACTION_UNLOCKED', // Mở khóa giao dịch
+}
+
+export interface NationalSyncEventItem {
+  id: string;
+  eventType: NationalSyncEventType;
+  parcelId: string;
+  parcelNationalCode: string;
+  ndxpTransactionId: string;                     // Mã giao dịch Trục liên thông quốc gia NDXP
+  status: NationalSyncStatus;
+  retryCount: number;
+  syncLatencyMs: number;                         // Độ trễ đồng bộ (mili-giây)
+  checksumSha256: string;                        // Mã băm kiểm toán chuỗi băm QTD-20
+  syncedAt: string;
+  errorMessage?: string;
+  payloadSummary?: string;
+}
+
+export interface TriggerNationalSyncRequest {
+  parcelId?: string;
+  parcelNationalCode?: string;
+  eventType?: NationalSyncEventType;
+  officerId: string;
+  forceSync?: boolean;
+}
+
+export interface TriggerNationalSyncResponse {
+  success: boolean;
+  event: NationalSyncEventItem;
+  ndxpTransactionId: string;
+  syncLatencyMs: number;
+  auditHash: string;
+  message: string;
+}
+
+export interface NationalSyncStatsResponse {
+  totalEvents: number;
+  syncedCount: number;
+  pendingCount: number;
+  failedCount: number;
+  conflictCount: number;
+  syncedRate: number;                            // Tỷ lệ đồng bộ thành công (%)
+  averageLatencyMs: number;                      // Độ trễ đồng bộ trung bình (ms)
+  lastSyncedAt: string;
+  ndxpGatewayStatus: 'ONLINE' | 'DEGRADED' | 'OFFLINE';
+}
+
+export interface QueryNationalSyncEventsRequest {
+  status?: NationalSyncStatus;
+  eventType?: NationalSyncEventType;
+  parcelNationalCode?: string;
+  limit?: number;
+}

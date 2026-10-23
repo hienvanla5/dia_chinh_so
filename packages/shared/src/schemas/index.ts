@@ -1,6 +1,8 @@
 import { LandOriginType,
   PropertyOnLandType,
-  ConstructionGrade, LandUseTermType, ExpiryWarningStatus } from '../types';
+  ConstructionGrade,
+  NationalSyncStatus,
+  NationalSyncEventType, LandUseTermType, ExpiryWarningStatus } from '../types';
 import { z } from 'zod';
 import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction, DigitalSignatureProvider, SignatureStandard, OcspCertificateStatus, SessionStatus, SensitiveOperationType, OfficerAccountStatus, DeactivationReasonType, DelegationScope, DelegationStatus, EnterpriseStaffPermission } from '../types';
 
@@ -538,3 +540,28 @@ export const CreatePropertyOnLandSchema = z.object({
 });
 
 export type CreatePropertyOnLandInput = z.infer<typeof CreatePropertyOnLandSchema>;
+
+
+// ==========================================
+// Schemas Đồng bộ thời gian thực với CSDL Đất đai Quốc gia (DCS-02-CN-007)
+// ==========================================
+
+export const TriggerNationalSyncSchema = z.object({
+  parcelId: z.string().optional(),
+  parcelNationalCode: z.string().optional(),
+  eventType: z.nativeEnum(NationalSyncEventType, {
+    errorMap: () => ({ message: 'Loại sự kiện biến động đồng bộ không hợp lệ' }),
+  }).optional(),
+  officerId: z.string().min(1, 'Mã cán bộ thực hiện không được để trống'),
+  forceSync: z.boolean().optional(),
+});
+
+export const QueryNationalSyncEventsSchema = z.object({
+  status: z.nativeEnum(NationalSyncStatus).optional(),
+  eventType: z.nativeEnum(NationalSyncEventType).optional(),
+  parcelNationalCode: z.string().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+});
+
+export type TriggerNationalSyncInput = z.infer<typeof TriggerNationalSyncSchema>;
+export type QueryNationalSyncEventsInput = z.infer<typeof QueryNationalSyncEventsSchema>;
