@@ -1770,3 +1770,142 @@ sequenceDiagram
     "message": "Từ chối hồ sơ tách thửa đất nông nghiệp do không đảm bảo hạn mức canh tác tối thiểu theo Luật Đất đai 2024."
   }
   ```
+
+
+---
+
+## 20. Nhóm API Quản Lý Thời Hạn Sử Dụng Đất & Cảnh Báo Sắp Hết Hạn [DCS-02-CN-005]
+
+### 20.1. [DCS-02-CN-005] Cập nhật thời hạn sử dụng đất cho thửa đất
+- **Method**: `PUT`
+- **Path**: `/api/v1/parcels/:id/term`
+- **Yêu cầu quyền (RBAC)**: `LAND_REGISTRAR`, `COMMUNE_OFFICER`, `ADMIN` (QTD-16)
+- **Request Body**:
+  ```json
+  {
+    "termType": "DEFINITE",
+    "startDate": "2020-05-15",
+    "durationYears": 50,
+    "expiryDate": "2070-05-15",
+    "officerId": "CB-HN-001",
+    "officerCommuneCode": "01001",
+    "notes": "Giao đất nông nghiệp theo Quyết định số 123/QĐ-UBND"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "parcel": {
+      "id": "PARCEL-HN-001",
+      "nationalCode": "01001-0012-0045",
+      "termType": "DEFINITE",
+      "termStartDate": "2020-05-15",
+      "termDurationYears": 50,
+      "termExpiryDate": "2070-05-15",
+      "expiryWarningStatus": "VALID"
+    },
+    "termType": "DEFINITE",
+    "expiryDate": "2070-05-15",
+    "daysRemaining": 15911,
+    "warningStatus": "VALID",
+    "auditHash": "dc67afd562e4c4b7b0ef61225c1c26ba5b26d2c1b3f3944a221c1c0dfecc2ea0",
+    "message": "Cập nhật thời hạn sử dụng đất cho thửa '01001-0012-0045' thành công. Trạng thái: VALID."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Đất có thời hạn thiếu ngày hết hạn hoặc ngày bắt đầu sai định dạng; hoặc thửa đất đang bị khóa giao dịch.
+  - `403 Forbidden`: Cán bộ vi phạm thẩm quyền địa giới hành chính (QTD-16).
+  - `404 Not Found`: Không tìm thấy thửa đất.
+
+### 20.2. [DCS-02-CN-005] Quét danh sách thửa đất sắp hết hạn sử dụng
+- **Method**: `GET`
+- **Path**: `/api/v1/parcels/expiring-soon`
+- **Query Params**:
+  - `daysThreshold` (number, tùy chọn, mặc định: 180 ngày)
+  - `communeCode` (string, tùy chọn)
+  - `warningStatus` (string, tùy chọn: `CRITICAL_3M` | `EXPIRING_SOON_6M` | `EXPIRED` | `VALID`)
+- **Response `200 OK`**:
+  ```json
+  {
+    "total": 2,
+    "daysThreshold": 180,
+    "items": [
+      {
+        "parcelId": "PARCEL-HCM-002",
+        "nationalCode": "79001-0005-0019",
+        "sheetNumber": 5,
+        "parcelNumber": 19,
+        "communeCode": "79001",
+        "communeName": "Phường Bến Nghé",
+        "purposeCode": "LUC",
+        "purposeName": "Đất chuyên trồng lúa nước",
+        "area": 1500,
+        "ownerName": "Nguyễn Văn Minh",
+        "ownerCitizenId": "079085112233",
+        "ownerPhone": "0987654321",
+        "termStartDate": "1976-10-15",
+        "termExpiryDate": "2026-10-13",
+        "daysRemaining": -10,
+        "warningStatus": "EXPIRED",
+        "legalExtensionGuidance": "Căn cứ Điều 172 Luật Đất đai 2024: Người sử dụng đất có nhu cầu tiếp tục sử dụng đất phải nộp hồ sơ xin gia hạn chậm nhất 06 tháng trước khi hết thời hạn sử dụng. Quá thời hạn này mà không nộp hồ sơ, Nhà nước sẽ tiến hành thu hồi đất theo luật định.",
+        "lastNotifiedAt": null
+      },
+      {
+        "parcelId": "PARCEL-HCM-001",
+        "nationalCode": "79001-0005-0018",
+        "sheetNumber": 5,
+        "parcelNumber": 18,
+        "communeCode": "79001",
+        "communeName": "Phường Bến Nghé",
+        "purposeCode": "TMD",
+        "purposeName": "Đất thương mại, dịch vụ",
+        "area": 250,
+        "ownerName": "Tập đoàn Đầu tư Bất động sản Sài Gòn",
+        "ownerCitizenId": "079080001234",
+        "ownerPhone": "0987654321",
+        "termStartDate": "2021-12-01",
+        "termExpiryDate": "2026-12-07",
+        "daysRemaining": 45,
+        "warningStatus": "CRITICAL_3M",
+        "legalExtensionGuidance": "Căn cứ Điều 172 Luật Đất đai 2024: Người sử dụng đất có nhu cầu tiếp tục sử dụng đất phải nộp hồ sơ xin gia hạn chậm nhất 06 tháng trước khi hết thời hạn sử dụng. Quá thời hạn này mà không nộp hồ sơ, Nhà nước sẽ tiến hành thu hồi đất theo luật định.",
+        "lastNotifiedAt": null
+      }
+    ],
+    "summary": {
+      "criticalCount": 1,
+      "warningCount": 0,
+      "expiredCount": 1
+    }
+  }
+  ```
+
+### 20.3. [DCS-02-CN-005] Phát thông báo cảnh báo hết hạn sử dụng đất cho chủ sở hữu
+- **Method**: `POST`
+- **Path**: `/api/v1/parcels/:id/notify-expiry`
+- **Yêu cầu quyền (RBAC)**: `LAND_REGISTRAR`, `COMMUNE_OFFICER`, `ADMIN` (QTD-27)
+- **Request Body**:
+  ```json
+  {
+    "channels": ["SMS", "APP_PUSH"],
+    "officerId": "ADMIN"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "parcelId": "PARCEL-HCM-001",
+    "nationalCode": "79001-0005-0018",
+    "ownerName": "Tập đoàn Đầu tư Bất động sản Sài Gòn",
+    "ownerPhone": "0987654321",
+    "sentChannels": ["SMS", "APP_PUSH"],
+    "notificationContent": "[ĐỊA CHÍNH SỐ] Kính gửi ông/bà Tập đoàn Đầu tư Bất động sản Sài Gòn, thửa đất số 18, tờ BĐ số 5 (Mã định danh: 79001-0005-0018) tại Phường Bến Nghé sẽ hết hạn sử dụng vào ngày 2026-12-07 (còn 45 ngày). Căn cứ Điều 172 Luật Đất đai 2024, đề nghị ông/bà nộp hồ sơ gia hạn trước ít nhất 06 tháng tại Chi nhánh Văn phòng Đăng ký Đất đai.",
+    "auditHash": "ad1804e7058f04127694a59f4a49c6be0a20469a0ad5622c9952a13aa6e2c7b0",
+    "notifiedAt": "2026-10-23T08:28:26.000Z",
+    "message": "Đã phát thông báo cảnh báo hết hạn sử dụng đất thành công qua các kênh: SMS, APP_PUSH."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Thửa đất không thuộc loại có thời hạn sử dụng xác định, hoặc đang bị khóa giao dịch.
+  - `404 Not Found`: Không tìm thấy thửa đất.
