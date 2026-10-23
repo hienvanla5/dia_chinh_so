@@ -10,12 +10,12 @@
 | Chỉ số | Số lượng | Tỷ lệ (%) | Ghi chú |
 |---|---|---|---|
 | **Tổng số User Stories** | **114** | **100%** | Toàn bộ 114 User Stories được số hóa tại `user_stories/` |
-| **Đã hoàn thành (Done)** | **18** | **15.8%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
+| **Đã hoàn thành (Done)** | **19** | **16.7%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
 | **Đang thực hiện (In Progress)** | **0** | **0.0%** | Không có Story nào đang dở dang |
-| **Chưa thực hiện (Backlog)** | **96** | **84.2%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
+| **Chưa thực hiện (Backlog)** | **95** | **83.3%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
 
-- **User Story hoàn thành gần nhất**: [`DCS-02-CN-008`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-008.md) - Tự động đối soát và phát hiện trùng lặp mã thửa.
-- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-02-CN-009`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-009.md) - Hiển thị lược sử biến động thửa đất dạng cây gia phả.
+- **User Story hoàn thành gần nhất**: [`DCS-02-CN-009`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-009.md) - Hiển thị lược sử biến động thửa đất dạng cây gia phả.
+- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-02-CN-010`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-010.md) - Cập nhật biến động thông tin chủ sở hữu qua Cổng Dịch vụ công số hóa.
 
 ---
 
@@ -361,3 +361,13 @@ flowchart TD
   - `apps/web`: Route `/parcels` bổ sung nút và Modal "Đối soát & Làm sạch CSDL Thửa Đất" với thẻ tỷ lệ dữ liệu sạch (99.8%), bộ lọc mức độ/trạng thái, bảng chi tiết báo cáo sai lệch và form xử lý/xác minh thực địa.
   - `tests`: 11 unit & integration tests PASS.
 - **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#23-nhóm-api-đối-soát--làm-sạch-csdl-thửa-đất-parcel-reconciliation-dcs-02-cn-008).
+
+
+### 3.19. [DCS-02-CN-009] Hiển thị lược sử biến động thửa đất dạng cây gia phả
+- **Persona**: Văn phòng Đăng ký Đất đai, Cán bộ Địa chính xã/phường
+- **Kiến trúc triển khai**:
+  - `packages/shared`: Kiểu dữ liệu đồ thị cây gia phả `PedigreeTreeNode`, `PedigreeTreeEdge`, `PedigreeTimelineEvent`, `PedigreeTreeResponse`, Schema `GetPedigreeTreeQuerySchema`.
+  - `apps/api`: Dịch vụ `ParcelService.getPedigreeTree` và Controller endpoint `GET /parcels/:id/pedigree-tree` xây dựng đồ thị DAG phả hệ biến động đa thế hệ, truy ngược tổ tiên gốc F0, phân cấp thế hệ con/cháu, tạo dòng thời gian pháp lý và chuỗi băm SHA-256 bảo đảm nguyên tắc bất biến (QTD-02).
+  - `apps/web`: Route `/parcels` nâng cấp Modal Cây gia phả tương tác với 2 chế độ xem: Đồ thị cây phả hệ trực quan (phóng to/thu nhỏ, chọn nút xem chi tiết) và Dòng thời gian biến động tuần tự.
+  - `tests`: 72 tests trong `parcel.service.spec.ts` PASS trọn vẹn 4 tiêu chí chấp nhận TC-01, TC-02, TC-03, TC-04.
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#24-nhóm-api-hiển-thị-lược-sử-biến-động-thửa-đất-dạng-cây-gia-phả-pedigree-tree-lineage-dcs-02-cn-009).
