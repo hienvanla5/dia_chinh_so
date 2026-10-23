@@ -361,3 +361,282 @@ describe('ParcelService [DCS-02-CN-002] Sinh Mã định danh thửa đất qu�
     });
   });
 });
+
+
+describe('ParcelService [DCS-02-CN-003] Quản lý vòng đời thửa đất: Tách thửa và hợp thửa', () => {
+  let service: ParcelService;
+
+  beforeEach(() => {
+    service = new ParcelService();
+  });
+
+  describe('DCS-02-CN-003-TC-01: Luồng thành công - Tách thửa, Hợp thửa và Cây gia phả (Lineage)', () => {
+    it('phải tách thửa thành công, chuyển thửa gốc sang HISTORICAL và sinh các thửa con hợp lệ', async () => {
+      // PARCEL-HN-001 có diện tích 125.8m2, Tờ 12, Thửa 45, Xã 01001, ODT, AVAILABLE
+      const res = await service.subdivideParcel({
+        parentParcelId: 'PARCEL-HN-001',
+        decisionNumber: 'QĐ-TÁCH-2026/01/UBND',
+        officerId: 'CB-HN-001',
+        officerCommuneCode: '01001',
+        newParcels: [
+          {
+            parcelNumber: 101,
+            area: 60.0,
+            address: 'Số 15A Điện Biên Phủ, Phường Điện Biên',
+            ownerName: 'Trần Văn Hoàng (Cha)',
+          },
+          {
+            parcelNumber: 102,
+            area: 65.8,
+            address: 'Số 15B Điện Biên Phủ, Phường Điện Biên',
+            ownerName: 'Trần Văn Long (Con)',
+          },
+        ],
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.parentParcel.legalStatus).toBe(ParcelLegalStatus.HISTORICAL);
+      expect(res.parentParcel.isHistorical).toBe(true);
+      expect(res.parentParcel.childParcelIds).toHaveLength(2);
+      expect(res.childParcels).toHaveLength(2);
+
+      // Thửa con 1
+      expect(res.childParcels[0].parentParcelId).toBe('PARCEL-HN-001');
+      expect(res.childParcels[0].nationalCode).toBe('01001-0012-0101');
+      expect(res.childParcels[0].area).toBe(60.0);
+      expect(res.childParcels[0].legalStatus).toBe(ParcelLegalStatus.AVAILABLE);
+
+      // Thửa con 2
+      expect(res.childParcels[1].parentParcelId).toBe('PARCEL-HN-001');
+      expect(res.childParcels[1].nationalCode).toBe('01001-0012-0102');
+      expect(res.childParcels[1].area).toBe(65.8);
+
+      // Mã băm kiểm toán
+      expect(res.auditHash).toHaveLength(64);
+    });
+
+    it('phải hợp thửa thành công các thửa đất liền kề cùng mục đích và đóng lịch sử các thửa tiền thân', async () => {
+      // Khai báo 2 thửa ODT liền kề trên xã 01001
+      const p1 = await service.declareNewParcel({
+        communeCode: '01001',
+        provinceCode: 'TINH_HN',
+        sheetNumber: 30,
+        parcelNumber: 1,
+        area: 70.0,
+        purposeCode: LandPurposeCode.ODT,
+        address: 'Số 1 Phố Hàng Chuối',
+        verticesVN2000: [{ x: 2325000, y: 589000 }, { x: 2325010, y: 589010 }, { x: 2325000, y: 589010 }],
+        surveyDocumentNumber: 'HS-TD-01',
+        officerId: 'CB-HN-001',
+        officerCommuneCode: '01001',
+      });
+      await service.updateLegalStatus(p1.parcel.id, ParcelLegalStatus.AVAILABLE);
+
+      const p2 = await service.declareNewParcel({
+        communeCode: '01001',
+        provinceCode: 'TINH_HN',
+        sheetNumber: 30,
+        parcelNumber: 2,
+        area: 80.0,
+        purposeCode: LandPurposeCode.ODT,
+        address: 'Số 3 Phố Hàng Chuối',
+        verticesVN2000: [{ x: 2325010, y: 589000 }, { x: 2325020, y: 589010 }, { x: 2325010, y: 589010 }],
+        surveyDocumentNumber: 'HS-TD-02',
+        officerId: 'CB-HN-001',
+        officerCommuneCode: '01001',
+      });
+      await service.updateLegalStatus(p2.parcel.id, ParcelLegalStatus.AVAILABLE);
+
+      // Thực hiện hợp thửa
+      const mergeRes = await service.mergeParcels({
+        sourceParcelIds: [p1.parcel.id, p2.parcel.id],
+        newParcelNumber: 99,
+        sheetNumber: 30,
+        decisionNumber: 'QĐ-HỢP-2026/02/UBND',
+        officerId: 'CB-HN-001',
+        officerCommuneCode: '01001',
+        ownerName: 'Công ty Cổ phần Thương mại Thủ Đô',
+      });
+
+      expect(mergeRes.success).toBe(true);
+      expect(mergeRes.mergedParcel.area).toBe(150.0);
+      expect(mergeRes.mergedParcel.nationalCode).toBe('01001-0030-0099');
+      expect(mergeRes.mergedParcel.mergedFromParcelIds).toContain(p1.parcel.id);
+      expect(mergeRes.mergedParcel.mergedFromParcelIds).toContain(p2.parcel.id);
+
+      // Các thửa tiền thân phải chuyển sang HISTORICAL (QTD-02)
+      const old1 = await service.findById(p1.parcel.id);
+      const old2 = await service.findById(p2.parcel.id);
+      expect(old1.legalStatus).toBe(ParcelLegalStatus.HISTORICAL);
+      expect(old2.legalStatus).toBe(ParcelLegalStatus.HISTORICAL);
+    });
+
+    it('phải truy xuất chính xác cây gia phả biến động (Lineage DAG)', async () => {
+      // Tách PARCEL-HN-001
+      const subRes = await service.subdivideParcel({
+        parentParcelId: 'PARCEL-HN-001',
+        decisionNumber: 'QĐ-TÁCH-2026/01/UBND',
+        officerId: 'CB-HN-001',
+        officerCommuneCode: '01001',
+        newParcels: [
+          { parcelNumber: 201, area: 60.0 },
+          { parcelNumber: 202, area: 65.8 },
+        ],
+      });
+
+      const childId = subRes.childParcels[0].id;
+      const lineage = await service.getParcelLineage(childId);
+
+      expect(lineage.parcelId).toBe(childId);
+      expect(lineage.parents).toHaveLength(1);
+      expect(lineage.parents[0].id).toBe('PARCEL-HN-001');
+      expect(lineage.lineageNodes.some((n) => n.relationship === 'PARENT')).toBe(true);
+      expect(lineage.lineageNodes.some((n) => n.relationship === 'CURRENT')).toBe(true);
+    });
+  });
+
+  describe('DCS-02-CN-003-TC-02: Dữ liệu không hợp lệ & Ràng buộc diện tích (QTD-08)', () => {
+    it('phải từ chối tách thửa nếu danh sách thửa con ít hơn 2 thửa', async () => {
+      await expect(
+        service.subdivideParcel({
+          parentParcelId: 'PARCEL-HN-001',
+          decisionNumber: 'QĐ-2026/01',
+          officerId: 'CB-HN-001',
+          newParcels: [{ parcelNumber: 101, area: 125.8 }],
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('phải từ chối nếu có thửa con nhỏ hơn hạn mức tối thiểu (QTD-08)', async () => {
+      await expect(
+        service.subdivideParcel({
+          parentParcelId: 'PARCEL-HN-001',
+          decisionNumber: 'QĐ-2026/01',
+          officerId: 'CB-HN-001',
+          newParcels: [
+            { parcelNumber: 101, area: 25.0 }, // Nhỏ hơn 30m2 ODT
+            { parcelNumber: 102, area: 100.8 },
+          ],
+        }),
+      ).rejects.toThrow(/nhỏ hơn hạn mức tối thiểu/);
+    });
+
+    it('phải từ chối nếu tổng diện tích các thửa con không khớp với thửa gốc', async () => {
+      await expect(
+        service.subdivideParcel({
+          parentParcelId: 'PARCEL-HN-001',
+          decisionNumber: 'QĐ-2026/01',
+          officerId: 'CB-HN-001',
+          newParcels: [
+            { parcelNumber: 101, area: 50.0 },
+            { parcelNumber: 102, area: 50.0 }, // Tổng 100m2 != 125.8m2
+          ],
+        }),
+      ).rejects.toThrow(/không khớp với diện tích thửa đất gốc/);
+    });
+
+    it('phải từ chối nếu các thửa con trùng số thứ tự thửa', async () => {
+      await expect(
+        service.subdivideParcel({
+          parentParcelId: 'PARCEL-HN-001',
+          decisionNumber: 'QĐ-2026/01',
+          officerId: 'CB-HN-001',
+          newParcels: [
+            { parcelNumber: 101, area: 60.0 },
+            { parcelNumber: 101, area: 65.8 }, // Trùng 101
+          ],
+        }),
+      ).rejects.toThrow(/không được trùng số thứ tự thửa/);
+    });
+  });
+
+  describe('DCS-02-CN-003-TC-03: Ràng buộc nghiệp vụ (QTD-02, QTD-16, QTD-31, Lock)', () => {
+    it('phải từ chối hợp thửa nếu các thửa đất không cùng mục đích sử dụng (QTD-31)', async () => {
+      // PARCEL-HN-001 (ODT) và PARCEL-HCM-001 (TMD)
+      await expect(
+        service.mergeParcels({
+          sourceParcelIds: ['PARCEL-HN-001', 'PARCEL-HCM-001'],
+          newParcelNumber: 999,
+          decisionNumber: 'QĐ-2026/05',
+          officerId: 'ADMIN',
+        }),
+      ).rejects.toThrow(/QTD-31/);
+    });
+
+    it('phải chặn cán bộ ngoài địa bàn thẩm quyền thực hiện tách thửa (QTD-16)', async () => {
+      await expect(
+        service.subdivideParcel({
+          parentParcelId: 'PARCEL-HN-001', // Thuộc xã 01001
+          decisionNumber: 'QĐ-2026/01',
+          officerId: 'CB-HCM-001',
+          officerCommuneCode: '79001', // Cán bộ thuộc xã 79001
+          newParcels: [
+            { parcelNumber: 101, area: 60.0 },
+            { parcelNumber: 102, area: 65.8 },
+          ],
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('phải chặn tách thửa khi thửa đất đang ở trạng thái LOCKED hoặc DISPUTED', async () => {
+      // PARCEL-HN-002 đang ở trạng thái LOCKED
+      await expect(
+        service.subdivideParcel({
+          parentParcelId: 'PARCEL-HN-002',
+          decisionNumber: 'QĐ-2026/01',
+          officerId: 'CB-HN-001',
+          officerCommuneCode: '01001',
+          newParcels: [
+            { parcelNumber: 105, area: 49.0 },
+            { parcelNumber: 106, area: 49.4 },
+          ],
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('phải từ chối tách thửa đối với thửa đất đã chuyển sang HISTORICAL (QTD-02)', async () => {
+      // Tách PARCEL-HN-001 lần 1
+      await service.subdivideParcel({
+        parentParcelId: 'PARCEL-HN-001',
+        decisionNumber: 'QĐ-2026/01',
+        officerId: 'ADMIN',
+        newParcels: [
+          { parcelNumber: 111, area: 60.0 },
+          { parcelNumber: 112, area: 65.8 },
+        ],
+      });
+
+      // Cố gắng tách tiếp thửa PARCEL-HN-001 (đã là HISTORICAL)
+      await expect(
+        service.subdivideParcel({
+          parentParcelId: 'PARCEL-HN-001',
+          decisionNumber: 'QĐ-2026/02',
+          officerId: 'ADMIN',
+          newParcels: [
+            { parcelNumber: 113, area: 60.0 },
+            { parcelNumber: 114, area: 65.8 },
+          ],
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('DCS-02-CN-003-TC-04: Toàn vẹn & Bất biến lịch sử CSDL (QTD-02)', () => {
+    it('thửa đất gốc sau khi tách vẫn tồn tại trong CSDL và tra cứu được', async () => {
+      await service.subdivideParcel({
+        parentParcelId: 'PARCEL-HN-001',
+        decisionNumber: 'QĐ-2026/01',
+        officerId: 'ADMIN',
+        newParcels: [
+          { parcelNumber: 121, area: 60.0 },
+          { parcelNumber: 122, area: 65.8 },
+        ],
+      });
+
+      const parentInDb = await service.findById('PARCEL-HN-001');
+      expect(parentInDb).toBeDefined();
+      expect(parentInDb.legalStatus).toBe(ParcelLegalStatus.HISTORICAL);
+      expect(parentInDb.isHistorical).toBe(true);
+    });
+  });
+});
