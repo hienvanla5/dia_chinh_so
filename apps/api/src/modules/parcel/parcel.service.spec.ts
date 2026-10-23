@@ -213,3 +213,151 @@ describe('ParcelService [DCS-02-CN-001] Khai báo thông tin thuộc tính thử
     });
   });
 });
+
+
+describe('ParcelService [DCS-02-CN-002] Sinh Mã định danh thửa đất quốc gia duy nhất', () => {
+  let service: ParcelService;
+
+  beforeEach(() => {
+    service = new ParcelService();
+  });
+
+  describe('DCS-02-CN-002-TC-01: Luồng thành công - Tự động sinh mã định danh và Spatial UID', () => {
+    it('phải sinh thành công mã định danh quốc gia theo chuẩn cấu trúc và Spatial UID', async () => {
+      const res = await service.generateNationalCode({
+        communeCode: '01001',
+        provinceCode: 'TINH_HN',
+        sheetNumber: 15,
+        parcelNumber: 88,
+        centroidX: 2325505.5,
+        centroidY: 589215.2,
+      });
+
+      expect(res.nationalCode).toBe('01001-0015-00088-00');
+      expect(res.shortCode).toBe('01001-0015-0088');
+      expect(res.spatialUid).toBe('VN-3405-01001-X2325506-Y589215');
+      expect(res.components.communeCode).toBe('01001');
+      expect(res.components.sheetNumber).toBe(15);
+      expect(res.components.parcelNumber).toBe(88);
+      expect(res.components.checksum).toBeDefined();
+      expect(res.isUnique).toBe(true);
+      expect(res.auditHash).toHaveLength(64);
+      expect(res.qrCodePayload).toContain('DCS:VN:01001-0015-00088-00');
+    });
+
+    it('phải hỗ trợ hậu tố phân nhánh thời gian khi tách/hợp thửa', async () => {
+      const res = await service.generateNationalCode({
+        communeCode: '79001',
+        provinceCode: 'TINH_HCM',
+        sheetNumber: 5,
+        parcelNumber: 120,
+        subdivisionBranch: '02',
+      });
+
+      expect(res.nationalCode).toBe('79001-0005-00120-02');
+      expect(res.components.branchSuffix).toBe('02');
+    });
+
+    it('phải thẩm tra hợp lệ mã định danh đúng quy chuẩn quốc gia', async () => {
+      const res = await service.validateNationalCode('01001-0015-00088-00');
+
+      expect(res.isValid).toBe(true);
+      expect(res.components?.communeCode).toBe('01001');
+      expect(res.components?.sheetNumber).toBe(15);
+      expect(res.components?.parcelNumber).toBe(88);
+    });
+  });
+
+  describe('DCS-02-CN-002-TC-02: Dữ liệu không hợp lệ & Từ chối định dạng sai', () => {
+    it('phải từ chối khi số tờ hoặc số thửa nhỏ hơn hoặc bằng 0', async () => {
+      await expect(
+        service.generateNationalCode({
+          communeCode: '01001',
+          provinceCode: 'TINH_HN',
+          sheetNumber: 0,
+          parcelNumber: 50,
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.generateNationalCode({
+          communeCode: '01001',
+          provinceCode: 'TINH_HN',
+          sheetNumber: 10,
+          parcelNumber: -5,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('phải từ chối khi mã xã không hợp lệ hoặc rỗng', async () => {
+      await expect(
+        service.generateNationalCode({
+          communeCode: '',
+          provinceCode: 'TINH_HN',
+          sheetNumber: 10,
+          parcelNumber: 20,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('phải trả về isValid = false khi thẩm tra mã định danh sai định dạng cấu trúc', async () => {
+      const resInvalid = await service.validateNationalCode('MA-THUA-KHONG-DUNG-CHUAN');
+      expect(resInvalid.isValid).toBe(false);
+      expect(resInvalid.errorReason).toBeDefined();
+
+      const resEmpty = await service.validateNationalCode('');
+      expect(resEmpty.isValid).toBe(false);
+    });
+  });
+
+  describe('DCS-02-CN-002-TC-03: Ràng buộc duy nhất toàn quốc (QTD-01)', () => {
+    it('phải phát hiện cảnh báo khi mã định danh đã tồn tại trong CSDL', async () => {
+      await service.declareNewParcel({
+        communeCode: '01001',
+        provinceCode: 'TINH_HN',
+        sheetNumber: 20,
+        parcelNumber: 99,
+        area: 120,
+        purposeCode: LandPurposeCode.ONT,
+        address: 'Số 10 Phố Phan Đình Phùng',
+        verticesVN2000: [
+          { x: 2325000, y: 589000 },
+          { x: 2325010, y: 589010 },
+          { x: 2325000, y: 589010 },
+        ],
+        surveyDocumentNumber: 'HS-2026-99',
+        officerId: 'CB-HN-001',
+        officerCommuneCode: '01001',
+      });
+
+      const genRes = await service.generateNationalCode({
+        communeCode: '01001',
+        provinceCode: 'TINH_HN',
+        sheetNumber: 20,
+        parcelNumber: 99,
+      });
+
+      expect(genRes.isUnique).toBe(false);
+      expect(genRes.message).toContain('Cảnh báo');
+
+      const valRes = await service.validateNationalCode('01001-0020-0099');
+      expect(valRes.isValid).toBe(true);
+      expect(valRes.isRegisteredInDatabase).toBe(true);
+    });
+  });
+
+  describe('DCS-02-CN-002-TC-04: Toàn vẹn & Mã băm kiểm toán', () => {
+    it('phải sinh mã băm SHA-256 nhất quán và mã QR phục vụ tra cứu số hóa', async () => {
+      const res = await service.generateNationalCode({
+        communeCode: '01001',
+        provinceCode: 'TINH_HN',
+        sheetNumber: 35,
+        parcelNumber: 42,
+      });
+
+      expect(res.auditHash).toBeDefined();
+      expect(res.auditHash).toHaveLength(64);
+      expect(res.qrCodePayload).toMatch(/^DCS:VN:01001-0035-00042-00:VN-3405-01001-X\d+-Y\d+:CS\d+$/);
+    });
+  });
+});
