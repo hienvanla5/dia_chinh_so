@@ -10,12 +10,12 @@
 | Chỉ số | Số lượng | Tỷ lệ (%) | Ghi chú |
 |---|---|---|---|
 | **Tổng số User Stories** | **114** | **100%** | Toàn bộ 114 User Stories được số hóa tại `user_stories/` |
-| **Đã hoàn thành (Done)** | **17** | **14.9%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
+| **Đã hoàn thành (Done)** | **18** | **15.8%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
 | **Đang thực hiện (In Progress)** | **0** | **0.0%** | Không có Story nào đang dở dang |
-| **Chưa thực hiện (Backlog)** | **97** | **85.1%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
+| **Chưa thực hiện (Backlog)** | **96** | **84.2%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
 
-- **User Story hoàn thành gần nhất**: [`DCS-02-CN-007`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-007.md) - Đồng bộ thời gian thực với CSDL Đất đai Quốc gia.
-- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-02-CN-008`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-008.md) - Tự động đối soát và phát hiện trùng lặp mã thửa.
+- **User Story hoàn thành gần nhất**: [`DCS-02-CN-008`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-008.md) - Tự động đối soát và phát hiện trùng lặp mã thửa.
+- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-02-CN-009`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-009.md) - Hiển thị lược sử biến động thửa đất dạng cây gia phả.
 
 ---
 
@@ -324,3 +324,40 @@ flowchart TD
   - `apps/web`: Route `/parcels` hiển thị cột Nguồn gốc sử dụng đất kèm thẻ phân định quyền năng, Modal Quản lý nguồn gốc và Modal Thẩm định đất nông nghiệp.
   - `tests`: 41 unit tests PASS bao phủ toàn diện 4 tiêu chí chấp nhận TC-01, TC-02, TC-03, TC-04.
 - **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#19-nhóm-api-quản-lý-nguồn-gốc-sử-dụng-đất-dcs-02-cn-004).
+
+
+### 3.15. [DCS-02-CN-005] Quản lý thời hạn sử dụng đất và cảnh báo sắp hết hạn
+- **Persona**: Cán bộ Địa chính xã/phường, Văn phòng Đăng ký Đất đai, Người sử dụng đất
+- **Kiến trúc triển khai**:
+  - `packages/shared`: Enum `LandUseTermType` (`STABLE_LONG_TERM`, `DEFINITE`), `ExpiryWarningStatus` (`VALID`, `EXPIRING_SOON_6M`, `CRITICAL_3M`, `EXPIRED`), Schema `UpdateLandTermSchema`, `GetExpiringParcelsQuerySchema`, `NotifyExpirySchema`.
+  - `apps/api`: Dịch vụ `updateLandTerm`, `getExpiringParcels`, `notifyExpiry` tính toán thời hạn theo Điều 172 Luật Đất đai 2024, phân loại ngưỡng 6 tháng, 3 tháng và gửi thông báo đa kênh SMS/App Push kèm mã băm SHA-256.
+  - `apps/web`: Route `/parcels` hiển thị cảnh báo thời hạn, Modal Quản lý thời hạn và Modal Danh sách thửa đất sắp hết hạn.
+  - `tests`: 55 unit tests PASS.
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#20-nhóm-api-quản-lý-thời-hạn-sử-dụng-đất-và-cảnh-báo-hết-hạn-dcs-02-cn-005).
+
+### 3.16. [DCS-02-CN-006] Quản lý tài sản gắn liền với đất trên thửa
+- **Persona**: Cán bộ Địa chính xã/phường, Văn phòng Đăng ký Đất đai, Chủ sở hữu tài sản
+- **Kiến trúc triển khai**:
+  - `packages/shared`: Enum `PropertyOnLandType` (nhà ở riêng lẻ, căn hộ, công trình thương mại, cây lâu năm), `ConstructionGrade`, `PropertyStatus`, Schema `CreatePropertyOnLandSchema`.
+  - `apps/api`: Dịch vụ `createPropertyOnLand`, `getPropertiesByParcel`, `demolishProperty` kiểm tra diện tích xây dựng không vượt quá diện tích thửa, áp dụng cơ chế đồng sở hữu vợ chồng (QTD-25) và ghi nhận phá dỡ tài sản.
+  - `apps/web`: Route `/parcels` Modal Quản lý tài sản trên đất, hỗ trợ thêm mới, xóa và hiển thị đồng sở hữu người phối ngẫu.
+  - `tests`: 67 unit tests PASS.
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#21-nhóm-api-quản-lý-tài-sản-gắn-liền-với-đất-trên-thửa-dcs-02-cn-006).
+
+### 3.17. [DCS-02-CN-007] Đồng bộ thời gian thực với CSDL Đất đai Quốc gia
+- **Persona**: Quản trị viên Hệ thống, Văn phòng Đăng ký Đất đai
+- **Kiến trúc triển khai**:
+  - `packages/shared`: Enum `NationalSyncStatus`, `NationalSyncEventType`, Schema `TriggerNationalSyncSchema`, `QueryNationalSyncEventsSchema`.
+  - `apps/api`: Module `NationalSyncModule`, Dịch vụ `triggerSync`, `retrySync`, `getStats`, `queryEvents` mô phỏng Trục liên thông NDXP với độ trễ dưới 200ms, cơ chế hàng đợi bất đồng bộ và chuỗi băm SHA-256 bảo đảm tính toàn vẹn.
+  - `apps/web`: Route `/parcels` Modal Đồng bộ CSDL Quốc gia qua NDXP với thẻ chỉ số thời gian thực, bảng sự kiện đồng bộ và nút Thử lại sự kiện lỗi.
+  - `tests`: 10 unit tests PASS.
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#22-nhóm-api-đồng-bộ-thời-gian-thực-với-csdl-đất-đai-quốc-gia-qua-ndxp-dcs-02-cn-007).
+
+### 3.18. [DCS-02-CN-008] Tự động đối soát và phát hiện trùng lặp mã thửa
+- **Persona**: Quản trị viên Hệ thống, Văn phòng Đăng ký Đất đai
+- **Kiến trúc triển khai**:
+  - `packages/shared`: Enum `ReconciliationAnomalyType` (`DUPLICATE_NATIONAL_CODE`, `DUPLICATE_SHEET_PARCEL`, `SPATIAL_OVERLAP`, `AREA_DISCREPANCY`), `ReconciliationSeverity`, `AnomalyResolutionStatus`, Schema `TriggerReconciliationScanSchema`, `ResolveReconciliationAnomalySchema`.
+  - `apps/api`: Module `ReconciliationModule`, Controller `ReconciliationController` và Service `ReconciliationService` cung cấp API `/stats`, `/reports`, `/scan`, `/resolve/:reportId` tự động đối soát CSDL, tính tỷ lệ dữ liệu sạch (Clean Data Rate), phát hiện trùng lặp mã quốc gia (QTD-01), chồng lấn ranh giới VN-2000 (QTD-06) và ghi nhận nhật ký kiểm toán SHA-256 (QTD-20).
+  - `apps/web`: Route `/parcels` bổ sung nút và Modal "Đối soát & Làm sạch CSDL Thửa Đất" với thẻ tỷ lệ dữ liệu sạch (99.8%), bộ lọc mức độ/trạng thái, bảng chi tiết báo cáo sai lệch và form xử lý/xác minh thực địa.
+  - `tests`: 11 unit & integration tests PASS.
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#23-nhóm-api-đối-soát--làm-sạch-csdl-thửa-đất-parcel-reconciliation-dcs-02-cn-008).
