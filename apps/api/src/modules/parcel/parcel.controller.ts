@@ -5,6 +5,10 @@ import {
   CreateParcelInput,
   DeclareNewParcelInput,
   DeclareNewParcelSchema,
+  GenerateNationalCodeInput,
+  GenerateNationalCodeSchema,
+  ValidateNationalCodeInput,
+  ValidateNationalCodeSchema,
   ParcelLegalStatus,
   UserRole,
 } from '@diachinhso/shared';
@@ -52,6 +56,24 @@ export class ParcelController {
   async declareNewParcel(@Body() body: DeclareNewParcelInput) {
     const validated = DeclareNewParcelSchema.parse(body);
     return this.parcelService.declareNewParcel(validated);
+  }
+
+  @Post('generate-code')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Sinh Mã định danh thửa đất quốc gia duy nhất (DCS-02-CN-002)' })
+  @ApiResponse({ status: 200, description: 'Sinh mã định danh quốc gia và Spatial UID thành công' })
+  async generateNationalCode(@Body() body: GenerateNationalCodeInput) {
+    const validated = GenerateNationalCodeSchema.parse(body);
+    return this.parcelService.generateNationalCode(validated);
+  }
+
+  @Post('validate-code')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Xác thực định dạng và kiểm tra sự tồn tại của Mã định danh thửa đất (DCS-02-CN-002)' })
+  @ApiResponse({ status: 200, description: 'Kết quả thẩm tra tính hợp lệ của mã định danh' })
+  async validateNationalCode(@Body() body: ValidateNationalCodeInput) {
+    const validated = ValidateNationalCodeSchema.parse(body);
+    return this.parcelService.validateNationalCode(validated.code);
   }
 
   @Post()
