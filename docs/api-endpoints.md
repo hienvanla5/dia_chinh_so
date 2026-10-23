@@ -2141,3 +2141,121 @@ sequenceDiagram
 - **Mã lỗi**:
   - `400 Bad Request`: Sự kiện đã ở trạng thái SYNCED, không cần thử lại.
   - `404 Not Found`: Không tìm thấy sự kiện đồng bộ.
+
+
+---
+
+## 23. Nhóm API Đối Soát & Làm Sạch CSDL Thửa Đất (Parcel Reconciliation) [DCS-02-CN-008]
+
+### 23.1. [DCS-02-CN-008] Lấy số liệu thống kê tổng quan đối soát dữ liệu đất đai
+- **Method**: `GET`
+- **Path**: `/api/v1/parcel-reconciliation/stats`
+- **Yêu cầu quyền (RBAC)**: `ADMIN`, `INSPECTOR`, `LAND_REGISTRAR` (QTD-01, QTD-06, QTD-20)
+- **Response `200 OK`**:
+  ```json
+  {
+    "totalScannedParcels": 1450,
+    "totalAnomalies": 4,
+    "criticalCount": 2,
+    "highCount": 1,
+    "mediumCount": 1,
+    "lowCount": 0,
+    "duplicateCodeCount": 2,
+    "spatialOverlapCount": 1,
+    "resolvedCount": 1,
+    "verifyingCount": 1,
+    "cleanDataRate": 99.8,
+    "lastScannedAt": "2026-10-23T08:50:00.000Z"
+  }
+  ```
+
+### 23.2. [DCS-02-CN-008] Lấy danh sách báo cáo sai lệch trùng lặp thửa đất
+- **Method**: `GET`
+- **Path**: `/api/v1/parcel-reconciliation/reports`
+- **Yêu cầu quyền (RBAC)**: `ADMIN`, `INSPECTOR`, `LAND_REGISTRAR`, `COMMUNE_OFFICER`
+- **Query Params**:
+  - `status` (`DETECTED`, `VERIFYING`, `RESOLVED`, `DISMISSED`, tùy chọn)
+  - `severity` (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, tùy chọn)
+  - `communeCode` (string, tùy chọn)
+- **Response `200 OK`**:
+  ```json
+  {
+    "total": 4,
+    "items": [
+      {
+        "id": "REC-REP-2026-0001",
+        "anomalyType": "DUPLICATE_SHEET_PARCEL",
+        "severity": "CRITICAL",
+        "communeCode": "01001",
+        "communeName": "Phường Điện Biên",
+        "involvedParcelIds": ["PARCEL-HN-001", "PARCEL-HN-OLD-099"],
+        "involvedNationalCodes": ["01001-0012-0045", "01001-0012-0045-OLD"],
+        "description": "Phát hiện 2 bản ghi cùng số tờ 12, số thửa 45 tại Phường Điện Biên từ cơ sở dữ liệu số hóa năm 2018 chưa chuẩn hóa mã quốc gia duy nhất (QTD-01).",
+        "detectedAt": "2026-10-22T08:00:00.000Z",
+        "status": "DETECTED",
+        "assignedBranch": "Chi nhánh Văn phòng Đăng ký Đất đai Ba Đình",
+        "auditHash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b1"
+      }
+    ]
+  }
+  ```
+
+### 23.3. [DCS-02-CN-008] Kích hoạt phiên quét đối soát tự động phát hiện trùng lặp mã thửa
+- **Method**: `POST`
+- **Path**: `/api/v1/parcel-reconciliation/scan`
+- **Yêu cầu quyền (RBAC)**: `ADMIN`, `INSPECTOR`, `LAND_REGISTRAR` (QTD-01, QTD-06, QTD-20)
+- **Request Body**:
+  ```json
+  {
+    "communeCode": "01001",
+    "officerId": "CB-VPDK-HN-001",
+    "notes": "Quét đối soát CSDL định kỳ tháng 10/2026"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "scanId": "SCAN-2026-1792720454675",
+    "scannedParcelsCount": 1450,
+    "anomaliesFoundCount": 3,
+    "newReports": [],
+    "cleanDataRate": 99.8,
+    "durationMs": 85,
+    "auditHash": "13288f4b0d6f4daa2884ce8e24110e6eb1060361b01b881ab9467472f9a41d04",
+    "message": "Đã hoàn thành đối soát tự động CSDL Địa chính. Phát hiện 3 trường hợp sai lệch/trùng lặp cần xác minh. Tỷ lệ dữ liệu sạch đạt 99.8%."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Mã cán bộ thực hiện để trống.
+
+### 23.4. [DCS-02-CN-008] Cập nhật kết quả xác minh / giải quyết sai lệch thửa đất
+- **Method**: `POST`
+- **Path**: `/api/v1/parcel-reconciliation/resolve/:reportId`
+- **Yêu cầu quyền (RBAC)**: `ADMIN`, `LAND_REGISTRAR` (QTD-20)
+- **Request Body**:
+  ```json
+  {
+    "officerId": "CB-VPDK-HN-001",
+    "newStatus": "RESOLVED",
+    "resolutionNotes": "Đã hoàn tất chuẩn hóa số hiệu thửa cũ thành mã quốc gia duy nhất 01001-0012-0045-00."
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "report": {
+      "id": "REC-REP-2026-0001",
+      "status": "RESOLVED",
+      "resolutionNotes": "Đã hoàn tất chuẩn hóa số hiệu thửa cũ thành mã quốc gia duy nhất 01001-0012-0045-00.",
+      "resolvedAt": "2026-10-23T08:52:00.000Z",
+      "resolvedByOfficerId": "CB-VPDK-HN-001",
+      "auditHash": "ca16c9e773c274e1a0b7f369ef5348bcde542d48d5e7f97ce04b8f2f3fcacbf2"
+    },
+    "auditHash": "ca16c9e773c274e1a0b7f369ef5348bcde542d48d5e7f97ce04b8f2f3fcacbf2",
+    "message": "Cập nhật kết quả xử lý sai lệch 'REC-REP-2026-0001' thành công. Trạng thái mới: RESOLVED."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Ghi chú phương án xử lý dưới 5 ký tự.
+  - `404 Not Found`: Không tìm thấy mã báo cáo sai lệch reportId.
