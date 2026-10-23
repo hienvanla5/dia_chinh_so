@@ -2342,3 +2342,92 @@ sequenceDiagram
   ```
 - **Mã lỗi**:
   - `404 Not Found`: Không tìm thấy thửa đất có ID hoặc Mã định danh yêu cầu.
+
+
+---
+
+## 25. Nhóm API Cập Nhật Biến Động Thông Tin Chủ Sở Hữu Qua Cổng Dịch Vụ Công (Owner Fluctuation) [DCS-02-CN-010]
+
+### 25.1. [DCS-02-CN-010] Nộp hồ sơ cập nhật biến động thông tin chủ sở hữu qua Cổng Dịch vụ công (QTD-07, QTD-25)
+- **Method**: `POST`
+- **Path**: `/api/v1/parcels/:id/owner-fluctuation`
+- **Yêu cầu quyền (RBAC)**: `LAND_USER`, `ADMIN`, `COMMUNE_OFFICER`, `LAND_REGISTRAR`
+- **Request Body**:
+  ```json
+  {
+    "fluctuationType": "IDENTITY_CORRECTION",
+    "applicantCitizenId": "001090123456",
+    "newOwnerName": "Trần Văn Hoàng (Đã chuẩn hóa)",
+    "newCitizenId": "001090123456",
+    "newAddress": "Số 12A Phố Hoàng Hoa Thám, Phường Điện Biên",
+    "newPhone": "0912345678",
+    "isJointSpouse": false,
+    "documentNumber": "CCCD-001090123456-CHIP",
+    "notes": "Đính chính thông tin nhân thân theo căn cước công dân gắn chip mới"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "dossier": {
+      "dossierId": "DVC-BD-1792722085800",
+      "dossierCode": "DVC-BD-2026-4312",
+      "parcelId": "PARCEL-HN-001",
+      "parcelNationalCode": "01001-0012-0045",
+      "fluctuationType": "IDENTITY_CORRECTION",
+      "applicantCitizenId": "001090123456",
+      "oldOwnerName": "Trần Văn Hoàng",
+      "oldCitizenId": "001090123456",
+      "newOwnerName": "Trần Văn Hoàng (Đã chuẩn hóa)",
+      "newCitizenId": "001090123456",
+      "newAddress": "Số 12A Phố Hoàng Hoa Thám, Phường Điện Biên",
+      "newPhone": "0912345678",
+      "isJointSpouse": false,
+      "documentNumber": "CCCD-001090123456-CHIP",
+      "status": "APPROVED",
+      "submittedAt": "2026-10-23T09:21:25.000Z",
+      "processedAt": "2026-10-23T09:21:25.000Z",
+      "processedByOfficerId": "DVC_PORTAL_AUTOMATION",
+      "auditHash": "3d53941d87c7baddaa63ee6978e9b1ffc77310213d315576ac0eff48d8d10526"
+    },
+    "updatedParcel": {
+      "id": "PARCEL-HN-001",
+      "nationalCode": "01001-0012-0045",
+      "ownerName": "Trần Văn Hoàng (Đã chuẩn hóa)",
+      "ownerCitizenId": "001090123456",
+      "legalStatus": "AVAILABLE"
+    },
+    "auditHash": "3d53941d87c7baddaa63ee6978e9b1ffc77310213d315576ac0eff48d8d10526",
+    "message": "Nộp và chỉnh lý biến động thông tin chủ sở hữu hồ sơ 'DVC-BD-2026-4312' thành công qua Cổng Dịch vụ công. Hồ sơ địa chính đã được tự động cập nhật."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Số CCCD không đúng 12 chữ số theo Đề án 06 (QTD-07), hoặc thiếu thông tin người phối ngẫu khi đăng ký đồng sở hữu vợ chồng (QTD-25).
+  - `403 Forbidden`: Thửa đất đang bị khóa giao dịch (LOCKED) hoặc có tranh chấp ranh giới.
+  - `404 Not Found`: Không tìm thấy mã thửa đất.
+
+### 25.2. [DCS-02-CN-010] Lấy lược sử các lần biến động chủ sở hữu của thửa đất
+- **Method**: `GET`
+- **Path**: `/api/v1/parcels/:id/owner-history`
+- **Yêu cầu quyền (RBAC)**: `LAND_USER`, `ADMIN`, `COMMUNE_OFFICER`, `LAND_REGISTRAR`, `INSPECTOR`
+- **Response `200 OK`**:
+  ```json
+  {
+    "parcelId": "PARCEL-HN-001",
+    "parcelNationalCode": "01001-0012-0045",
+    "totalRecords": 2,
+    "history": [
+      {
+        "dossierCode": "DVC-BD-2026-4312",
+        "fluctuationType": "IDENTITY_CORRECTION",
+        "oldOwnerName": "Trần Văn Hoàng",
+        "newOwnerName": "Trần Văn Hoàng (Đã chuẩn hóa)",
+        "newCitizenId": "001090123456",
+        "status": "APPROVED",
+        "submittedAt": "2026-10-23T09:21:25.000Z",
+        "auditHash": "3d53941d87c7baddaa63ee6978e9b1ffc77310213d315576ac0eff48d8d10526"
+      }
+    ]
+  }
+  ```
