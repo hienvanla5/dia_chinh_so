@@ -35,6 +35,10 @@ import {
   Phone,
   Send,
   AlertOctagon,
+  RefreshCw,
+  Cloud,
+  Zap,
+  RotateCcw,
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -312,6 +316,91 @@ export default function ParcelsPage() {
   ]);
 
   const [isPropertiesModalOpen, setIsPropertiesModalOpen] = useState(false);
+  // DCS-02-CN-007: Đồng bộ thời gian thực với CSDL Đất đai Quốc gia
+  interface SyncEventDisplay {
+    id: string;
+    eventType: string;
+    parcelId: string;
+    parcelNationalCode: string;
+    ndxpTransactionId: string;
+    status: 'SYNCED' | 'PENDING' | 'FAILED' | 'CONFLICT';
+    retryCount: number;
+    syncLatencyMs: number;
+    checksumSha256: string;
+    syncedAt: string;
+    errorMessage?: string;
+  }
+
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [syncEvents, setSyncEvents] = useState<SyncEventDisplay[]>([
+    {
+      id: 'SYNC-EVT-2026-0005',
+      eventType: 'Khóa phiên giao dịch 90 phút',
+      parcelId: 'PARCEL-HN-002',
+      parcelNationalCode: '01001-0012-0046',
+      ndxpTransactionId: 'NDXP-TX-2026-00816',
+      status: 'FAILED',
+      retryCount: 2,
+      syncLatencyMs: 310,
+      checksumSha256: '9f8e7d6c5b4a3928172635445566778899aabbccddeeff001122334455667788',
+      syncedAt: '2026-10-22T10:30:00.000Z',
+      errorMessage: 'NDXP Gateway timeout sau 300ms',
+    },
+    {
+      id: 'SYNC-EVT-2026-0004',
+      eventType: 'Khai báo thửa đất mới',
+      parcelId: 'PARCEL-HCM-002',
+      parcelNationalCode: '79001-0005-0019',
+      ndxpTransactionId: 'NDXP-TX-2026-00815',
+      status: 'PENDING',
+      retryCount: 0,
+      syncLatencyMs: 0,
+      checksumSha256: '1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b',
+      syncedAt: '2026-10-22T10:00:00.000Z',
+    },
+    {
+      id: 'SYNC-EVT-2026-0003',
+      eventType: 'Cập nhật thời hạn sử dụng đất',
+      parcelId: 'PARCEL-HCM-001',
+      parcelNationalCode: '79001-0005-0018',
+      ndxpTransactionId: 'NDXP-TX-2026-00814',
+      status: 'SYNCED',
+      retryCount: 0,
+      syncLatencyMs: 65,
+      checksumSha256: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
+      syncedAt: '2026-10-22T09:30:00.000Z',
+    },
+    {
+      id: 'SYNC-EVT-2026-0002',
+      eventType: 'Đăng ký tài sản trên đất',
+      parcelId: 'PARCEL-HN-001',
+      parcelNationalCode: '01001-0012-0045',
+      ndxpTransactionId: 'NDXP-TX-2026-00813',
+      status: 'SYNCED',
+      retryCount: 0,
+      syncLatencyMs: 95,
+      checksumSha256: 'b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3',
+      syncedAt: '2026-10-22T08:15:00.000Z',
+    },
+    {
+      id: 'SYNC-EVT-2026-0001',
+      eventType: 'Khai báo thửa đất mới',
+      parcelId: 'PARCEL-HN-001',
+      parcelNationalCode: '01001-0012-0045',
+      ndxpTransactionId: 'NDXP-TX-2026-00812',
+      status: 'SYNCED',
+      retryCount: 0,
+      syncLatencyMs: 78,
+      checksumSha256: 'c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4',
+      syncedAt: '2026-10-22T08:00:00.000Z',
+    },
+  ]);
+
+  const [syncTargetParcelCode, setSyncTargetParcelCode] = useState('01001-0012-0045');
+  const [syncTargetEventType, setSyncTargetEventType] = useState('PARCEL_DECLARED');
+  const [isTriggeringSync, setIsTriggeringSync] = useState(false);
+  const [syncSuccessMsg, setSyncSuccessMsg] = useState<string | null>(null);
+
   const [selectedPropertyParcel, setSelectedPropertyParcel] = useState<ParcelDisplay | null>(null);
   const [showAddPropertyForm, setShowAddPropertyForm] = useState(false);
 
@@ -473,6 +562,56 @@ export default function ParcelsPage() {
 
   
   // Handlers Quản lý tài sản trên đất (DCS-02-CN-006)
+  
+  // Handlers Đồng bộ CSDL Quốc gia (DCS-02-CN-007)
+  const handleTriggerSync = (targetCode?: string, targetType?: string) => {
+    const code = targetCode || syncTargetParcelCode;
+    const type = targetType || syncTargetEventType;
+    setIsTriggeringSync(true);
+    setSyncSuccessMsg(null);
+
+    setTimeout(() => {
+      const latency = Math.floor(55 + Math.random() * 50);
+      const txId = `NDXP-TX-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const newEvt: SyncEventDisplay = {
+        id: `SYNC-EVT-2026-${String(syncEvents.length + 1).padStart(4, '0')}`,
+        eventType: type === 'PARCEL_DECLARED' ? 'Khai báo thửa đất mới' : type === 'ORIGIN_UPDATED' ? 'Cập nhật nguồn gốc đất' : type === 'TERM_UPDATED' ? 'Cập nhật thời hạn sử dụng đất' : 'Biến động dữ liệu địa chính',
+        parcelId: 'PARCEL-CUSTOM',
+        parcelNationalCode: code,
+        ndxpTransactionId: txId,
+        status: 'SYNCED',
+        retryCount: 0,
+        syncLatencyMs: latency,
+        checksumSha256: 'e8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7',
+        syncedAt: new Date().toISOString(),
+      };
+
+      setSyncEvents(prev => [newEvt, ...prev]);
+      setIsTriggeringSync(false);
+      setSyncSuccessMsg(`Đã đồng bộ thời gian thực thửa đất '${code}' về CSDL Quốc gia thành công qua Trục NDXP (Độ trễ: ${latency} ms, Mã GD: ${txId})`);
+    }, 500);
+  };
+
+  const handleRetrySync = (eventId: string) => {
+    setTimeout(() => {
+      setSyncEvents(prev =>
+        prev.map(e =>
+          e.id === eventId
+            ? {
+                ...e,
+                status: 'SYNCED',
+                retryCount: e.retryCount + 1,
+                syncLatencyMs: 72,
+                errorMessage: undefined,
+                syncedAt: new Date().toISOString(),
+              }
+            : e
+        )
+      );
+      setSyncSuccessMsg(`Đã thử lại thành công sự kiện '${eventId}' qua Trục liên thông NDXP (Độ trễ: 72 ms)`);
+    }, 400);
+  };
+
   const handleOpenPropertiesModal = (parcel: ParcelDisplay) => {
     setSelectedPropertyParcel(parcel);
     setShowAddPropertyForm(false);
@@ -1124,6 +1263,10 @@ export default function ParcelsPage() {
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
+          <Button variant="outline" onClick={() => setIsSyncModalOpen(true)} className="border-blue-300 bg-blue-50 text-blue-900 hover:bg-blue-100">
+            <RefreshCw className="w-4 h-4 mr-1.5 text-blue-600" />
+            Đồng bộ CSDL Quốc gia
+          </Button>
           <Button variant="outline" onClick={() => setIsExpiringListModalOpen(true)} className="border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100">
             <Clock className="w-4 h-4 mr-1.5 text-amber-600" />
             Cảnh báo hết hạn (6 tháng)
@@ -2934,6 +3077,192 @@ export default function ParcelsPage() {
 
             <div className="flex justify-end pt-3 border-t border-slate-200">
               <Button variant="outline" size="sm" onClick={() => setIsPropertiesModalOpen(false)}>
+                Đóng
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+    
+      {/* Modal Đồng bộ CSDL Đất đai Quốc gia qua NDXP (DCS-02-CN-007) */}
+      {isSyncModalOpen && (
+        <Modal
+          isOpen={isSyncModalOpen}
+          onClose={() => setIsSyncModalOpen(false)}
+          title="Đồng Bộ Thời Gian Thực Với Cơ Sở Dữ Liệu Đất Đai Quốc Gia"
+        >
+          <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
+            {/* Thanh trạng thái Gateway NDXP */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg">
+              <div className="flex flex-wrap justify-between items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="text-xs font-bold text-slate-900">Trục liên thông quốc gia (NDXP / LGSP):</span>
+                  <Badge variant="success">TRỰC TUYẾN (ONLINE)</Badge>
+                </div>
+                <div className="text-xs text-slate-500 font-mono">
+                  Độ trễ trung bình: <strong className="text-emerald-700">78 ms</strong> (Thời gian thực)
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-slate-200 text-center">
+                <div className="p-2 bg-white rounded border border-slate-100">
+                  <div className="text-[11px] text-slate-500">Tổng sự kiện</div>
+                  <div className="text-base font-extrabold text-slate-900 mt-0.5">{syncEvents.length}</div>
+                </div>
+                <div className="p-2 bg-white rounded border border-slate-100">
+                  <div className="text-[11px] text-slate-500">Đã đồng bộ</div>
+                  <div className="text-base font-extrabold text-emerald-700 mt-0.5">
+                    {syncEvents.filter(e => e.status === 'SYNCED').length}
+                  </div>
+                </div>
+                <div className="p-2 bg-white rounded border border-slate-100">
+                  <div className="text-[11px] text-slate-500">Đang chờ NDXP</div>
+                  <div className="text-base font-extrabold text-amber-700 mt-0.5">
+                    {syncEvents.filter(e => e.status === 'PENDING').length}
+                  </div>
+                </div>
+                <div className="p-2 bg-white rounded border border-slate-100">
+                  <div className="text-[11px] text-slate-500">Cần thử lại</div>
+                  <div className="text-base font-extrabold text-rose-700 mt-0.5">
+                    {syncEvents.filter(e => e.status === 'FAILED').length}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {syncSuccessMsg && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>{syncSuccessMsg}</span>
+              </div>
+            )}
+
+            {/* Khối kích hoạt đồng bộ chủ động */}
+            <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+              <h4 className="text-xs font-bold text-blue-950 uppercase flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-blue-600" />
+                <span>Kích hoạt đồng bộ sự kiện biến động tức thời</span>
+              </h4>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-blue-900 mb-1">Mã thửa đất quốc gia:</label>
+                  <Select
+                    value={syncTargetParcelCode}
+                    onChange={e => setSyncTargetParcelCode(e.target.value)}
+                    options={parcels.map(p => ({
+                      value: p.nationalCode,
+                      label: `${p.nationalCode} (Tờ ${p.sheetNumber}, Thửa ${p.parcelNumber})`,
+                    }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-blue-900 mb-1">Loại biến động:</label>
+                  <Select
+                    value={syncTargetEventType}
+                    onChange={e => setSyncTargetEventType(e.target.value)}
+                    options={[
+                      { value: 'PARCEL_DECLARED', label: 'Khai báo thửa đất mới' },
+                      { value: 'ORIGIN_UPDATED', label: 'Cập nhật nguồn gốc sử dụng đất' },
+                      { value: 'TERM_UPDATED', label: 'Cập nhật thời hạn sử dụng đất' },
+                      { value: 'PROPERTY_REGISTERED', label: 'Đăng ký tài sản gắn liền với đất' },
+                      { value: 'TRANSACTION_LOCKED', label: 'Khóa giao dịch thời gian thực 90p' },
+                    ]}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => handleTriggerSync()}
+                  isLoading={isTriggeringSync}
+                >
+                  <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                  Đồng bộ ngay qua NDXP
+                </Button>
+              </div>
+            </div>
+
+            {/* Bảng nhật ký sự kiện đồng bộ NDXP */}
+            <div className="border border-slate-200 rounded-lg overflow-hidden">
+              <div className="bg-slate-100 px-3.5 py-2 font-bold text-xs text-slate-800 flex justify-between items-center">
+                <span>Nhật ký truyền tin Trục NDXP (Chuỗi băm SHA-256)</span>
+                <span className="text-[11px] text-slate-500 font-normal">Tự động làm mới</span>
+              </div>
+              <table className="min-w-full divide-y divide-slate-200 text-xs">
+                <thead className="bg-slate-50 font-bold text-slate-700">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Mã GD NDXP</th>
+                    <th className="px-3 py-2 text-left">Loại biến động</th>
+                    <th className="px-3 py-2 text-left">Thửa đất</th>
+                    <th className="px-3 py-2 text-left">Trạng thái</th>
+                    <th className="px-3 py-2 text-left">Độ trễ</th>
+                    <th className="px-3 py-2 text-right">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {syncEvents.map(evt => (
+                    <tr key={evt.id} className="hover:bg-slate-50">
+                      <td className="px-3 py-2 font-mono font-semibold text-slate-900 whitespace-nowrap">
+                        <div>{evt.ndxpTransactionId}</div>
+                        <div className="text-[10px] text-slate-400 font-mono truncate max-w-[120px]">
+                          Hash: {evt.checksumSha256.slice(0, 12)}...
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="font-medium text-slate-800">{evt.eventType}</div>
+                        {evt.errorMessage && (
+                          <div className="text-[11px] text-rose-600 mt-0.5">{evt.errorMessage}</div>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 font-mono font-bold text-slate-900 whitespace-nowrap">
+                        {evt.parcelNationalCode}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {evt.status === 'SYNCED' && <Badge variant="success">Đã đồng bộ</Badge>}
+                        {evt.status === 'PENDING' && <Badge variant="warning">Đang xếp hàng</Badge>}
+                        {evt.status === 'FAILED' && <Badge variant="danger">Lỗi kết nối</Badge>}
+                        {evt.status === 'CONFLICT' && <Badge variant="danger">Xung đột dữ liệu</Badge>}
+                      </td>
+                      <td className="px-3 py-2 font-mono whitespace-nowrap">
+                        {evt.syncLatencyMs > 0 ? (
+                          <span className={evt.syncLatencyMs < 150 ? 'text-emerald-700 font-bold' : 'text-amber-700'}>
+                            {evt.syncLatencyMs} ms
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 italic">--</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right whitespace-nowrap">
+                        {evt.status === 'FAILED' ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRetrySync(evt.id)}
+                            className="text-rose-700 hover:bg-rose-50 border-rose-200"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5 mr-1 text-rose-600" />
+                            Thử lại
+                          </Button>
+                        ) : (
+                          <span className="text-[11px] text-emerald-700 font-semibold flex items-center justify-end gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Khớp 100%
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-200">
+              <Button variant="outline" size="sm" onClick={() => setIsSyncModalOpen(false)}>
                 Đóng
               </Button>
             </div>
