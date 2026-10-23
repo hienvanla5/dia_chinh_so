@@ -1527,3 +1527,69 @@ export interface ResolveReconciliationAnomalyResponse {
   auditHash: string;
   message: string;
 }
+
+
+// ==========================================
+// Hiển thị lược sử biến động thửa đất dạng cây gia phả (DCS-02-CN-009)
+// ==========================================
+
+export type PedigreeNodeRole =
+  | 'ROOT'
+  | 'PARENT'
+  | 'CURRENT'
+  | 'CHILD'
+  | 'MERGED_SOURCE'
+  | 'DESCENDANT';
+
+export type PedigreeEdgeRelationship = 'SUBDIVIDED_TO' | 'MERGED_INTO';
+
+export interface PedigreeTreeNode {
+  id: string;
+  nationalCode: string;
+  sheetNumber: number;
+  parcelNumber: number;
+  area: number;
+  purposeCode: LandPurposeCode;
+  ownerName?: string;
+  ownerCitizenId?: string;
+  legalStatus: ParcelLegalStatus;
+  generation: number;                                            // 0 = F0 gốc, 1 = F1, 2 = F2...
+  role: PedigreeNodeRole;
+  fluctuationType?: string;
+  decisionNumber?: string;
+  decisionDate?: string;
+  auditHash: string;
+}
+
+export interface PedigreeTreeEdge {
+  source: string;                                                // ID thửa đất cha / tiền thân
+  target: string;                                                // ID thửa đất con / kế thừa
+  relationship: PedigreeEdgeRelationship;
+  decisionNumber?: string;
+  transferredArea?: number;
+}
+
+export interface PedigreeTimelineEvent {
+  eventId: string;
+  timestamp: string;
+  eventType: string;
+  eventTitle: string;
+  description: string;
+  decisionNumber?: string;
+  involvedParcelCodes: string[];
+  officerName: string;
+  auditHash: string;
+}
+
+export interface PedigreeTreeResponse {
+  parcelId: string;
+  nationalCode: string;
+  rootNodeId: string;
+  totalGenerations: number;
+  totalNodes: number;
+  nodes: PedigreeTreeNode[];
+  edges: PedigreeTreeEdge[];
+  timeline: PedigreeTimelineEvent[];
+  auditHash: string;
+  generatedAt: string;
+}

@@ -593,3 +593,15 @@ export const ResolveReconciliationAnomalySchema = z.object({
 
 export type TriggerReconciliationScanInput = z.infer<typeof TriggerReconciliationScanSchema>;
 export type ResolveReconciliationAnomalyInput = z.infer<typeof ResolveReconciliationAnomalySchema>;
+
+
+// ==========================================
+// Schemas Hiển thị lược sử biến động dạng cây gia phả (DCS-02-CN-009)
+// ==========================================
+
+export const GetPedigreeTreeQuerySchema = z.object({
+  maxDepth: z.coerce.number().int().positive().optional(),
+  includeTimeline: z.coerce.boolean().optional(),
+});
+
+export type GetPedigreeTreeQueryInput = z.infer<typeof GetPedigreeTreeQuerySchema>;
