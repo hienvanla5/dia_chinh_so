@@ -40,6 +40,11 @@ import {
   Zap,
   RotateCcw,
   ScanSearch,
+  CalendarRange,
+  GitBranch,
+  GitCommit,
+  ZoomOut,
+  ZoomIn,
   CheckCheck,
   FileSearch,
 } from 'lucide-react';
@@ -914,6 +919,11 @@ export default function ParcelsPage() {
 
   // Modal Cây gia phả (DCS-02-CN-003)
   const [isLineageModalOpen, setIsLineageModalOpen] = useState(false);
+  // State điều khiển đồ thị cây gia phả tương tác (DCS-02-CN-009)
+  const [pedigreeViewMode, setPedigreeViewMode] = useState<'TREE' | 'TIMELINE'>('TREE');
+  const [pedigreeZoomLevel, setPedigreeZoomLevel] = useState<number>(100);
+  const [selectedPedigreeNodeId, setSelectedPedigreeNodeId] = useState<string | null>(null);
+
   const [lineageParcel, setLineageParcel] = useState<ParcelDisplay | null>(null);
 
   // Lọc danh sách
@@ -1825,112 +1835,321 @@ export default function ParcelsPage() {
         </Modal>
       )}
 
-      {/* Modal Cây gia phả biến động (DCS-02-CN-003) */}
+      {/* Modal Cây gia phả biến động thửa đất chi tiết qua các thời kỳ (DCS-02-CN-009, QTD-02) */}
       {isLineageModalOpen && lineageParcel && (
         <Modal
           isOpen={isLineageModalOpen}
-          onClose={() => setIsLineageModalOpen(false)}
-          title="Cây gia phả biến động thửa đất (Lineage)"
+          onClose={() => {
+            setIsLineageModalOpen(false);
+            setSelectedPedigreeNodeId(null);
+            setPedigreeZoomLevel(100);
+          }}
+          title="Sơ Đồ Cây Gia Phả & Lược Sử Biến Động Thửa Đất"
+          size="xl"
         >
-          <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-              <span className="text-slate-500 block">Thửa đất đang tra cứu:</span>
-              <span className="font-mono font-extrabold text-base text-primary-950 block mt-0.5">
-                {lineageParcel.nationalCode}
-              </span>
-              <span className="text-slate-600 block text-[11px] mt-1">
-                Tờ {lineageParcel.sheetNumber}, Thửa {lineageParcel.parcelNumber} • Diện tích: {lineageParcel.area} m² ({lineageParcel.purposeName})
-              </span>
-            </div>
-
-            {/* Sơ đồ phả hệ */}
-            <div className="space-y-3 pt-2">
-              {/* Thửa cha / Thửa tiền thân */}
-              {lineageParcel.parentNationalCode && (
-                <div className="p-3.5 bg-slate-100 border border-slate-300 rounded-lg text-xs space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-700">
-                    <History className="w-4 h-4 text-slate-500" />
-                    <span>Thửa đất cha tiền thân (Đã đóng lịch sử):</span>
-                  </div>
-                  <p className="font-mono font-bold text-slate-900">{lineageParcel.parentNationalCode}</p>
-                  <p className="text-[11px] text-slate-500">Quan hệ: Tách thửa theo quyết định phê duyệt địa chính</p>
+          <div className="space-y-4 text-sm text-slate-800">
+            {/* Header thông tin thửa đất và chuyển đổi chế độ xem */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-lg">
+              <div>
+                <div className="text-xs text-slate-500 uppercase font-semibold">Thửa đất tra cứu phả hệ:</div>
+                <div className="text-lg font-mono font-extrabold text-primary-950 mt-0.5 flex items-center gap-2">
+                  <Network className="w-5 h-5 text-indigo-700" />
+                  {lineageParcel.nationalCode}
                 </div>
-              )}
-
-              {lineageParcel.mergedFromNationalCodes && lineageParcel.mergedFromNationalCodes.length > 0 && (
-                <div className="p-3.5 bg-slate-100 border border-slate-300 rounded-lg text-xs space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-700">
-                    <History className="w-4 h-4 text-slate-500" />
-                    <span>Các thửa đất tiền thân trước khi hợp (Đã đóng lịch sử):</span>
-                  </div>
-                  <p className="font-mono font-bold text-slate-900">
-                    {lineageParcel.mergedFromNationalCodes.join(' + ')}
-                  </p>
-                  <p className="text-[11px] text-slate-500">Quan hệ: Hợp thửa thành một thể thống nhất</p>
-                </div>
-              )}
-
-              {(lineageParcel.parentNationalCode || (lineageParcel.mergedFromNationalCodes && lineageParcel.mergedFromNationalCodes.length > 0)) && (
-                <div className="flex justify-center text-slate-400">
-                  <ArrowDown className="w-5 h-5 animate-bounce" />
-                </div>
-              )}
-
-              {/* Thửa hiện tại */}
-              <div className="p-3.5 bg-primary-50 border-2 border-primary-800 rounded-lg text-xs space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-primary-950">Thửa đất hiện hành:</span>
-                  <Badge variant={lineageParcel.legalStatus === 'AVAILABLE' ? 'success' : 'neutral'}>
-                    {lineageParcel.legalStatus === 'AVAILABLE' ? 'Đang hiệu lực' : 'Đã đóng lịch sử'}
-                  </Badge>
-                </div>
-                <p className="font-mono font-extrabold text-sm text-primary-950">{lineageParcel.nationalCode}</p>
-                <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-700 pt-1">
-                  <div>Chủ sở hữu: <strong>{lineageParcel.ownerName || 'Chưa xác lập'}</strong></div>
-                  <div>Hồ sơ phê duyệt: <strong>{lineageParcel.surveyDocumentNumber}</strong></div>
+                <div className="text-xs text-slate-600 mt-0.5">
+                  Tờ {lineageParcel.sheetNumber}, Thửa {lineageParcel.parcelNumber} • Diện tích: {lineageParcel.area} m² ({lineageParcel.purposeName}) • {lineageParcel.communeName}
                 </div>
               </div>
 
-              {/* Thửa con nếu đã phân nhánh */}
-              {lineageParcel.childParcelIds && lineageParcel.childParcelIds.length > 0 && (
-                <>
-                  <div className="flex justify-center text-slate-400">
-                    <ArrowDown className="w-5 h-5 animate-bounce" />
-                  </div>
-
-                  <div className="p-3.5 bg-purple-50 border border-purple-200 rounded-lg text-xs space-y-2">
-                    <div className="flex items-center gap-1.5 font-bold text-purple-900">
-                      <GitFork className="w-4 h-4 text-purple-700" />
-                      <span>Các thửa đất con kế thừa (Đang hoạt động):</span>
-                    </div>
-                    <div className="space-y-1.5">
-                      {parcels
-                        .filter(p => lineageParcel.childParcelIds?.includes(p.id))
-                        .map(child => (
-                          <div
-                            key={child.id}
-                            className="p-2 bg-white rounded border border-purple-200 flex justify-between items-center"
-                          >
-                            <span className="font-mono font-bold text-purple-950">{child.nationalCode}</span>
-                            <span className="text-slate-600 font-semibold">{child.area} m²</span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {!lineageParcel.parentNationalCode &&
-                (!lineageParcel.mergedFromNationalCodes || lineageParcel.mergedFromNationalCodes.length === 0) &&
-                (!lineageParcel.childParcelIds || lineageParcel.childParcelIds.length === 0) && (
-                  <div className="p-4 text-center text-xs text-slate-500 italic bg-slate-50 rounded-lg border border-slate-200">
-                    Thửa đất này là thửa đất gốc hình thành ban đầu từ bản đồ địa chính chính quy, chưa phát sinh biến động tách hoặc hợp thửa.
-                  </div>
-                )}
+              {/* Chuyển đổi tab Xem Cây Đồ Thị / Dòng Thời Gian */}
+              <div className="flex items-center gap-1.5 p-1 bg-slate-200 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setPedigreeViewMode('TREE')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+                    pedigreeViewMode === 'TREE'
+                      ? 'bg-white text-indigo-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Network className="w-3.5 h-3.5 inline mr-1" />
+                  Đồ thị cây phả hệ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPedigreeViewMode('TIMELINE')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+                    pedigreeViewMode === 'TIMELINE'
+                      ? 'bg-white text-indigo-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <CalendarRange className="w-3.5 h-3.5 inline mr-1" />
+                  Dòng thời gian
+                </button>
+              </div>
             </div>
 
+            {/* Thanh thông số cây gia phả */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="p-2.5 bg-white border border-slate-200 rounded-lg shadow-sm">
+                <div className="text-[11px] font-semibold text-slate-500 uppercase">Số thế hệ phả hệ</div>
+                <div className="text-xl font-extrabold text-indigo-700 mt-0.5">
+                  {(lineageParcel.parentNationalCode || (lineageParcel.mergedFromNationalCodes && lineageParcel.mergedFromNationalCodes.length > 0)) ? 2 : 1} Thế hệ
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">F0 (Gốc) &rarr; F1 (Phân nhánh)</div>
+              </div>
+              <div className="p-2.5 bg-white border border-slate-200 rounded-lg shadow-sm">
+                <div className="text-[11px] font-semibold text-slate-500 uppercase">Thửa tiền thân / Gốc</div>
+                <div className="text-xl font-extrabold text-slate-800 mt-0.5">
+                  {lineageParcel.parentNationalCode
+                    ? '1 Thửa cha'
+                    : lineageParcel.mergedFromNationalCodes && lineageParcel.mergedFromNationalCodes.length > 0
+                    ? `${lineageParcel.mergedFromNationalCodes.length} Thửa gộp`
+                    : 'Thửa gốc ban đầu'}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">Lịch sử được lưu giữ vĩnh viễn</div>
+              </div>
+              <div className="p-2.5 bg-white border border-slate-200 rounded-lg shadow-sm">
+                <div className="text-[11px] font-semibold text-slate-500 uppercase">Thửa con kế thừa</div>
+                <div className="text-xl font-extrabold text-purple-700 mt-0.5">
+                  {lineageParcel.childParcelIds ? `${lineageParcel.childParcelIds.length} Thửa con` : '0 Thửa con'}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">Đang giao dịch trên thực địa</div>
+              </div>
+              <div className="p-2.5 bg-white border border-slate-200 rounded-lg shadow-sm">
+                <div className="text-[11px] font-semibold text-slate-500 uppercase">Mã băm cây gia phả</div>
+                <div className="text-xs font-mono text-slate-700 font-bold truncate mt-1.5" title={lineageParcel.auditHash}>
+                  {lineageParcel.auditHash.slice(0, 16)}...
+                </div>
+                <div className="text-[10px] text-emerald-600 font-semibold mt-0.5 flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" /> Chuỗi kiểm toán bất biến
+                </div>
+              </div>
+            </div>
+
+            {/* CHẾ ĐỘ XEM 1: ĐỒ THỊ CÂY GIA PHẢ (TREE VIEW) */}
+            {pedigreeViewMode === 'TREE' && (
+              <div className="space-y-3">
+                {/* Thanh điều hướng Zoom */}
+                <div className="flex items-center justify-between text-xs text-slate-600 px-1">
+                  <div className="italic">
+                    Nhấp vào từng khối để xem hồ sơ kỹ thuật và chi tiết biến động
+                  </div>
+                  <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-md border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setPedigreeZoomLevel(prev => Math.max(prev - 10, 70))}
+                      className="p-1 hover:bg-white rounded text-slate-700"
+                      title="Thu nhỏ"
+                    >
+                      <ZoomOut className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="font-mono font-semibold px-1">{pedigreeZoomLevel}%</span>
+                    <button
+                      type="button"
+                      onClick={() => setPedigreeZoomLevel(prev => Math.min(prev + 10, 140))}
+                      className="p-1 hover:bg-white rounded text-slate-700"
+                      title="Phóng to"
+                    >
+                      <ZoomIn className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPedigreeZoomLevel(100)}
+                      className="text-[11px] px-1.5 py-0.5 hover:bg-white rounded text-slate-700 ml-1 font-semibold"
+                    >
+                      Đặt lại
+                    </button>
+                  </div>
+                </div>
+
+                {/* Khung vẽ Canvas / Sơ đồ phân nhánh */}
+                <div
+                  className="p-6 bg-gradient-to-b from-slate-50 to-indigo-50/30 border border-slate-300 rounded-lg overflow-x-auto min-h-[300px] flex flex-col items-center justify-center transition-all"
+                  style={{ transform: `scale(${pedigreeZoomLevel / 100})`, transformOrigin: 'top center' }}
+                >
+                  {/* THẾ HỆ F0: THỬA GỐC / TIỀN THÂN */}
+                  {(lineageParcel.parentNationalCode || (lineageParcel.mergedFromNationalCodes && lineageParcel.mergedFromNationalCodes.length > 0)) && (
+                    <div className="flex flex-col items-center">
+                      <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <History className="w-3.5 h-3.5 text-slate-500" />
+                        Thế hệ F0 &bull; Thửa đất tiền thân (Đã chuyển lịch sử)
+                      </div>
+                      <div className="flex flex-wrap justify-center gap-3">
+                        {lineageParcel.parentNationalCode && (
+                          <div
+                            onClick={() => setSelectedPedigreeNodeId(lineageParcel.parentNationalCode || null)}
+                            className={`cursor-pointer p-3.5 bg-slate-100 hover:bg-slate-200 border-2 rounded-lg transition shadow-sm max-w-xs text-center ${
+                              selectedPedigreeNodeId === lineageParcel.parentNationalCode ? 'border-indigo-600 ring-2 ring-indigo-200' : 'border-slate-300'
+                            }`}
+                          >
+                            <Badge variant="neutral" className="mb-1">Lịch sử (Đã tách)</Badge>
+                            <div className="font-mono font-bold text-slate-900 text-sm">{lineageParcel.parentNationalCode}</div>
+                            <div className="text-[11px] text-slate-600 mt-1">Căn cứ: Quyết định tách thửa của UBND</div>
+                          </div>
+                        )}
+
+                        {lineageParcel.mergedFromNationalCodes && lineageParcel.mergedFromNationalCodes.map(code => (
+                          <div
+                            key={code}
+                            onClick={() => setSelectedPedigreeNodeId(code)}
+                            className={`cursor-pointer p-3.5 bg-slate-100 hover:bg-slate-200 border-2 rounded-lg transition shadow-sm max-w-xs text-center ${
+                              selectedPedigreeNodeId === code ? 'border-indigo-600 ring-2 ring-indigo-200' : 'border-slate-300'
+                            }`}
+                          >
+                            <Badge variant="neutral" className="mb-1">Lịch sử (Đã hợp)</Badge>
+                            <div className="font-mono font-bold text-slate-900 text-sm">{code}</div>
+                            <div className="text-[11px] text-slate-600 mt-1">Hợp vào thửa mới</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="my-3 flex flex-col items-center text-indigo-500">
+                        <div className="w-0.5 h-6 bg-indigo-300"></div>
+                        <ArrowDown className="w-5 h-5 text-indigo-600 -mt-1 animate-bounce" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* THẾ HỆ F1: THỬA ĐANG XÉT HIỆN TẠI */}
+                  <div className="flex flex-col items-center w-full max-w-md">
+                    <div className="text-[11px] font-bold text-primary-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Network className="w-3.5 h-3.5 text-primary-900" />
+                      Thế hệ hiện hành &bull; Thửa đất đang tra cứu
+                    </div>
+                    <div
+                      onClick={() => setSelectedPedigreeNodeId(lineageParcel.id)}
+                      className={`cursor-pointer w-full p-4 bg-white border-2 rounded-lg transition shadow-md ${
+                        selectedPedigreeNodeId === lineageParcel.id ? 'border-indigo-600 ring-2 ring-indigo-300' : 'border-primary-800'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <Badge variant={lineageParcel.legalStatus === 'AVAILABLE' ? 'success' : 'neutral'}>
+                          {lineageParcel.legalStatus === 'AVAILABLE' ? 'Đang hiệu lực giao dịch' : 'Đã đóng lịch sử'}
+                        </Badge>
+                        <span className="text-[11px] font-mono text-slate-400">ID: {lineageParcel.id}</span>
+                      </div>
+                      <div className="font-mono font-extrabold text-base text-primary-950 mt-1.5">
+                        {lineageParcel.nationalCode}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-700 mt-2 pt-2 border-t border-slate-100">
+                        <div>Diện tích: <strong className="text-slate-950">{lineageParcel.area} m²</strong></div>
+                        <div>Mục đích: <strong className="text-slate-950">{lineageParcel.purposeCode}</strong></div>
+                        <div>Chủ sử dụng: <strong className="text-slate-950">{lineageParcel.ownerName || 'Chưa định danh'}</strong></div>
+                        <div>Hồ sơ số: <strong className="text-slate-950">{lineageParcel.surveyDocumentNumber}</strong></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* THẾ HỆ TIẾP THEO: THỬA CON KẾ THỪA */}
+                  {lineageParcel.childParcelIds && lineageParcel.childParcelIds.length > 0 && (
+                    <div className="flex flex-col items-center mt-3">
+                      <div className="my-2 flex flex-col items-center text-purple-500">
+                        <div className="w-0.5 h-6 bg-purple-300"></div>
+                        <ArrowDown className="w-5 h-5 text-purple-600 -mt-1 animate-bounce" />
+                      </div>
+
+                      <div className="text-[11px] font-bold text-purple-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <GitFork className="w-3.5 h-3.5 text-purple-700" />
+                        Thế hệ kế thừa &bull; Các thửa đất con phát sinh
+                      </div>
+                      <div className="flex flex-wrap justify-center gap-3">
+                        {parcels
+                          .filter(p => lineageParcel.childParcelIds?.includes(p.id))
+                          .map(child => (
+                            <div
+                              key={child.id}
+                              onClick={() => setSelectedPedigreeNodeId(child.id)}
+                              className={`cursor-pointer p-3 bg-white hover:bg-purple-50/50 border-2 rounded-lg transition shadow-sm text-center min-w-[200px] ${
+                                selectedPedigreeNodeId === child.id ? 'border-purple-600 ring-2 ring-purple-200' : 'border-purple-200'
+                              }`}
+                            >
+                              <Badge variant="success" className="mb-1">Đang hoạt động</Badge>
+                              <div className="font-mono font-bold text-purple-950 text-xs">{child.nationalCode}</div>
+                              <div className="text-xs text-slate-700 mt-1 font-semibold">{child.area} m² &bull; Tờ {child.sheetNumber}</div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {!lineageParcel.parentNationalCode &&
+                    (!lineageParcel.mergedFromNationalCodes || lineageParcel.mergedFromNationalCodes.length === 0) &&
+                    (!lineageParcel.childParcelIds || lineageParcel.childParcelIds.length === 0) && (
+                      <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-md text-xs text-slate-500 text-center">
+                        Thửa đất này là thửa đất gốc hình thành ban đầu từ bản đồ địa chính chính quy, chưa phát sinh biến động tách hoặc hợp thửa.
+                      </div>
+                    )}
+                </div>
+              </div>
+            )}
+
+            {/* CHẾ ĐỘ XEM 2: DÒNG THỜI GIAN BIẾN ĐỘNG (TIMELINE VIEW) */}
+            {pedigreeViewMode === 'TIMELINE' && (
+              <div className="space-y-3 p-4 bg-white border border-slate-200 rounded-lg max-h-[380px] overflow-y-auto">
+                <div className="text-xs font-bold text-slate-900 uppercase mb-2">
+                  Trình tự biến động địa chính theo dòng thời gian pháp lý
+                </div>
+                <div className="relative pl-6 border-l-2 border-indigo-200 space-y-4">
+                  {/* Sự kiện 1: Đăng ký xác lập ban đầu */}
+                  <div className="relative">
+                    <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-indigo-600 border-2 border-white"></div>
+                    <div className="text-xs font-semibold text-slate-500">2020-01-15 &bull; Cấp Giấy chứng nhận lần đầu</div>
+                    <div className="text-sm font-bold text-slate-900 mt-0.5">
+                      Xác lập bản đồ địa chính chính quy thửa đất {lineageParcel.parentNationalCode || lineageParcel.nationalCode}
+                    </div>
+                    <div className="text-xs text-slate-700 mt-1">
+                      Đăng ký ban đầu theo hồ sơ trích đo địa chính số {lineageParcel.surveyDocumentNumber}. Người sử dụng đất: {lineageParcel.ownerName || 'Chưa định danh'}.
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-400 mt-1">
+                      Mã băm kiểm toán: {lineageParcel.auditHash.slice(0, 24)}...
+                    </div>
+                  </div>
+
+                  {/* Sự kiện 2: Biến động tách/hợp nếu có */}
+                  {lineageParcel.parentNationalCode && (
+                    <div className="relative">
+                      <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-purple-600 border-2 border-white"></div>
+                      <div className="text-xs font-semibold text-slate-500">2026-10-22 &bull; Thủ tục tách thửa đất</div>
+                      <div className="text-sm font-bold text-slate-900 mt-0.5">
+                        Tách thửa đất từ thửa tiền thân {lineageParcel.parentNationalCode}
+                      </div>
+                      <div className="text-xs text-slate-700 mt-1">
+                        Căn cứ quyết định tách thửa của cơ quan có thẩm quyền. Thửa cha chuyển trạng thái lưu trữ lịch sử, hình thành thửa đất mới {lineageParcel.nationalCode} với diện tích {lineageParcel.area} m².
+                      </div>
+                      <div className="text-[10px] font-mono text-slate-400 mt-1">
+                        Chuyên viên thụ lý: Văn phòng Đăng ký Đất đai
+                      </div>
+                    </div>
+                  )}
+
+                  {lineageParcel.mergedFromNationalCodes && lineageParcel.mergedFromNationalCodes.length > 0 && (
+                    <div className="relative">
+                      <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-blue-600 border-2 border-white"></div>
+                      <div className="text-xs font-semibold text-slate-500">2026-10-22 &bull; Thủ tục hợp thửa đất</div>
+                      <div className="text-sm font-bold text-slate-900 mt-0.5">
+                        Hợp nhất {lineageParcel.mergedFromNationalCodes.length} thửa đất tiền thân
+                      </div>
+                      <div className="text-xs text-slate-700 mt-1">
+                        Hợp các thửa ({lineageParcel.mergedFromNationalCodes.join(', ')}) thành một thửa duy nhất {lineageParcel.nationalCode} diện tích {lineageParcel.area} m².
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end pt-3 border-t border-slate-200">
-              <Button variant="primary" size="sm" onClick={() => setIsLineageModalOpen(false)}>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setIsLineageModalOpen(false);
+                  setSelectedPedigreeNodeId(null);
+                  setPedigreeZoomLevel(100);
+                }}
+              >
                 Đóng
               </Button>
             </div>
