@@ -10,9 +10,9 @@
 | Chỉ số | Số lượng | Tỷ lệ (%) | Ghi chú |
 |---|---|---|---|
 | **Tổng số User Stories** | **114** | **100%** | Toàn bộ 114 User Stories được số hóa tại `user_stories/` |
-| **Đã hoàn thành (Done)** | **13** | **11.4%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
+| **Đã hoàn thành (Done)** | **14** | **12.3%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
 | **Đang thực hiện (In Progress)** | **0** | **0.0%** | Không có Story nào đang dở dang |
-| **Chưa thực hiện (Backlog)** | **101** | **88.6%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
+| **Chưa thực hiện (Backlog)** | **100** | **87.7%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
 
 - **User Story hoàn thành gần nhất**: [`DCS-02-CN-001`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-001.md) - Khai báo thông tin thuộc tính thửa đất mới.
 - **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-02-CN-002`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-002.md) - Sinh Mã định danh thửa đất quốc gia duy nhất.
@@ -309,3 +309,12 @@ flowchart TD
   - `apps/web`: Route `/parcels` bổ sung tính năng Tách thửa, Hợp thửa và Modal hiển thị cây gia phả biến động (Lineage) dạng đồ thị trực quan.
   - `tests`: 32 unit tests PASS bao phủ trọn vẹn 4 tiêu chí chấp nhận TC-01, TC-02, TC-03, TC-04.
 - **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#18-nhóm-api-quản-lý-vòng-đời-thửa-đất-tách-thửa--hợp-thửa-dcs-02-cn-003).
+
+### 3.14. [DCS-02-CN-004] Quản lý nguồn gốc sử dụng đất theo Luật Đất đai 2024
+- **Persona**: Văn phòng Đăng ký Đất đai, Cán bộ Địa chính xã/phường
+- **Kiến trúc triển khai**:
+  - `packages/shared`: Enum 8 loại nguồn gốc sử dụng đất `LandOriginType`, các trường quyền năng `LandOriginRights` (`canTransfer`, `canMortgage`, `canSublease`, `canDonate`), schema `UpdateLandOriginSchema`, `ValidateAgriculturalSubdivisionSchema`.
+  - `apps/api`: Dịch vụ `updateLandOrigin` và `validateAgriculturalSubdivision` tự động phân định quyền năng chuyển nhượng/thế chấp theo nguồn gốc đất (ví dụ thuê hàng năm bị hạn chế chuyển nhượng QSDĐ trần) và chặn tách thửa đất nông nghiệp dưới hạn mức canh tác tối thiểu $500m^2$ chống manh mún đất đai (QTD-26).
+  - `apps/web`: Route `/parcels` hiển thị cột Nguồn gốc sử dụng đất kèm thẻ phân định quyền năng, Modal Quản lý nguồn gốc và Modal Thẩm định đất nông nghiệp.
+  - `tests`: 41 unit tests PASS bao phủ toàn diện 4 tiêu chí chấp nhận TC-01, TC-02, TC-03, TC-04.
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#19-nhóm-api-quản-lý-nguồn-gốc-sử-dụng-đất-dcs-02-cn-004).
