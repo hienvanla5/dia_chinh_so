@@ -16,6 +16,12 @@ import {
   QrCode,
   Hash,
   Compass,
+  GitFork,
+  Merge,
+  History,
+  Network,
+  ArrowDown,
+  ArrowRight,
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -46,6 +52,12 @@ interface ParcelDisplay {
   ownerCitizenId?: string;
   auditHash: string;
   createdAt: string;
+  parentParcelId?: string;
+  parentNationalCode?: string;
+  mergedFromParcelIds?: string[];
+  mergedFromNationalCodes?: string[];
+  childParcelIds?: string[];
+  isHistorical?: boolean;
 }
 
 export default function ParcelsPage() {
@@ -118,7 +130,7 @@ export default function ParcelsPage() {
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Trạng thái modal khai báo thửa mới
+  // Modal Khai báo thửa mới (DCS-02-CN-001)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -135,9 +147,8 @@ export default function ParcelsPage() {
   const [formSurveyDoc, setFormSurveyDoc] = useState('TĐ-2026/099/VPĐK-HN');
   const [formOwnerName, setFormOwnerName] = useState('Nguyễn Văn Minh');
   const [formOwnerCccd, setFormOwnerCccd] = useState('001095112233');
-  const [formNotes, setFormNotes] = useState('Thửa đất mới trích đo địa chính theo quy chuẩn 2024');
 
-  // Đỉnh tọa độ VN-2000
+  // Đỉnh VN-2000
   const [p1x, setP1x] = useState('2325500.1');
   const [p1y, setP1y] = useState('589200.2');
   const [p2x, setP2x] = useState('2325515.5');
@@ -147,11 +158,9 @@ export default function ParcelsPage() {
   const [p4x, setP4x] = useState('2325490.0');
   const [p4y, setP4y] = useState('589214.5');
 
-  // Trạng thái modal Công cụ Mã định danh quốc gia
+  // Modal Công cụ Mã định danh quốc gia (DCS-02-CN-002)
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   const [codeTab, setCodeTab] = useState<'GENERATE' | 'VALIDATE'>('GENERATE');
-
-  // State sinh mã
   const [genCommuneCode, setGenCommuneCode] = useState('01001');
   const [genSheetNumber, setGenSheetNumber] = useState('15');
   const [genParcelNumber, setGenParcelNumber] = useState('88');
@@ -168,7 +177,6 @@ export default function ParcelsPage() {
     auditHash: string;
   } | null>(null);
 
-  // State kiểm tra mã
   const [valCodeInput, setValCodeInput] = useState('01001-0012-0045');
   const [valResult, setValResult] = useState<{
     isValid: boolean;
@@ -180,7 +188,31 @@ export default function ParcelsPage() {
     message: string;
   } | null>(null);
 
-  // Xử lý bộ lọc danh sách
+  // Modal Tách thửa (DCS-02-CN-003)
+  const [isSubdivideModalOpen, setIsSubdivideModalOpen] = useState(false);
+  const [selectedParentParcel, setSelectedParentParcel] = useState<ParcelDisplay | null>(null);
+  const [subDecisionNum, setSubDecisionNum] = useState('QĐ-TÁCH-2026/01/UBND');
+  const [child1ParcelNum, setChild1ParcelNum] = useState('');
+  const [child1Area, setChild1Area] = useState('');
+  const [child1Owner, setChild1Owner] = useState('');
+  const [child2ParcelNum, setChild2ParcelNum] = useState('');
+  const [child2Area, setChild2Area] = useState('');
+  const [child2Owner, setChild2Owner] = useState('');
+  const [subError, setSubError] = useState<string | null>(null);
+
+  // Modal Hợp thửa (DCS-02-CN-003)
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
+  const [selectedMergeIds, setSelectedMergeIds] = useState<string[]>([]);
+  const [mergeDecisionNum, setMergeDecisionNum] = useState('QĐ-HỢP-2026/02/UBND');
+  const [mergeNewParcelNum, setMergeNewParcelNum] = useState('');
+  const [mergeNewOwner, setMergeNewOwner] = useState('');
+  const [mergeError, setMergeError] = useState<string | null>(null);
+
+  // Modal Cây gia phả (DCS-02-CN-003)
+  const [isLineageModalOpen, setIsLineageModalOpen] = useState(false);
+  const [lineageParcel, setLineageParcel] = useState<ParcelDisplay | null>(null);
+
+  // Lọc danh sách
   const filteredParcels = parcels.filter(p => {
     const matchCommune = filterCommune === 'ALL' || p.communeCode === filterCommune;
     const matchStatus = filterStatus === 'ALL' || p.legalStatus === filterStatus;
@@ -193,19 +225,218 @@ export default function ParcelsPage() {
     return matchCommune && matchStatus && matchSearch;
   });
 
-  // Mở modal khai báo
+  // Mở modal khai báo mới
   const handleOpenModal = () => {
     setErrorMessage(null);
     setSuccessResult(null);
     setIsModalOpen(true);
   };
 
-  // Mở modal mã định danh
-  const handleOpenCodeModal = () => {
-    setIsCodeModalOpen(true);
+  // Mở modal tách thửa
+  const handleOpenSubdivide = (p: ParcelDisplay) => {
+    setSelectedParentParcel(p);
+    setSubDecisionNum(`QĐ-TÁCH-${new Date().getFullYear()}/0${parcels.length}/UBND`);
+    setChild1ParcelNum(String(p.parcelNumber * 10 + 1));
+    const half1 = (p.area / 2).toFixed(1);
+    const half2 = (p.area - parseFloat(half1)).toFixed(1);
+    setChild1Area(half1);
+    setChild1Owner(p.ownerName || 'Chủ nhận thừa kế A');
+    setChild2ParcelNum(String(p.parcelNumber * 10 + 2));
+    setChild2Area(half2);
+    setChild2Owner(p.ownerName ? `${p.ownerName} (Phần còn lại)` : 'Chủ nhận chuyển nhượng B');
+    setSubError(null);
+    setIsSubdivideModalOpen(true);
   };
 
-  // Xử lý sinh mã định danh
+  // Xác nhận tách thửa
+  const handleConfirmSubdivide = () => {
+    if (!selectedParentParcel) return;
+    setSubError(null);
+
+    const c1Num = parseInt(child1ParcelNum, 10);
+    const c1A = parseFloat(child1Area);
+    const c2Num = parseInt(child2ParcelNum, 10);
+    const c2A = parseFloat(child2Area);
+
+    if (isNaN(c1Num) || c1Num <= 0 || isNaN(c2Num) || c2Num <= 0) {
+      setSubError('Số thửa đất con phải là số nguyên dương lớn hơn 0.');
+      return;
+    }
+
+    if (c1Num === c2Num) {
+      setSubError('Các thửa đất con mới hình thành không được trùng số thứ tự thửa.');
+      return;
+    }
+
+    if (isNaN(c1A) || c1A < 30 || isNaN(c2A) || c2A < 30) {
+      setSubError('Diện tích mỗi thửa đất mới hình thành phải đạt tối thiểu 30 m² theo quy định của UBND cấp tỉnh.');
+      return;
+    }
+
+    const totalChildArea = c1A + c2A;
+    if (Math.abs(totalChildArea - selectedParentParcel.area) > 0.5) {
+      setSubError(
+        `Tổng diện tích các thửa đất con (${totalChildArea} m²) không khớp với diện tích thửa đất gốc (${selectedParentParcel.area} m²).`
+      );
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const sheetStr = String(selectedParentParcel.sheetNumber).padStart(4, '0');
+
+    const child1: ParcelDisplay = {
+      id: `PARCEL-SUB-${Date.now()}-1`,
+      nationalCode: `${selectedParentParcel.communeCode}-${sheetStr}-${String(c1Num).padStart(4, '0')}`,
+      communeCode: selectedParentParcel.communeCode,
+      communeName: selectedParentParcel.communeName,
+      provinceCode: selectedParentParcel.provinceCode,
+      provinceName: selectedParentParcel.provinceName,
+      sheetNumber: selectedParentParcel.sheetNumber,
+      parcelNumber: c1Num,
+      area: c1A,
+      purposeCode: selectedParentParcel.purposeCode,
+      purposeName: selectedParentParcel.purposeName,
+      address: `${selectedParentParcel.address} (Nhánh 1)`,
+      legalStatus: 'AVAILABLE',
+      surveyDocumentNumber: subDecisionNum,
+      ownerName: child1Owner,
+      auditHash: `sha256_${Date.now()}_child1_subdivision_audit`,
+      createdAt: now,
+      parentParcelId: selectedParentParcel.id,
+      parentNationalCode: selectedParentParcel.nationalCode,
+    };
+
+    const child2: ParcelDisplay = {
+      id: `PARCEL-SUB-${Date.now()}-2`,
+      nationalCode: `${selectedParentParcel.communeCode}-${sheetStr}-${String(c2Num).padStart(4, '0')}`,
+      communeCode: selectedParentParcel.communeCode,
+      communeName: selectedParentParcel.communeName,
+      provinceCode: selectedParentParcel.provinceCode,
+      provinceName: selectedParentParcel.provinceName,
+      sheetNumber: selectedParentParcel.sheetNumber,
+      parcelNumber: c2Num,
+      area: c2A,
+      purposeCode: selectedParentParcel.purposeCode,
+      purposeName: selectedParentParcel.purposeName,
+      address: `${selectedParentParcel.address} (Nhánh 2)`,
+      legalStatus: 'AVAILABLE',
+      surveyDocumentNumber: subDecisionNum,
+      ownerName: child2Owner,
+      auditHash: `sha256_${Date.now()}_child2_subdivision_audit`,
+      createdAt: now,
+      parentParcelId: selectedParentParcel.id,
+      parentNationalCode: selectedParentParcel.nationalCode,
+    };
+
+    // Cập nhật thửa gốc thành HISTORICAL
+    setParcels(prev =>
+      prev.map(item =>
+        item.id === selectedParentParcel.id
+          ? {
+              ...item,
+              legalStatus: 'HISTORICAL',
+              isHistorical: true,
+              childParcelIds: [child1.id, child2.id],
+            }
+          : item
+      )
+    );
+
+    setParcels(prev => [child1, child2, ...prev]);
+    setIsSubdivideModalOpen(false);
+  };
+
+  // Mở modal hợp thửa
+  const handleOpenMerge = () => {
+    setSelectedMergeIds([]);
+    setMergeDecisionNum(`QĐ-HỢP-${new Date().getFullYear()}/0${parcels.length}/UBND`);
+    setMergeNewParcelNum(String(parcels.length * 20 + 99));
+    setMergeNewOwner('');
+    setMergeError(null);
+    setIsMergeModalOpen(true);
+  };
+
+  // Xác nhận hợp thửa
+  const handleConfirmMerge = () => {
+    setMergeError(null);
+    if (selectedMergeIds.length < 2) {
+      setMergeError('Vui lòng chọn tối thiểu 2 thửa đất thành phần để thực hiện hợp thửa.');
+      return;
+    }
+
+    const selectedList = parcels.filter(p => selectedMergeIds.includes(p.id));
+
+    // Kiểm tra cùng mục đích sử dụng (QTD-31)
+    const firstPurpose = selectedList[0].purposeCode;
+    const samePurpose = selectedList.every(p => p.purposeCode === firstPurpose);
+    if (!samePurpose) {
+      setMergeError(
+        'Quy định cấm hợp thửa đất không cùng mục đích sử dụng: Các thửa đất đã chọn có mục đích khác nhau. Vui lòng chuyển mục đích sử dụng đất đồng nhất trước khi nộp hồ sơ!'
+      );
+      return;
+    }
+
+    // Kiểm tra cùng xã
+    const firstCommune = selectedList[0].communeCode;
+    const sameCommune = selectedList.every(p => p.communeCode === firstCommune);
+    if (!sameCommune) {
+      setMergeError('Không thể hợp các thửa đất nằm ở các đơn vị hành chính xã/phường khác nhau.');
+      return;
+    }
+
+    const newNum = parseInt(mergeNewParcelNum, 10);
+    if (isNaN(newNum) || newNum <= 0) {
+      setMergeError('Số thứ tự thửa đất mới phải là số nguyên dương lớn hơn 0.');
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const totalArea = selectedList.reduce((sum, p) => sum + p.area, 0);
+    const sheetStr = String(selectedList[0].sheetNumber).padStart(4, '0');
+    const newNationalCode = `${firstCommune}-${sheetStr}-${String(newNum).padStart(4, '0')}`;
+
+    const mergedParcel: ParcelDisplay = {
+      id: `PARCEL-MRG-${Date.now()}`,
+      nationalCode: newNationalCode,
+      communeCode: firstCommune,
+      communeName: selectedList[0].communeName,
+      provinceCode: selectedList[0].provinceCode,
+      provinceName: selectedList[0].provinceName,
+      sheetNumber: selectedList[0].sheetNumber,
+      parcelNumber: newNum,
+      area: totalArea,
+      purposeCode: firstPurpose,
+      purposeName: selectedList[0].purposeName,
+      address: selectedList[0].address,
+      legalStatus: 'AVAILABLE',
+      surveyDocumentNumber: mergeDecisionNum,
+      ownerName: mergeNewOwner || selectedList[0].ownerName,
+      auditHash: `sha256_${Date.now()}_merged_audit`,
+      createdAt: now,
+      mergedFromParcelIds: selectedList.map(p => p.id),
+      mergedFromNationalCodes: selectedList.map(p => p.nationalCode),
+    };
+
+    // Chuyển các thửa cũ thành HISTORICAL
+    setParcels(prev =>
+      prev.map(item =>
+        selectedMergeIds.includes(item.id)
+          ? { ...item, legalStatus: 'HISTORICAL', isHistorical: true }
+          : item
+      )
+    );
+
+    setParcels(prev => [mergedParcel, ...prev]);
+    setIsMergeModalOpen(false);
+  };
+
+  // Mở modal cây gia phả
+  const handleOpenLineage = (p: ParcelDisplay) => {
+    setLineageParcel(p);
+    setIsLineageModalOpen(true);
+  };
+
+  // Xử lý sinh mã định danh (DCS-02-CN-002)
   const handleGenerateCode = () => {
     const s = parseInt(genSheetNumber, 10);
     const p = parseInt(genParcelNumber, 10);
@@ -250,7 +481,7 @@ export default function ParcelsPage() {
     });
   };
 
-  // Xử lý thẩm tra mã định danh
+  // Xử lý thẩm tra mã định danh (DCS-02-CN-002)
   const handleValidateCode = () => {
     const clean = valCodeInput.trim();
     const regex = /^(?:(\d{2})-)?(\d{5})-(\d{4})-(\d{4,5})(?:-(\d{2}))?$/;
@@ -283,7 +514,7 @@ export default function ParcelsPage() {
     });
   };
 
-  // Submit khai báo
+  // Submit khai báo mới (DCS-02-CN-001)
   const handleDeclareSubmit = () => {
     setErrorMessage(null);
 
@@ -370,8 +601,8 @@ export default function ParcelsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Khai báo & Quản lý Thuộc tính Thửa đất"
-        description="Tạo lập cơ sở dữ liệu thửa đất mới hình thành và theo dõi hồ sơ thẩm định địa chính"
+        title="Quản lý Thửa đất & Vòng đời Biến động"
+        description="Theo dõi toàn diện cơ sở dữ liệu thửa đất, mã định danh quốc gia, lịch sử tách thửa và hợp thửa"
       />
 
       {/* 4 Thẻ KPI chỉ số */}
@@ -391,23 +622,6 @@ export default function ParcelsPage() {
           <p className="text-xs text-slate-500 mt-2">Dữ liệu địa chính đồng bộ</p>
         </Card>
 
-        <Card className="p-4 border-l-4 border-l-amber-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Chờ VPĐKĐĐ thẩm định
-              </p>
-              <h3 className="text-2xl font-extrabold text-amber-700 mt-1">
-                {parcels.filter(p => p.legalStatus === 'PENDING_APPRAISAL').length}
-              </h3>
-            </div>
-            <div className="p-2.5 bg-amber-50 rounded-lg text-amber-600">
-              <FileText className="w-5 h-5" />
-            </div>
-          </div>
-          <p className="text-xs text-amber-600 mt-2">Hồ sơ mới khai báo</p>
-        </Card>
-
         <Card className="p-4 border-l-4 border-l-emerald-600">
           <div className="flex items-center justify-between">
             <div>
@@ -422,7 +636,24 @@ export default function ParcelsPage() {
               <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
-          <p className="text-xs text-emerald-600 mt-2">Đã được phê duyệt pháp lý</p>
+          <p className="text-xs text-emerald-600 mt-2">Đủ điều kiện pháp lý</p>
+        </Card>
+
+        <Card className="p-4 border-l-4 border-l-purple-600">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Lịch sử tách / hợp
+              </p>
+              <h3 className="text-2xl font-extrabold text-purple-700 mt-1">
+                {parcels.filter(p => p.legalStatus === 'HISTORICAL').length}
+              </h3>
+            </div>
+            <div className="p-2.5 bg-purple-50 rounded-lg text-purple-600">
+              <History className="w-5 h-5" />
+            </div>
+          </div>
+          <p className="text-xs text-purple-600 mt-2">Đã đóng hiệu lực lịch sử</p>
         </Card>
 
         <Card className="p-4 border-l-4 border-l-rose-600">
@@ -466,6 +697,7 @@ export default function ParcelsPage() {
                 { value: 'ALL', label: 'Tất cả trạng thái' },
                 { value: 'AVAILABLE', label: 'Bình thường (Sẵn sàng)' },
                 { value: 'PENDING_APPRAISAL', label: 'Chờ VPĐKĐĐ thẩm định' },
+                { value: 'HISTORICAL', label: 'Lịch sử (Đã tách/hợp)' },
                 { value: 'LOCKED', label: 'Đang khóa giao dịch' },
               ]}
             />
@@ -473,20 +705,24 @@ export default function ParcelsPage() {
         </div>
 
         <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
-          <div className="w-full sm:w-56">
+          <div className="w-full sm:w-48">
             <Input
               placeholder="Tìm theo mã thửa, địa chỉ, chủ..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline" onClick={handleOpenCodeModal}>
+          <Button variant="outline" onClick={handleOpenMerge}>
+            <Merge className="w-4 h-4 mr-1.5" />
+            Hợp thửa đất
+          </Button>
+          <Button variant="outline" onClick={() => setIsCodeModalOpen(true)}>
             <ShieldCheck className="w-4 h-4 mr-1.5" />
-            Mã định danh quốc gia
+            Mã định danh
           </Button>
           <Button variant="primary" onClick={handleOpenModal}>
             <FilePlus className="w-4 h-4 mr-1.5" />
-            Khai báo thửa mới
+            Khai báo mới
           </Button>
         </div>
       </div>
@@ -506,10 +742,10 @@ export default function ParcelsPage() {
                 <th className="px-3.5 py-3 text-left">Số tờ / Số thửa</th>
                 <th className="px-3.5 py-3 text-left">Diện tích</th>
                 <th className="px-3.5 py-3 text-left">Loại đất (Mục đích)</th>
-                <th className="px-3.5 py-3 text-left">Địa chỉ thửa đất</th>
                 <th className="px-3.5 py-3 text-left">Chủ sử dụng đất</th>
                 <th className="px-3.5 py-3 text-left">Trạng thái pháp lý</th>
-                <th className="px-3.5 py-3 text-left">Mã băm kiểm toán</th>
+                <th className="px-3.5 py-3 text-left">Quan hệ vòng đời</th>
+                <th className="px-3.5 py-3 text-right">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-slate-800">
@@ -530,9 +766,6 @@ export default function ParcelsPage() {
                     </span>
                     <span className="text-xs text-slate-700">{p.purposeName}</span>
                   </td>
-                  <td className="px-3.5 py-2.5 text-xs text-slate-700 max-w-xs truncate" title={p.address}>
-                    {p.address}
-                  </td>
                   <td className="px-3.5 py-2.5 text-xs">
                     {p.ownerName ? (
                       <div>
@@ -548,17 +781,434 @@ export default function ParcelsPage() {
                     {p.legalStatus === 'PENDING_APPRAISAL' && (
                       <Badge variant="warning">Chờ VPĐKĐĐ thẩm định</Badge>
                     )}
+                    {p.legalStatus === 'HISTORICAL' && (
+                      <Badge variant="neutral">Lịch sử biến động</Badge>
+                    )}
                     {p.legalStatus === 'LOCKED' && <Badge variant="danger">Đang khóa giao dịch</Badge>}
                     {p.legalStatus === 'DISPUTED' && <Badge variant="danger">Tranh chấp ranh giới</Badge>}
                   </td>
-                  <td className="px-3.5 py-2.5 font-mono text-[11px] text-slate-600 max-w-xs truncate" title={p.auditHash}>
-                    {p.auditHash}
+                  <td className="px-3.5 py-2.5 text-xs">
+                    {p.parentNationalCode && (
+                      <div className="text-slate-600">
+                        <span className="text-[11px] text-slate-400 block">Tách từ thửa cha:</span>
+                        <span className="font-mono font-semibold">{p.parentNationalCode}</span>
+                      </div>
+                    )}
+                    {p.mergedFromNationalCodes && p.mergedFromNationalCodes.length > 0 && (
+                      <div className="text-slate-600">
+                        <span className="text-[11px] text-slate-400 block">Hợp từ các thửa:</span>
+                        <span className="font-mono font-semibold text-[11px]">
+                          {p.mergedFromNationalCodes.join(', ')}
+                        </span>
+                      </div>
+                    )}
+                    {p.childParcelIds && p.childParcelIds.length > 0 && (
+                      <div className="text-purple-700 font-semibold text-xs">
+                        Đã phân nhánh {p.childParcelIds.length} thửa con
+                      </div>
+                    )}
+                    {!p.parentNationalCode && (!p.mergedFromNationalCodes || p.mergedFromNationalCodes.length === 0) && (!p.childParcelIds || p.childParcelIds.length === 0) && (
+                      <span className="text-slate-400 italic">Thửa đất gốc</span>
+                    )}
+                  </td>
+                  <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
+                    <div className="flex justify-end gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenLineage(p)}
+                        title="Xem cây phả hệ biến động"
+                      >
+                        <Network className="w-3.5 h-3.5 mr-1" />
+                        Gia phả
+                      </Button>
+                      {p.legalStatus === 'AVAILABLE' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenSubdivide(p)}
+                          title="Tách thửa đất này"
+                        >
+                          <GitFork className="w-3.5 h-3.5 mr-1" />
+                          Tách thửa
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Modal Tách thửa đất (DCS-02-CN-003) */}
+      {isSubdivideModalOpen && selectedParentParcel && (
+        <Modal
+          isOpen={isSubdivideModalOpen}
+          onClose={() => setIsSubdivideModalOpen(false)}
+          title="Thủ tục Tách thửa đất & Phân nhánh lịch sử"
+        >
+          <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Thửa đất gốc:</span>
+                <span className="font-mono font-bold text-primary-950">{selectedParentParcel.nationalCode}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Diện tích gốc:</span>
+                <span className="font-extrabold text-slate-900">{selectedParentParcel.area} m²</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Mục đích sử dụng:</span>
+                <span className="font-semibold">{selectedParentParcel.purposeName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Hạn mức diện tích tối thiểu:</span>
+                <span className="font-semibold text-emerald-800">30.0 m² (theo quy định UBND tỉnh)</span>
+              </div>
+            </div>
+
+            {subError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-900 text-xs flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{subError}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Số quyết định / văn bản cho phép tách thửa:
+              </label>
+              <Input
+                value={subDecisionNum}
+                onChange={e => setSubDecisionNum(e.target.value)}
+                placeholder="Ví dụ: QĐ-TÁCH-2026/01/UBND"
+              />
+            </div>
+
+            {/* Thửa con 1 */}
+            <div className="p-3 border border-slate-200 rounded-lg space-y-2.5">
+              <span className="text-xs font-bold text-slate-800 block">Thửa đất mới thứ nhất:</span>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <label className="text-[11px] text-slate-600 block mb-1">Số thứ tự thửa mới:</label>
+                  <Input
+                    type="number"
+                    value={child1ParcelNum}
+                    onChange={e => setChild1ParcelNum(e.target.value)}
+                    placeholder="Ví dụ: 101"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-600 block mb-1">Diện tích (m²):</label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={child1Area}
+                    onChange={e => setChild1Area(e.target.value)}
+                    placeholder="Ví dụ: 60.0"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[11px] text-slate-600 block mb-1">Chủ sử dụng đất thừa kế / nhận quyền:</label>
+                  <Input
+                    value={child1Owner}
+                    onChange={e => setChild1Owner(e.target.value)}
+                    placeholder="Họ tên người nhận"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Thửa con 2 */}
+            <div className="p-3 border border-slate-200 rounded-lg space-y-2.5">
+              <span className="text-xs font-bold text-slate-800 block">Thửa đất mới thứ hai:</span>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <label className="text-[11px] text-slate-600 block mb-1">Số thứ tự thửa mới:</label>
+                  <Input
+                    type="number"
+                    value={child2ParcelNum}
+                    onChange={e => setChild2ParcelNum(e.target.value)}
+                    placeholder="Ví dụ: 102"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-600 block mb-1">Diện tích (m²):</label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={child2Area}
+                    onChange={e => setChild2Area(e.target.value)}
+                    placeholder="Ví dụ: 65.8"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[11px] text-slate-600 block mb-1">Chủ sử dụng đất phần còn lại:</label>
+                  <Input
+                    value={child2Owner}
+                    onChange={e => setChild2Owner(e.target.value)}
+                    placeholder="Họ tên người nhận"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-500 leading-relaxed italic">
+              * Lưu ý: Thửa đất gốc sau khi tách sẽ tự động được chuyển sang trạng thái Lịch sử biến động và bảo toàn vĩnh viễn trong CSDL quốc gia.
+            </p>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <Button variant="outline" size="sm" onClick={() => setIsSubdivideModalOpen(false)}>
+                Hủy bỏ
+              </Button>
+              <Button variant="primary" size="sm" onClick={handleConfirmSubdivide}>
+                <GitFork className="w-4 h-4 mr-1.5" />
+                Xác nhận tách thửa
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Hợp thửa đất (DCS-02-CN-003) */}
+      {isMergeModalOpen && (
+        <Modal
+          isOpen={isMergeModalOpen}
+          onClose={() => setIsMergeModalOpen(false)}
+          title="Thủ tục Hợp các thửa đất liền kề"
+        >
+          <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Chọn từ 2 thửa đất trở lên có cùng mục đích sử dụng và cùng địa bàn xã để hợp nhất thành một thửa duy nhất.
+            </p>
+
+            {mergeError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-900 text-xs flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{mergeError}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-2">
+                Chọn các thửa đất tham gia hợp thửa (tối thiểu 2 thửa):
+              </label>
+              <div className="space-y-2 max-h-48 overflow-y-auto border border-slate-200 rounded-lg p-2.5">
+                {parcels
+                  .filter(p => p.legalStatus === 'AVAILABLE')
+                  .map(p => {
+                    const isChecked = selectedMergeIds.includes(p.id);
+                    return (
+                      <label
+                        key={p.id}
+                        className={`flex items-center justify-between p-2 rounded cursor-pointer text-xs transition-colors ${
+                          isChecked ? 'bg-primary-50 border border-primary-200' : 'hover:bg-slate-50 border border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={e => {
+                              if (e.target.checked) {
+                                setSelectedMergeIds(prev => [...prev, p.id]);
+                              } else {
+                                setSelectedMergeIds(prev => prev.filter(id => id !== p.id));
+                              }
+                            }}
+                            className="rounded border-slate-300 text-primary-800 focus:ring-primary-600"
+                          />
+                          <div>
+                            <span className="font-mono font-bold text-slate-900">{p.nationalCode}</span>
+                            <span className="text-slate-500 block text-[11px]">
+                              Tờ {p.sheetNumber}, Thửa {p.parcelNumber} - {p.communeName}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-extrabold text-slate-900 block">{p.area} m²</span>
+                          <span className="font-mono text-[11px] text-slate-600">{p.purposeCode}</span>
+                        </div>
+                      </label>
+                    );
+                  })}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Số thứ tự thửa gộp mới:
+                </label>
+                <Input
+                  type="number"
+                  value={mergeNewParcelNum}
+                  onChange={e => setMergeNewParcelNum(e.target.value)}
+                  placeholder="Ví dụ: 99"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Tổng diện tích mới dự kiến:
+                </label>
+                <div className="px-3 py-2 bg-slate-100 rounded border border-slate-200 text-sm font-extrabold text-slate-900">
+                  {parcels
+                    .filter(p => selectedMergeIds.includes(p.id))
+                    .reduce((sum, p) => sum + p.area, 0)
+                    .toLocaleString('vi-VN')}{' '}
+                  m²
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Số quyết định / văn bản cho phép hợp thửa:
+              </label>
+              <Input
+                value={mergeDecisionNum}
+                onChange={e => setMergeDecisionNum(e.target.value)}
+                placeholder="Ví dụ: QĐ-HỢP-2026/02/UBND"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Chủ sử dụng đất sau khi hợp nhất:
+              </label>
+              <Input
+                value={mergeNewOwner}
+                onChange={e => setMergeNewOwner(e.target.value)}
+                placeholder="Họ tên cá nhân / Tổ chức nhận quyền"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <Button variant="outline" size="sm" onClick={() => setIsMergeModalOpen(false)}>
+                Hủy bỏ
+              </Button>
+              <Button variant="primary" size="sm" onClick={handleConfirmMerge}>
+                <Merge className="w-4 h-4 mr-1.5" />
+                Xác nhận hợp thửa
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Cây gia phả biến động (DCS-02-CN-003) */}
+      {isLineageModalOpen && lineageParcel && (
+        <Modal
+          isOpen={isLineageModalOpen}
+          onClose={() => setIsLineageModalOpen(false)}
+          title="Cây gia phả biến động thửa đất (Lineage)"
+        >
+          <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+              <span className="text-slate-500 block">Thửa đất đang tra cứu:</span>
+              <span className="font-mono font-extrabold text-base text-primary-950 block mt-0.5">
+                {lineageParcel.nationalCode}
+              </span>
+              <span className="text-slate-600 block text-[11px] mt-1">
+                Tờ {lineageParcel.sheetNumber}, Thửa {lineageParcel.parcelNumber} • Diện tích: {lineageParcel.area} m² ({lineageParcel.purposeName})
+              </span>
+            </div>
+
+            {/* Sơ đồ phả hệ */}
+            <div className="space-y-3 pt-2">
+              {/* Thửa cha / Thửa tiền thân */}
+              {lineageParcel.parentNationalCode && (
+                <div className="p-3.5 bg-slate-100 border border-slate-300 rounded-lg text-xs space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                    <History className="w-4 h-4 text-slate-500" />
+                    <span>Thửa đất cha tiền thân (Đã đóng lịch sử):</span>
+                  </div>
+                  <p className="font-mono font-bold text-slate-900">{lineageParcel.parentNationalCode}</p>
+                  <p className="text-[11px] text-slate-500">Quan hệ: Tách thửa theo quyết định phê duyệt địa chính</p>
+                </div>
+              )}
+
+              {lineageParcel.mergedFromNationalCodes && lineageParcel.mergedFromNationalCodes.length > 0 && (
+                <div className="p-3.5 bg-slate-100 border border-slate-300 rounded-lg text-xs space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                    <History className="w-4 h-4 text-slate-500" />
+                    <span>Các thửa đất tiền thân trước khi hợp (Đã đóng lịch sử):</span>
+                  </div>
+                  <p className="font-mono font-bold text-slate-900">
+                    {lineageParcel.mergedFromNationalCodes.join(' + ')}
+                  </p>
+                  <p className="text-[11px] text-slate-500">Quan hệ: Hợp thửa thành một thể thống nhất</p>
+                </div>
+              )}
+
+              {(lineageParcel.parentNationalCode || (lineageParcel.mergedFromNationalCodes && lineageParcel.mergedFromNationalCodes.length > 0)) && (
+                <div className="flex justify-center text-slate-400">
+                  <ArrowDown className="w-5 h-5 animate-bounce" />
+                </div>
+              )}
+
+              {/* Thửa hiện tại */}
+              <div className="p-3.5 bg-primary-50 border-2 border-primary-800 rounded-lg text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-primary-950">Thửa đất hiện hành:</span>
+                  <Badge variant={lineageParcel.legalStatus === 'AVAILABLE' ? 'success' : 'neutral'}>
+                    {lineageParcel.legalStatus === 'AVAILABLE' ? 'Đang hiệu lực' : 'Đã đóng lịch sử'}
+                  </Badge>
+                </div>
+                <p className="font-mono font-extrabold text-sm text-primary-950">{lineageParcel.nationalCode}</p>
+                <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-700 pt-1">
+                  <div>Chủ sở hữu: <strong>{lineageParcel.ownerName || 'Chưa xác lập'}</strong></div>
+                  <div>Hồ sơ phê duyệt: <strong>{lineageParcel.surveyDocumentNumber}</strong></div>
+                </div>
+              </div>
+
+              {/* Thửa con nếu đã phân nhánh */}
+              {lineageParcel.childParcelIds && lineageParcel.childParcelIds.length > 0 && (
+                <>
+                  <div className="flex justify-center text-slate-400">
+                    <ArrowDown className="w-5 h-5 animate-bounce" />
+                  </div>
+
+                  <div className="p-3.5 bg-purple-50 border border-purple-200 rounded-lg text-xs space-y-2">
+                    <div className="flex items-center gap-1.5 font-bold text-purple-900">
+                      <GitFork className="w-4 h-4 text-purple-700" />
+                      <span>Các thửa đất con kế thừa (Đang hoạt động):</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {parcels
+                        .filter(p => lineageParcel.childParcelIds?.includes(p.id))
+                        .map(child => (
+                          <div
+                            key={child.id}
+                            className="p-2 bg-white rounded border border-purple-200 flex justify-between items-center"
+                          >
+                            <span className="font-mono font-bold text-purple-950">{child.nationalCode}</span>
+                            <span className="text-slate-600 font-semibold">{child.area} m²</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {!lineageParcel.parentNationalCode &&
+                (!lineageParcel.mergedFromNationalCodes || lineageParcel.mergedFromNationalCodes.length === 0) &&
+                (!lineageParcel.childParcelIds || lineageParcel.childParcelIds.length === 0) && (
+                  <div className="p-4 text-center text-xs text-slate-500 italic bg-slate-50 rounded-lg border border-slate-200">
+                    Thửa đất này là thửa đất gốc hình thành ban đầu từ bản đồ địa chính chính quy, chưa phát sinh biến động tách hoặc hợp thửa.
+                  </div>
+                )}
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-200">
+              <Button variant="primary" size="sm" onClick={() => setIsLineageModalOpen(false)}>
+                Đóng
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Modal Công cụ Mã định danh quốc gia (DCS-02-CN-002) */}
@@ -788,7 +1438,7 @@ export default function ParcelsPage() {
         </Modal>
       )}
 
-      {/* Modal Khai báo thuộc tính thửa đất mới */}
+      {/* Modal Khai báo thuộc tính thửa đất mới (DCS-02-CN-001) */}
       {isModalOpen && (
         <Modal
           isOpen={isModalOpen}
