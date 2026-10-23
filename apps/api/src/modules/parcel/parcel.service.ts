@@ -26,6 +26,15 @@ import {
   LandOriginRights,
   UpdateLandOriginInput,
   UpdateLandOriginResponse,
+  LandUseTermType,
+  ExpiryWarningStatus,
+  UpdateLandTermInput,
+  UpdateLandTermResponse,
+  GetExpiringParcelsQueryInput,
+  GetExpiringParcelsResponse,
+  ExpiringParcelItem,
+  NotifyExpiryInput,
+  NotifyExpiryResponse,
   ValidateAgriculturalSubdivisionInput,
   ValidateAgriculturalSubdivisionResponse,
   SubdivideParcelInput,
@@ -52,6 +61,13 @@ export class ParcelService {
    * Khởi tạo dữ liệu mẫu các thửa đất chuẩn hóa theo hệ tọa độ VN-2000 và 34 tỉnh thành
    */
   private seedInitialParcels(): void {
+    const nearExpiryDate = new Date();
+    nearExpiryDate.setDate(nearExpiryDate.getDate() + 45);
+    const nearExpiryDateStr = nearExpiryDate.toISOString().split('T')[0];
+
+    const expiredDate = new Date();
+    expiredDate.setDate(expiredDate.getDate() - 10);
+    const expiredDateStr = expiredDate.toISOString().split('T')[0];
     const initialSeed: ParcelItem[] = [
       {
         id: 'PARCEL-HN-001',
@@ -167,8 +183,57 @@ export class ParcelService {
         },
         declaredByOfficerId: 'CB-HCM-001',
         auditHash: 'c932408a0e6d14b9f3c7a3714e0b34567890cdef1234567890abcdef12345678',
+        termType: LandUseTermType.DEFINITE,
+        termStartDate: '2021-12-01',
+        termDurationYears: 5,
+        termExpiryDate: nearExpiryDateStr,
+        expiryWarningStatus: ExpiryWarningStatus.CRITICAL_3M,
         createdAt: '2026-10-18T14:15:00.000Z',
         updatedAt: '2026-10-18T14:15:00.000Z',
+      },
+      {
+        id: 'PARCEL-HCM-002',
+        nationalCode: '79001-0005-0019',
+        communeCode: '79001',
+        communeName: 'Phường Bến Nghé',
+        provinceCode: 'TINH_HCM',
+        provinceName: 'Thành phố Hồ Chí Minh',
+        sheetNumber: 5,
+        parcelNumber: 19,
+        area: 1500.0,
+        purposeCode: LandPurposeCode.LUC,
+        address: 'Khu vực bãi bồi ven sông, Phường Bến Nghé',
+        legalStatus: ParcelLegalStatus.AVAILABLE,
+        surveyDocumentNumber: 'TĐ-2026/089/VPĐK-HCM',
+        ownerName: 'Nguyễn Văn Minh',
+        ownerCitizenId: '079085112233',
+        verticesVN2000: [
+          { x: 1192320.80, y: 605225.40 },
+          { x: 1192350.10, y: 605255.00 },
+          { x: 1192330.40, y: 605270.20 },
+          { x: 1192305.20, y: 605240.90 },
+        ],
+        boundaryGeojson: {
+          type: 'Polygon',
+          coordinates: [
+            [
+              [106.702, 10.779],
+              [106.704, 10.780],
+              [106.705, 10.779],
+              [106.703, 10.778],
+              [106.702, 10.779],
+            ],
+          ],
+        },
+        declaredByOfficerId: 'CB-HCM-001',
+        auditHash: 'd123408a0e6d14b9f3c7a3714e0b34567890cdef1234567890abcdef12345699',
+        termType: LandUseTermType.DEFINITE,
+        termStartDate: '1976-10-15',
+        termDurationYears: 50,
+        termExpiryDate: expiredDateStr,
+        expiryWarningStatus: ExpiryWarningStatus.EXPIRED,
+        createdAt: '2026-10-18T14:30:00.000Z',
+        updatedAt: '2026-10-18T14:30:00.000Z',
       },
     ];
 
@@ -1109,4 +1174,252 @@ export class ParcelService {
       message: 'Hồ sơ tách thửa đất nông nghiệp đủ điều kiện hạn mức canh tác tối thiểu theo quy định của Luật Đất đai 2024.',
     };
   }
+
+  /**
+   * Helper ánh xạ tên gọi chuẩn mục đích sử dụng đất
+   */
+  private getPurposeName(code: LandPurposeCode): string {
+    const map: Partial<Record<LandPurposeCode, string>> = {
+      [LandPurposeCode.ODT]: 'Đất ở tại đô thị',
+      [LandPurposeCode.ONT]: 'Đất ở tại nông thôn',
+      [LandPurposeCode.LUC]: 'Đất chuyên trồng lúa nước',
+      [LandPurposeCode.LUK]: 'Đất trồng lúa nước còn lại',
+      [LandPurposeCode.CLN]: 'Đất trồng cây lâu năm',
+      [LandPurposeCode.HNK]: 'Đất trồng cây hàng năm khác',
+      [LandPurposeCode.RSX]: 'Đất rừng sản xuất',
+      [LandPurposeCode.RPH]: 'Đất rừng phòng hộ',
+      [LandPurposeCode.TMD]: 'Đất thương mại, dịch vụ',
+      [LandPurposeCode.SKC]: 'Đất cơ sở sản xuất phi nông nghiệp',
+    };
+    return map[code] || code;
+  }
+
+  /**
+   * Cập nhật thời hạn sử dụng đất cho thửa đất (DCS-02-CN-005)
+   */
+  async updateLandTerm(input: UpdateLandTermInput): Promise<UpdateLandTermResponse> {
+    const parcel = this.parcelsStore.find((p) => p.id === input.parcelId);
+    if (!parcel) {
+      throw new NotFoundException(`Không tìm thấy thửa đất có ID: ${input.parcelId}`);
+    }
+
+    // Kiểm tra thẩm quyền địa giới hành chính (QTD-16)
+    if (input.officerCommuneCode && input.officerCommuneCode !== parcel.communeCode && input.officerId !== 'ADMIN') {
+      throw new ForbiddenException(
+        `Từ chối thực hiện (QTD-16): Cán bộ chỉ có thẩm quyền trên địa bàn xã '${input.officerCommuneCode}', không có thẩm quyền trên xã '${parcel.communeCode}'`,
+      );
+    }
+
+    // Ràng buộc thửa đất đang bị khóa giao dịch (QTD-27 / AC-03)
+    if (parcel.legalStatus === ParcelLegalStatus.LOCKED) {
+      throw new BadRequestException('Thao tác bị từ chối: Thửa đất đang trong tình trạng bị khóa giao dịch');
+    }
+
+    let expiryDate = input.expiryDate;
+    let durationYears = input.durationYears;
+    let startDate = input.startDate;
+    let warningStatus = ExpiryWarningStatus.VALID;
+    let daysRemaining: number | undefined;
+
+    if (input.termType === LandUseTermType.STABLE_LONG_TERM) {
+      // Đất sử dụng ổn định lâu dài (vô thời hạn - e.g. Đất ở ODT, ONT)
+      expiryDate = undefined;
+      durationYears = undefined;
+      warningStatus = ExpiryWarningStatus.VALID;
+      daysRemaining = undefined;
+    } else if (input.termType === LandUseTermType.DEFINITE) {
+      // Đất sử dụng có thời hạn
+      if (!expiryDate && (!startDate || !durationYears)) {
+        throw new BadRequestException(
+          'Đất sử dụng có thời hạn bắt buộc phải có ngày hết hạn hoặc ngày bắt đầu kèm số năm thời hạn',
+        );
+      }
+
+      if (!expiryDate && startDate && durationYears) {
+        const start = new Date(startDate);
+        if (isNaN(start.getTime())) {
+          throw new BadRequestException('Ngày bắt đầu sử dụng đất không hợp lệ');
+        }
+        const exp = new Date(start);
+        exp.setFullYear(exp.getFullYear() + durationYears);
+        expiryDate = exp.toISOString().split('T')[0];
+      }
+
+      if (expiryDate) {
+        const expTime = new Date(expiryDate).getTime();
+        if (isNaN(expTime)) {
+          throw new BadRequestException('Ngày hết hạn sử dụng đất không đúng định dạng YYYY-MM-DD');
+        }
+        const nowTime = new Date().getTime();
+        daysRemaining = Math.ceil((expTime - nowTime) / (1000 * 60 * 60 * 24));
+
+        if (daysRemaining <= 0) {
+          warningStatus = ExpiryWarningStatus.EXPIRED;
+        } else if (daysRemaining <= 90) {
+          warningStatus = ExpiryWarningStatus.CRITICAL_3M;
+        } else if (daysRemaining <= 180) {
+          warningStatus = ExpiryWarningStatus.EXPIRING_SOON_6M;
+        } else {
+          warningStatus = ExpiryWarningStatus.VALID;
+        }
+      }
+    }
+
+    // Cập nhật thông tin thửa đất
+    parcel.termType = input.termType;
+    parcel.termStartDate = startDate;
+    parcel.termDurationYears = durationYears;
+    parcel.termExpiryDate = expiryDate;
+    parcel.expiryWarningStatus = warningStatus;
+    parcel.updatedAt = new Date().toISOString();
+
+    // Mã băm kiểm toán SHA-256 (AC-04)
+    const auditPayload = `PARCEL_TERM:${parcel.id}:${parcel.nationalCode}:${input.termType}:${expiryDate || 'PERPETUAL'}:${input.officerId}:${parcel.updatedAt}`;
+    const auditHash = createHash('sha256').update(auditPayload).digest('hex');
+    parcel.auditHash = auditHash;
+
+    this.logger.log(
+      `Đã cập nhật thời hạn sử dụng đất cho thửa '${parcel.nationalCode}': ${input.termType} (Hết hạn: ${expiryDate || 'Ổn định lâu dài'}, Trạng thái: ${warningStatus}, Audit: ${auditHash})`,
+    );
+
+    return {
+      success: true,
+      parcel,
+      termType: input.termType,
+      expiryDate,
+      daysRemaining,
+      warningStatus,
+      auditHash,
+      message: `Cập nhật thời hạn sử dụng đất cho thửa '${parcel.nationalCode}' thành công. Trạng thái: ${warningStatus}.`,
+    };
+  }
+
+  /**
+   * Quét danh sách thửa đất sắp hết hạn sử dụng (DCS-02-CN-005, QTD-27)
+   */
+  async getExpiringParcels(query: GetExpiringParcelsQueryInput): Promise<GetExpiringParcelsResponse> {
+    const daysThreshold = query.daysThreshold || 180; // Mặc định 6 tháng
+    const nowTime = new Date().getTime();
+
+    let criticalCount = 0;
+    let warningCount = 0;
+    let expiredCount = 0;
+
+    const items: ExpiringParcelItem[] = [];
+
+    for (const parcel of this.parcelsStore) {
+      if (parcel.isHistorical) continue;
+      if (parcel.termType !== LandUseTermType.DEFINITE || !parcel.termExpiryDate) continue;
+      if (query.communeCode && parcel.communeCode !== query.communeCode) continue;
+
+      const expTime = new Date(parcel.termExpiryDate).getTime();
+      if (isNaN(expTime)) continue;
+
+      const daysRemaining = Math.ceil((expTime - nowTime) / (1000 * 60 * 60 * 24));
+
+      if (daysRemaining <= daysThreshold) {
+        let status: ExpiryWarningStatus;
+        if (daysRemaining <= 0) {
+          status = ExpiryWarningStatus.EXPIRED;
+          expiredCount++;
+        } else if (daysRemaining <= 90) {
+          status = ExpiryWarningStatus.CRITICAL_3M;
+          criticalCount++;
+        } else {
+          status = ExpiryWarningStatus.EXPIRING_SOON_6M;
+          warningCount++;
+        }
+
+        if (query.warningStatus && query.warningStatus !== status) {
+          continue;
+        }
+
+        items.push({
+          parcelId: parcel.id,
+          nationalCode: parcel.nationalCode,
+          sheetNumber: parcel.sheetNumber,
+          parcelNumber: parcel.parcelNumber,
+          communeCode: parcel.communeCode,
+          communeName: parcel.communeName,
+          purposeCode: parcel.purposeCode,
+          purposeName: this.getPurposeName(parcel.purposeCode),
+          area: parcel.area,
+          ownerName: parcel.ownerName || 'Chưa định danh chủ sở hữu',
+          ownerCitizenId: parcel.ownerCitizenId || 'N/A',
+          ownerPhone: '0987654321',
+          termStartDate: parcel.termStartDate,
+          termExpiryDate: parcel.termExpiryDate,
+          daysRemaining,
+          warningStatus: status,
+          legalExtensionGuidance:
+            'Căn cứ Điều 172 Luật Đất đai 2024: Người sử dụng đất có nhu cầu tiếp tục sử dụng đất phải nộp hồ sơ xin gia hạn chậm nhất 06 tháng trước khi hết thời hạn sử dụng. Quá thời hạn này mà không nộp hồ sơ, Nhà nước sẽ tiến hành thu hồi đất theo luật định.',
+          lastNotifiedAt: parcel.lastExpiryNotifiedAt,
+        });
+      }
+    }
+
+    items.sort((a, b) => a.daysRemaining - b.daysRemaining);
+
+    return {
+      total: items.length,
+      daysThreshold,
+      items,
+      summary: {
+        criticalCount,
+        warningCount,
+        expiredCount,
+      },
+    };
+  }
+
+  /**
+   * Phát thông báo cảnh báo thời hạn sử dụng đất tới chủ sở hữu (DCS-02-CN-005, QTD-27)
+   */
+  async notifyExpiry(input: NotifyExpiryInput): Promise<NotifyExpiryResponse> {
+    const parcel = this.parcelsStore.find((p) => p.id === input.parcelId);
+    if (!parcel) {
+      throw new NotFoundException(`Không tìm thấy thửa đất có ID: ${input.parcelId}`);
+    }
+
+    if (parcel.termType !== LandUseTermType.DEFINITE || !parcel.termExpiryDate) {
+      throw new BadRequestException('Thửa đất không thuộc loại hình có thời hạn sử dụng xác định');
+    }
+
+    if (parcel.legalStatus === ParcelLegalStatus.LOCKED) {
+      throw new BadRequestException('Thao tác bị từ chối: Thửa đất đang trong tình trạng bị khóa giao dịch');
+    }
+
+    const channels = input.channels && input.channels.length > 0 ? input.channels : ['SMS', 'APP_PUSH'];
+    const expTime = new Date(parcel.termExpiryDate).getTime();
+    const daysRemaining = Math.ceil((expTime - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    const ownerName = parcel.ownerName || 'Chủ sử dụng đất';
+    const ownerPhone = '0987654321';
+
+    const notificationContent = `[ĐỊA CHÍNH SỐ] Kính gửi ông/bà ${ownerName}, thửa đất số ${parcel.parcelNumber}, tờ BĐ số ${parcel.sheetNumber} (Mã định danh: ${parcel.nationalCode}) tại ${parcel.communeName} sẽ hết hạn sử dụng vào ngày ${parcel.termExpiryDate} (còn ${daysRemaining > 0 ? daysRemaining + ' ngày' : 'ĐÃ HẾT HẠN'}). Căn cứ Điều 172 Luật Đất đai 2024, đề nghị ông/bà nộp hồ sơ gia hạn trước ít nhất 06 tháng tại Chi nhánh Văn phòng Đăng ký Đất đai.`;
+
+    const now = new Date().toISOString();
+    parcel.lastExpiryNotifiedAt = now;
+
+    // Mã băm kiểm toán SHA-256 (AC-04)
+    const auditPayload = `NOTIFY_EXPIRY:${parcel.id}:${parcel.nationalCode}:${channels.join(',')}:${now}`;
+    const auditHash = createHash('sha256').update(auditPayload).digest('hex');
+
+    this.logger.log(
+      `Đã gửi cảnh báo thời hạn thửa '${parcel.nationalCode}' qua [${channels.join(', ')}] tới '${ownerName}' (Audit: ${auditHash})`,
+    );
+
+    return {
+      success: true,
+      parcelId: parcel.id,
+      nationalCode: parcel.nationalCode,
+      ownerName,
+      ownerPhone,
+      sentChannels: channels,
+      notificationContent,
+      auditHash,
+      notifiedAt: now,
+      message: `Đã phát thông báo cảnh báo hết hạn sử dụng đất thành công qua các kênh: ${channels.join(', ')}.`,
+    };
+  }
+
 }

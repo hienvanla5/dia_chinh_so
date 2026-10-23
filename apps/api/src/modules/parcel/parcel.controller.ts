@@ -15,6 +15,12 @@ import {
   MergeParcelsSchema,
   UpdateLandOriginInput,
   UpdateLandOriginSchema,
+  UpdateLandTermInput,
+  UpdateLandTermSchema,
+  GetExpiringParcelsQueryInput,
+  GetExpiringParcelsQuerySchema,
+  NotifyExpiryInput,
+  NotifyExpirySchema,
   ValidateAgriculturalSubdivisionInput,
   ValidateAgriculturalSubdivisionSchema,
   ParcelLegalStatus,
@@ -49,6 +55,16 @@ export class ParcelController {
   @ApiOperation({ summary: 'Tra cứu thửa đất theo Mã định danh quốc gia' })
   async findByNationalCode(@Param('nationalCode') nationalCode: string) {
     return this.parcelService.findByNationalCode(nationalCode);
+  }
+
+  @Get('expiring-soon')
+  @ApiOperation({ summary: 'Tra cứu danh sách thửa đất sắp hết hạn sử dụng (DCS-02-CN-005, QTD-27)' })
+  @ApiQuery({ name: 'daysThreshold', required: false, type: Number })
+  @ApiQuery({ name: 'communeCode', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Danh sách thửa đất sắp hết hạn sử dụng kèm khuyến nghị thủ tục' })
+  async getExpiringParcels(@Query() query: GetExpiringParcelsQueryInput) {
+    const validated = GetExpiringParcelsQuerySchema.parse(query);
+    return this.parcelService.getExpiringParcels(validated);
   }
 
   @Get(':id')
@@ -147,4 +163,28 @@ export class ParcelController {
     const validated = ValidateAgriculturalSubdivisionSchema.parse({ ...body, parcelId: id });
     return this.parcelService.validateAgriculturalSubdivision(validated);
   }
+  @Put(':id/term')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cập nhật thời hạn sử dụng đất cho thửa đất (DCS-02-CN-005)' })
+  @ApiResponse({ status: 200, description: 'Cập nhật thời hạn sử dụng đất thành công' })
+  async updateTerm(
+    @Param('id') id: string,
+    @Body() body: Omit<UpdateLandTermInput, 'parcelId'>,
+  ) {
+    const validated = UpdateLandTermSchema.parse({ ...body, parcelId: id });
+    return this.parcelService.updateLandTerm(validated);
+  }
+
+  @Post(':id/notify-expiry')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Gửi thông báo cảnh báo thời hạn sử dụng đất cho chủ sở hữu (DCS-02-CN-005, QTD-27)' })
+  @ApiResponse({ status: 200, description: 'Phát thông báo cảnh báo thành công' })
+  async notifyExpiry(
+    @Param('id') id: string,
+    @Body() body: Omit<NotifyExpiryInput, 'parcelId'>,
+  ) {
+    const validated = NotifyExpirySchema.parse({ ...body, parcelId: id });
+    return this.parcelService.notifyExpiry(validated);
+  }
+
 }
