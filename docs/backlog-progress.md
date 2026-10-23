@@ -10,9 +10,9 @@
 | Chỉ số | Số lượng | Tỷ lệ (%) | Ghi chú |
 |---|---|---|---|
 | **Tổng số User Stories** | **114** | **100%** | Toàn bộ 114 User Stories được số hóa tại `user_stories/` |
-| **Đã hoàn thành (Done)** | **11** | **9.6%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
+| **Đã hoàn thành (Done)** | **12** | **10.5%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
 | **Đang thực hiện (In Progress)** | **0** | **0.0%** | Không có Story nào đang dở dang |
-| **Chưa thực hiện (Backlog)** | **103** | **90.4%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
+| **Chưa thực hiện (Backlog)** | **102** | **89.5%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
 
 - **User Story hoàn thành gần nhất**: [`DCS-02-CN-001`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-001.md) - Khai báo thông tin thuộc tính thửa đất mới.
 - **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-02-CN-002`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-002.md) - Sinh Mã định danh thửa đất quốc gia duy nhất.
@@ -291,3 +291,12 @@ flowchart TD
   - Cập nhật dòng `User Story hoàn thành gần nhất` và `User Story đề xuất tiếp theo`.
   - Thêm một hàng mới vào **Mục 2: Danh Sách User Stories Đã Hoàn Thành** và bổ sung chi tiết vào **Mục 3**.
   - Thực hiện commit tài liệu này cùng với mã nguồn story.
+
+### 3.12. [DCS-02-CN-002] Sinh Mã định danh thửa đất quốc gia duy nhất
+- **Persona**: Quản trị viên Hệ thống, Văn phòng Đăng ký Đất đai, Cán bộ Địa chính
+- **Kiến trúc triển khai**:
+  - `packages/shared`: Schema `GenerateNationalCodeSchema`, `ValidateNationalCodeSchema`, kiểu dữ liệu `GenerateNationalCodeResponse`, `ValidateNationalCodeResponse`, `NationalCodeComponents`.
+  - `apps/api`: Dịch vụ `ParcelService.generateNationalCode` và `ParcelService.validateNationalCode` sinh mã chuẩn mở rộng, mã rút gọn, tính Checksum Mod-11, sinh Spatial UID (`VN-3405-[Commune]-X[cx]-Y[cy]`), mã QR chuẩn DCS và mã băm SHA-256 bất biến.
+  - `apps/web`: Route `/parcels` bổ sung Modal Công cụ Mã định danh quốc gia với 2 tab: Sinh mã định danh tự động và Thẩm tra & Đối soát mã.
+  - `tests`: 20 unit tests PASS bao phủ toàn diện 4 tiêu chí chấp nhận TC-01, TC-02, TC-03, TC-04.
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#17-nhóm-api-sinh--thẩm-định-mã-định-danh-thửa-đất-quốc-gia-dcs-02-cn-002).
