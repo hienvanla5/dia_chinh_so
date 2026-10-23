@@ -1578,3 +1578,117 @@ sequenceDiagram
     "message": "Mã định danh thửa đất sai quy chuẩn cấu trúc"
   }
   ```
+
+
+---
+
+## 18. Nhóm API Quản Lý Vòng Đời Thửa Đất: Tách Thửa & Hợp Thửa [DCS-02-CN-003]
+
+### 18.1. [DCS-02-CN-003] Tách thửa đất & thiết lập quan hệ phả hệ cha-con
+- **Method**: `POST`
+- **Path**: `/api/v1/parcels/:id/subdivide`
+- **Yêu cầu quyền (RBAC)**: `LAND_REGISTRAR`, `COMMUNE_OFFICER`, `ADMIN` (QTD-02, QTD-08, QTD-16)
+- **Request Body**:
+  ```json
+  {
+    "decisionNumber": "QĐ-TÁCH-2026/01/UBND",
+    "officerId": "CB-HN-001",
+    "officerCommuneCode": "01001",
+    "minSubdivisionArea": 30.0,
+    "newParcels": [
+      {
+        "parcelNumber": 101,
+        "area": 60.0,
+        "address": "Số 15A Điện Biên Phủ, Phường Điện Biên",
+        "ownerName": "Trần Văn Hoàng"
+      },
+      {
+        "parcelNumber": 102,
+        "area": 65.8,
+        "address": "Số 15B Điện Biên Phủ, Phường Điện Biên",
+        "ownerName": "Trần Văn Long"
+      }
+    ]
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "parentParcel": {
+      "id": "PARCEL-HN-001",
+      "nationalCode": "01001-0012-0045",
+      "legalStatus": "HISTORICAL",
+      "isHistorical": true,
+      "childParcelIds": ["PARCEL-SUB-1729670000-1", "PARCEL-SUB-1729670000-2"]
+    },
+    "childParcels": [
+      {
+        "id": "PARCEL-SUB-1729670000-1",
+        "nationalCode": "01001-0012-0101",
+        "parentParcelId": "PARCEL-HN-001",
+        "parentNationalCode": "01001-0012-0045",
+        "area": 60.0,
+        "legalStatus": "AVAILABLE"
+      },
+      {
+        "id": "PARCEL-SUB-1729670000-2",
+        "nationalCode": "01001-0012-0102",
+        "parentParcelId": "PARCEL-HN-001",
+        "parentNationalCode": "01001-0012-0045",
+        "area": 65.8,
+        "legalStatus": "AVAILABLE"
+      }
+    ],
+    "auditHash": "d1c2b3a4e5f6...",
+    "message": "Tách thửa đất '01001-0012-0045' thành công thành 2 thửa mới. Thửa đất gốc đã được chuyển sang trạng thái lịch sử và lưu vết phả hệ."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Danh sách thửa con ít hơn 2 thửa, diện tích thửa con nhỏ hơn hạn mức tối thiểu ($< 30m^2$), hoặc tổng diện tích các thửa con không khớp diện tích thửa gốc (QTD-08).
+  - `403 Forbidden`: Thửa đất đang ở trạng thái bị khóa (`LOCKED`), tranh chấp (`DISPUTED`), phong tỏa (`FROZEN`), hoặc cán bộ không có thẩm quyền địa giới (QTD-16).
+  - `409 Conflict`: Số hiệu thửa đất con mới hình thành đã tồn tại trên địa bàn.
+
+### 18.2. [DCS-02-CN-003] Hợp các thửa đất liền kề thành thửa mới
+- **Method**: `POST`
+- **Path**: `/api/v1/parcels/merge`
+- **Yêu cầu quyền (RBAC)**: `LAND_REGISTRAR`, `COMMUNE_OFFICER`, `ADMIN` (QTD-02, QTD-31, QTD-16)
+- **Request Body**:
+  ```json
+  {
+    "sourceParcelIds": ["PARCEL-HN-001", "PARCEL-HN-003"],
+    "newParcelNumber": 99,
+    "sheetNumber": 12,
+    "decisionNumber": "QĐ-HỢP-2026/02/UBND",
+    "officerId": "CB-HN-001",
+    "officerCommuneCode": "01001",
+    "ownerName": "Công ty Cổ phần Thương mại Thủ Đô"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "sourceParcels": [
+      { "id": "PARCEL-HN-001", "legalStatus": "HISTORICAL" },
+      { "id": "PARCEL-HN-003", "legalStatus": "HISTORICAL" }
+    ],
+    "mergedParcel": {
+      "id": "PARCEL-MRG-1729670000",
+      "nationalCode": "01001-0012-0099",
+      "area": 224.2,
+      "legalStatus": "AVAILABLE",
+      "mergedFromParcelIds": ["PARCEL-HN-001", "PARCEL-HN-003"]
+    },
+    "auditHash": "a9b8c7d6e5f4...",
+    "message": "Hợp 2 thửa đất thành thửa mới '01001-0012-0099' thành công. Toàn bộ thửa đất tiền thân đã chuyển sang trạng thái lịch sử."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Vi phạm quy định cấm hợp thửa đất không cùng mục đích sử dụng (QTD-31) hoặc các thửa đất khác đơn vị hành chính xã.
+  - `403 Forbidden`: Thửa đất đang bị khóa/tranh chấp hoặc cán bộ ngoài thẩm quyền.
+
+### 18.3. [DCS-02-CN-003] Truy xuất cây gia phả biến động thửa đất (Lineage DAG)
+- **Method**: `GET`
+- **Path**: `/api/v1/parcels/:id/lineage`
+- **Response `200 OK`**: Trả về cấu trúc cây quan hệ biến động gồm thửa cha (`PARENT`), thửa hiện hành (`CURRENT`), và các thửa con kế thừa (`CHILD`) kèm loại biến động (`SUBDIVISION` hoặc `MERGE`).
