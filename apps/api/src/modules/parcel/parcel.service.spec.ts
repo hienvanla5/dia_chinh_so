@@ -10,6 +10,8 @@ import {
   ParcelLegalStatus,
   DeclareNewParcelInput,
   LandOriginType,
+  LandUseTermType,
+  ExpiryWarningStatus,
 } from '@diachinhso/shared';
 
 describe('ParcelService [DCS-02-CN-001] Khai báo thông tin thuộc tính thửa đất mới', () => {
@@ -811,6 +813,199 @@ describe('ParcelService [DCS-02-CN-004] Quản lý nguồn gốc sử dụng đ�
       expect(res.auditHash).toBeDefined();
       expect(res.auditHash).toHaveLength(64);
       expect(res.parcel.originDecisionNumber).toBe('QĐ-CN-2026/099/UBND');
+    });
+  });
+});
+
+
+describe('ParcelService [DCS-02-CN-005] Quản lý thời hạn sử dụng đất và cảnh báo sắp hết hạn', () => {
+  let service: ParcelService;
+
+  beforeEach(() => {
+    service = new ParcelService();
+  });
+
+  describe('DCS-02-CN-005-TC-01: Luồng thành công', () => {
+    it('phải cập nhật thời hạn ổn định lâu dài (STABLE_LONG_TERM) thành công', async () => {
+      const res = await service.updateLandTerm({
+        parcelId: 'PARCEL-HN-001',
+        termType: LandUseTermType.STABLE_LONG_TERM,
+        officerId: 'CB-HN-001',
+        officerCommuneCode: '01001',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.termType).toBe(LandUseTermType.STABLE_LONG_TERM);
+      expect(res.expiryDate).toBeUndefined();
+      expect(res.warningStatus).toBe(ExpiryWarningStatus.VALID);
+      expect(res.parcel.termType).toBe(LandUseTermType.STABLE_LONG_TERM);
+    });
+
+    it('phải tính toán chính xác ngày hết hạn khi cung cấp ngày bắt đầu và số năm thời hạn', async () => {
+      const res = await service.updateLandTerm({
+        parcelId: 'PARCEL-HN-001',
+        termType: LandUseTermType.DEFINITE,
+        startDate: '2020-05-15',
+        durationYears: 50,
+        officerId: 'ADMIN',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.termType).toBe(LandUseTermType.DEFINITE);
+      expect(res.expiryDate).toBe('2070-05-15');
+      expect(res.warningStatus).toBe(ExpiryWarningStatus.VALID);
+      expect(res.daysRemaining).toBeGreaterThan(10000);
+    });
+
+    it('phải xác định trạng thái cảnh báo khẩn cấp CRITICAL_3M khi hạn còn dưới 90 ngày', async () => {
+      // Đặt ngày hết hạn 45 ngày nữa
+      const nearFuture = new Date();
+      nearFuture.setDate(nearFuture.getDate() + 45);
+      const expiryStr = nearFuture.toISOString().split('T')[0];
+
+      const res = await service.updateLandTerm({
+        parcelId: 'PARCEL-HCM-001',
+        termType: LandUseTermType.DEFINITE,
+        expiryDate: expiryStr,
+        officerId: 'ADMIN',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.warningStatus).toBe(ExpiryWarningStatus.CRITICAL_3M);
+      expect(res.daysRemaining).toBeLessThanOrEqual(90);
+      expect(res.daysRemaining).toBeGreaterThan(0);
+    });
+
+    it('phải quét được danh sách thửa đất sắp hết hạn sử dụng và phân loại tóm tắt chính xác', async () => {
+      // PARCEL-HCM-001 và PARCEL-HCM-002 đã được seed có thời hạn trong vòng 60 ngày
+      const res = await service.getExpiringParcels({ daysThreshold: 180 });
+
+      expect(res.total).toBeGreaterThanOrEqual(1);
+      expect(res.items.length).toBe(res.total);
+      expect(res.summary).toBeDefined();
+      expect(typeof res.summary.criticalCount).toBe('number');
+      expect(res.items[0].legalExtensionGuidance).toContain('Điều 172 Luật Đất đai 2024');
+    });
+
+    it('phải gửi thông báo cảnh báo hết hạn thành công qua SMS và APP_PUSH cho chủ sở hữu', async () => {
+      const res = await service.notifyExpiry({
+        parcelId: 'PARCEL-HCM-001',
+        channels: ['SMS', 'APP_PUSH'],
+        officerId: 'ADMIN',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.sentChannels).toEqual(['SMS', 'APP_PUSH']);
+      expect(res.notificationContent).toContain('Điều 172 Luật Đất đai 2024');
+      expect(res.auditHash).toHaveLength(64);
+      expect(res.notifiedAt).toBeDefined();
+    });
+  });
+
+  describe('DCS-02-CN-005-TC-02: Dữ liệu không hợp lệ', () => {
+    it('phải từ chối nếu đất có thời hạn nhưng thiếu cả ngày hết hạn và số năm thời hạn', async () => {
+      await expect(
+        service.updateLandTerm({
+          parcelId: 'PARCEL-HN-001',
+          termType: LandUseTermType.DEFINITE,
+          officerId: 'ADMIN',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('phải từ chối nếu ngày bắt đầu sử dụng không hợp lệ', async () => {
+      await expect(
+        service.updateLandTerm({
+          parcelId: 'PARCEL-HN-001',
+          termType: LandUseTermType.DEFINITE,
+          startDate: 'ngay-khong-hop-le',
+          durationYears: 50,
+          officerId: 'ADMIN',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('phải từ chối gửi thông báo cảnh báo nếu thửa đất không thuộc loại có thời hạn', async () => {
+      // Đặt PARCEL-HN-001 thành STABLE_LONG_TERM
+      await service.updateLandTerm({
+        parcelId: 'PARCEL-HN-001',
+        termType: LandUseTermType.STABLE_LONG_TERM,
+        officerId: 'ADMIN',
+      });
+
+      await expect(
+        service.notifyExpiry({
+          parcelId: 'PARCEL-HN-001',
+          officerId: 'ADMIN',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('phải báo lỗi không tìm thấy khi ID thửa đất không tồn tại', async () => {
+      await expect(
+        service.updateLandTerm({
+          parcelId: 'PARCEL-KHONG-TON-TAI',
+          termType: LandUseTermType.STABLE_LONG_TERM,
+          officerId: 'ADMIN',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('DCS-02-CN-005-TC-03: Ràng buộc nghiệp vụ & Thẩm quyền (QTD-16, QTD-27)', () => {
+    it('phải từ chối khi cán bộ xã khác vi phạm thẩm quyền địa giới hành chính (QTD-16)', async () => {
+      await expect(
+        service.updateLandTerm({
+          parcelId: 'PARCEL-HN-001', // communeCode: '01001'
+          termType: LandUseTermType.STABLE_LONG_TERM,
+          officerId: 'CB-COMMUNE-999',
+          officerCommuneCode: '79001', // Khác 01001
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('phải từ chối cập nhật thời hạn khi thửa đất đang bị khóa giao dịch (QTD-27 / AC-03)', async () => {
+      await expect(
+        service.updateLandTerm({
+          parcelId: 'PARCEL-HN-002', // Trạng thái LOCKED
+          termType: LandUseTermType.STABLE_LONG_TERM,
+          officerId: 'ADMIN',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('phải từ chối gửi thông báo khi thửa đất đang bị khóa giao dịch', async () => {
+      await expect(
+        service.notifyExpiry({
+          parcelId: 'PARCEL-HN-002', // Trạng thái LOCKED
+          officerId: 'ADMIN',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('DCS-02-CN-005-TC-04: Kiểm toán & Toàn vẹn (AC-04)', () => {
+    it('phải gắn mã băm SHA-256 bất biến khi cập nhật thời hạn sử dụng đất', async () => {
+      const res = await service.updateLandTerm({
+        parcelId: 'PARCEL-HN-001',
+        termType: LandUseTermType.STABLE_LONG_TERM,
+        officerId: 'ADMIN',
+      });
+
+      expect(res.auditHash).toBeDefined();
+      expect(res.auditHash).toHaveLength(64);
+      expect(res.parcel.auditHash).toBe(res.auditHash);
+    });
+
+    it('phải gắn mã băm SHA-256 bất biến khi phát thông báo cảnh báo hết hạn', async () => {
+      const res = await service.notifyExpiry({
+        parcelId: 'PARCEL-HCM-001',
+        channels: ['SMS'],
+        officerId: 'ADMIN',
+      });
+
+      expect(res.auditHash).toBeDefined();
+      expect(res.auditHash).toHaveLength(64);
     });
   });
 });
