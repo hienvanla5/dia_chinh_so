@@ -1,4 +1,7 @@
-import { LandOriginType,
+import {
+  LandOriginType,
+  OwnerFluctuationType,
+  OwnerFluctuationStatus,
   PropertyOnLandType,
   ConstructionGrade,
   NationalSyncStatus,
@@ -605,3 +608,38 @@ export const GetPedigreeTreeQuerySchema = z.object({
 });
 
 export type GetPedigreeTreeQueryInput = z.infer<typeof GetPedigreeTreeQuerySchema>;
+
+
+// ==========================================
+// Schemas Cập nhật biến động thông tin chủ sở hữu (DCS-02-CN-010)
+// ==========================================
+
+export const SubmitOwnerFluctuationSchema = z.object({
+  parcelId: z.string().min(1, 'ID thửa đất không được để trống'),
+  fluctuationType: z.nativeEnum(OwnerFluctuationType, {
+    errorMap: () => ({ message: 'Loại biến động chủ sở hữu không hợp lệ' }),
+  }),
+  applicantCitizenId: z.string().regex(/^\d{12}$/, 'Số CCCD người nộp phải đúng 12 chữ số theo Đề án 06'),
+  newOwnerName: z.string().min(2, 'Họ tên chủ sở hữu mới tối thiểu 2 ký tự'),
+  newCitizenId: z.string().regex(/^\d{12}$/, 'Số CCCD chủ sở hữu mới phải đúng 12 chữ số theo Đề án 06'),
+  newAddress: z.string().optional(),
+  newPhone: z.string().regex(/^0\d{9}$/, 'Số điện thoại phải có 10 chữ số bắt đầu bằng 0').optional().or(z.literal('')),
+  isJointSpouse: z.boolean().optional(),
+  spouseName: z.string().optional(),
+  spouseCitizenId: z.string().optional(),
+  documentNumber: z.string().optional(),
+  documentImageUrl: z.string().optional(),
+  notes: z.string().optional(),
+}).refine((data: any) => {
+  if (data.isJointSpouse) {
+    if (!data.spouseName || typeof data.spouseName !== 'string' || data.spouseName.trim().length < 2) return false;
+    if (!data.spouseCitizenId || typeof data.spouseCitizenId !== 'string' || !/^\d{12}$/.test(data.spouseCitizenId)) return false;
+    if (data.spouseCitizenId === data.newCitizenId) return false;
+  }
+  return true;
+}, {
+  message: 'Khi đăng ký đồng sở hữu vợ chồng (QTD-25), bắt buộc nhập đầy đủ họ tên và số CCCD 12 số khác nhau của vợ/chồng',
+  path: ['spouseCitizenId'],
+});
+
+export type SubmitOwnerFluctuationInput = z.infer<typeof SubmitOwnerFluctuationSchema>;

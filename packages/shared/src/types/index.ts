@@ -1593,3 +1593,80 @@ export interface PedigreeTreeResponse {
   auditHash: string;
   generatedAt: string;
 }
+
+
+// ==========================================
+// Cập nhật biến động thông tin chủ sở hữu qua Cổng Dịch vụ công (DCS-02-CN-010)
+// ==========================================
+
+export enum OwnerFluctuationType {
+  IDENTITY_CORRECTION = 'IDENTITY_CORRECTION', // Đính chính CCCD, thường trú
+  MARRIAGE_ADDITION = 'MARRIAGE_ADDITION',     // Bổ sung người phối ngẫu theo QTD-25
+  OWNER_TRANSFER = 'OWNER_TRANSFER',           // Chuyển nhượng quyền sử dụng đất
+  INHERITANCE = 'INHERITANCE',                 // Thừa kế quyền sử dụng đất
+  DONATION = 'DONATION',                       // Tặng cho quyền sử dụng đất
+}
+
+export enum OwnerFluctuationStatus {
+  SUBMITTED = 'SUBMITTED',                     // Đã nộp qua Cổng Dịch vụ công
+  PROCESSING = 'PROCESSING',                   // Đang thụ lý thẩm định
+  APPROVED = 'APPROVED',                       // Đã phê duyệt và cập nhật hồ sơ địa chính
+  REJECTED = 'REJECTED',                       // Từ chối
+}
+
+export interface OwnerFluctuationDossier {
+  dossierId: string;
+  dossierCode: string;                         // Ví dụ: DVC-BD-2026-0001
+  parcelId: string;
+  parcelNationalCode: string;
+  fluctuationType: OwnerFluctuationType;
+  applicantCitizenId: string;
+  oldOwnerName: string;
+  oldCitizenId: string;
+  newOwnerName: string;
+  newCitizenId: string;
+  newAddress?: string;
+  newPhone?: string;
+  isJointSpouse: boolean;
+  spouseName?: string;
+  spouseCitizenId?: string;
+  documentNumber?: string;                     // Số CCCD mới hoặc số GĐKKH
+  documentImageUrl?: string;
+  notes?: string;
+  status: OwnerFluctuationStatus;
+  submittedAt: string;
+  processedAt?: string;
+  processedByOfficerId?: string;
+  auditHash: string;
+}
+
+export interface SubmitOwnerFluctuationRequest {
+  parcelId: string;
+  fluctuationType: OwnerFluctuationType;
+  applicantCitizenId: string;
+  newOwnerName: string;
+  newCitizenId: string;
+  newAddress?: string;
+  newPhone?: string;
+  isJointSpouse?: boolean;
+  spouseName?: string;
+  spouseCitizenId?: string;
+  documentNumber?: string;
+  documentImageUrl?: string;
+  notes?: string;
+}
+
+export interface SubmitOwnerFluctuationResponse {
+  success: boolean;
+  dossier: OwnerFluctuationDossier;
+  updatedParcel: ParcelItem;
+  auditHash: string;
+  message: string;
+}
+
+export interface GetOwnerHistoryResponse {
+  parcelId: string;
+  parcelNationalCode: string;
+  totalRecords: number;
+  history: OwnerFluctuationDossier[];
+}
