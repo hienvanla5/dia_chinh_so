@@ -12,6 +12,9 @@ import {
   FileText,
   ShieldCheck,
   Building2,
+  Home,
+  Plus,
+  Trash2,
   Lock,
   QrCode,
   Hash,
@@ -259,6 +262,80 @@ export default function ParcelsPage() {
 
   // State Modal gửi thông báo cảnh báo chủ sở hữu (DCS-02-CN-005, QTD-27)
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
+  // DCS-02-CN-006: Quản lý tài sản gắn liền với đất trên thửa
+  interface PropertyDisplay {
+    id: string;
+    parcelId: string;
+    assetType: string;
+    name: string;
+    constructionArea: number;
+    floorArea: number;
+    structure: string;
+    grade: string;
+    floorsCount?: number;
+    completionYear?: number;
+    ownershipTerm?: string;
+    completionCertificateNumber?: string;
+    completionCertificateDate?: string;
+    ownerName: string;
+    ownerCitizenId: string;
+    isJointSpouseOwnership: boolean;
+    spouseName?: string;
+    spouseCitizenId?: string;
+    status: 'ACTIVE' | 'DEMOLISHED';
+    auditHash: string;
+  }
+
+  const [properties, setProperties] = useState<PropertyDisplay[]>([
+    {
+      id: 'PROP-HN-001',
+      parcelId: 'PARCEL-HN-001',
+      assetType: 'INDIVIDUAL_HOUSE',
+      name: 'Nhà ở riêng lẻ 3 tầng mái bê tông cốt thép',
+      constructionArea: 85.0,
+      floorArea: 255.0,
+      structure: 'Khung bê tông cốt thép, tường gạch',
+      grade: 'Cấp III',
+      floorsCount: 3,
+      completionYear: 2022,
+      ownershipTerm: 'Lâu dài',
+      completionCertificateNumber: 'GP-HC-2022/105/SXD-HN',
+      completionCertificateDate: '2022-11-20',
+      ownerName: 'Trần Văn Hoàng',
+      ownerCitizenId: '001090123456',
+      isJointSpouseOwnership: true,
+      spouseName: 'Vũ Thị Mai',
+      spouseCitizenId: '001192556677',
+      status: 'ACTIVE',
+      auditHash: 'e5b7a192c4d8e30f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f',
+    },
+  ]);
+
+  const [isPropertiesModalOpen, setIsPropertiesModalOpen] = useState(false);
+  const [selectedPropertyParcel, setSelectedPropertyParcel] = useState<ParcelDisplay | null>(null);
+  const [showAddPropertyForm, setShowAddPropertyForm] = useState(false);
+
+  // Form states for adding property
+  const [propAssetType, setPropAssetType] = useState('INDIVIDUAL_HOUSE');
+  const [propName, setPropName] = useState('');
+  const [propConstructionArea, setPropConstructionArea] = useState('');
+  const [propFloorArea, setPropFloorArea] = useState('');
+  const [propStructure, setPropStructure] = useState('Khung bê tông cốt thép');
+  const [propGrade, setPropGrade] = useState('GRADE_3');
+  const [propFloorsCount, setPropFloorsCount] = useState('3');
+  const [propCompletionYear, setPropCompletionYear] = useState('2023');
+  const [propOwnershipTerm, setPropOwnershipTerm] = useState('Lâu dài');
+  const [propCertNumber, setPropCertNumber] = useState('');
+  const [propCertDate, setPropCertDate] = useState('');
+  const [propOwnerName, setPropOwnerName] = useState('');
+  const [propOwnerCccd, setPropOwnerCccd] = useState('');
+  const [propIsJointSpouse, setPropIsJointSpouse] = useState(false);
+  const [propSpouseName, setPropSpouseName] = useState('');
+  const [propSpouseCccd, setPropSpouseCccd] = useState('');
+  const [propError, setPropError] = useState<string | null>(null);
+  const [propSuccess, setPropSuccess] = useState<string | null>(null);
+  const [isSavingProp, setIsSavingProp] = useState(false);
+
   const [selectedNotifyParcel, setSelectedNotifyParcel] = useState<ParcelDisplay | null>(null);
   const [notifySms, setNotifySms] = useState(true);
   const [notifyAppPush, setNotifyAppPush] = useState(true);
@@ -392,6 +469,104 @@ export default function ParcelsPage() {
     } finally {
       setTermSaveLoading(false);
     }
+  };
+
+  
+  // Handlers Quản lý tài sản trên đất (DCS-02-CN-006)
+  const handleOpenPropertiesModal = (parcel: ParcelDisplay) => {
+    setSelectedPropertyParcel(parcel);
+    setShowAddPropertyForm(false);
+    setPropName(`Nhà ở riêng lẻ trên thửa ${parcel.parcelNumber}`);
+    setPropConstructionArea(String(Math.min(parcel.area * 0.7, 100)));
+    setPropFloorArea(String(Math.min(parcel.area * 0.7 * 3, 300)));
+    setPropStructure('Khung cột bê tông cốt thép, tường gạch');
+    setPropGrade('GRADE_3');
+    setPropFloorsCount('3');
+    setPropCompletionYear('2023');
+    setPropOwnershipTerm('Lâu dài');
+    setPropCertNumber(`GP-HC-2023/${parcel.parcelNumber}/SXD`);
+    setPropCertDate('2023-09-20');
+    setPropOwnerName(parcel.ownerName || '');
+    setPropOwnerCccd(parcel.ownerCitizenId || '');
+    setPropIsJointSpouse(false);
+    setPropSpouseName('');
+    setPropSpouseCccd('');
+    setPropError(null);
+    setPropSuccess(null);
+    setIsPropertiesModalOpen(true);
+  };
+
+  const handleSaveProperty = () => {
+    if (!selectedPropertyParcel) return;
+    setPropError(null);
+    setPropSuccess(null);
+
+    const constArea = parseFloat(propConstructionArea);
+    const floorArea = parseFloat(propFloorArea);
+
+    if (isNaN(constArea) || constArea <= 0) {
+      setPropError('Diện tích xây dựng phải là số dương lớn hơn 0 m²');
+      return;
+    }
+    if (constArea > selectedPropertyParcel.area) {
+      setPropError(`Diện tích xây dựng (${constArea} m²) vượt quá diện tích thửa đất (${selectedPropertyParcel.area} m²)`);
+      return;
+    }
+    if (!propOwnerName.trim()) {
+      setPropError('Họ tên chủ sở hữu tài sản không được để trống');
+      return;
+    }
+    if (!propOwnerCccd || !/^\d{12}$/.test(propOwnerCccd)) {
+      setPropError('Số CCCD chủ sở hữu phải gồm đúng 12 chữ số');
+      return;
+    }
+    if (propIsJointSpouse) {
+      if (!propSpouseName.trim() || !propSpouseCccd || !/^\d{12}$/.test(propSpouseCccd)) {
+        setPropError('Theo quy định đồng sở hữu vợ chồng (Luật Đất đai 2024), bắt buộc nhập đầy đủ họ tên và số CCCD 12 số của người phối ngẫu');
+        return;
+      }
+      if (propSpouseCccd === propOwnerCccd) {
+        setPropError('Số CCCD của vợ/chồng không được trùng với CCCD của chủ sở hữu');
+        return;
+      }
+    }
+
+    setIsSavingProp(true);
+    setTimeout(() => {
+      const newProp: PropertyDisplay = {
+        id: `PROP-${selectedPropertyParcel.provinceCode.replace('TINH_', '')}-${String(properties.length + 1).padStart(3, '0')}`,
+        parcelId: selectedPropertyParcel.id,
+        assetType: propAssetType,
+        name: propName || 'Tài sản trên đất',
+        constructionArea: constArea,
+        floorArea: floorArea || constArea,
+        structure: propStructure,
+        grade: propGrade === 'GRADE_1' ? 'Cấp I' : propGrade === 'GRADE_2' ? 'Cấp II' : propGrade === 'GRADE_3' ? 'Cấp III' : 'Cấp IV',
+        floorsCount: parseInt(propFloorsCount, 10) || 1,
+        completionYear: parseInt(propCompletionYear, 10) || 2023,
+        ownershipTerm: propOwnershipTerm,
+        completionCertificateNumber: propCertNumber,
+        completionCertificateDate: propCertDate,
+        ownerName: propOwnerName,
+        ownerCitizenId: propOwnerCccd,
+        isJointSpouseOwnership: propIsJointSpouse,
+        spouseName: propIsJointSpouse ? propSpouseName : undefined,
+        spouseCitizenId: propIsJointSpouse ? propSpouseCccd : undefined,
+        status: 'ACTIVE',
+        auditHash: 'f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2',
+      };
+
+      setProperties(prev => [...prev, newProp]);
+      setIsSavingProp(false);
+      setPropSuccess(`Đã đăng ký tài sản '${newProp.name}' thành công trên thửa đất ${selectedPropertyParcel.nationalCode}.`);
+      setShowAddPropertyForm(false);
+    }, 600);
+  };
+
+  const handleDemolishProperty = (propertyId: string) => {
+    setProperties(prev =>
+      prev.map(p => (p.id === propertyId ? { ...p, status: 'DEMOLISHED' } : p))
+    );
   };
 
   const handleOpenNotifyModal = (parcel: ParcelDisplay) => {
@@ -2450,6 +2625,316 @@ export default function ParcelsPage() {
               >
                 <Send className="w-4 h-4 mr-1.5" />
                 Phát thông báo ngay
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+    
+      {/* Modal Quản lý Tài sản Gắn liền với Đất (DCS-02-CN-006, QTD-25) */}
+      {isPropertiesModalOpen && selectedPropertyParcel && (
+        <Modal
+          isOpen={isPropertiesModalOpen}
+          onClose={() => setIsPropertiesModalOpen(false)}
+          title="Quản lý Tài sản Gắn liền với Đất trên Thửa"
+        >
+          <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
+            {/* Tóm tắt thửa đất */}
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-slate-500">Mã thửa đất:</span>
+                <span className="font-bold font-mono text-slate-900">{selectedPropertyParcel.nationalCode}</span>
+              </div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-slate-500">Địa chỉ / Vị trí:</span>
+                <span className="font-semibold text-slate-800">Tờ {selectedPropertyParcel.sheetNumber}, Thửa {selectedPropertyParcel.parcelNumber} - {selectedPropertyParcel.address}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Diện tích thửa đất:</span>
+                <span className="font-bold text-slate-900">{selectedPropertyParcel.area.toLocaleString('vi-VN')} m²</span>
+              </div>
+            </div>
+
+            {propSuccess && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>{propSuccess}</span>
+              </div>
+            )}
+
+            {/* Danh sách tài sản hiện có trên thửa */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                  Danh sách tài sản công trình ({properties.filter(p => p.parcelId === selectedPropertyParcel.id).length})
+                </h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddPropertyForm(!showAddPropertyForm)}
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  {showAddPropertyForm ? 'Đóng biểu mẫu' : 'Đăng ký tài sản mới'}
+                </Button>
+              </div>
+
+              {properties.filter(p => p.parcelId === selectedPropertyParcel.id).length === 0 ? (
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-center text-xs text-slate-500 italic">
+                  Chưa ghi nhận tài sản gắn liền với đất trên thửa này.
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {properties
+                    .filter(p => p.parcelId === selectedPropertyParcel.id)
+                    .map(prop => (
+                      <div
+                        key={prop.id}
+                        className={`p-3 rounded-lg border text-xs ${
+                          prop.status === 'ACTIVE'
+                            ? 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
+                            : 'bg-slate-50 border-slate-200 opacity-60'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-bold text-slate-900 text-sm">{prop.name}</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">
+                              {prop.assetType === 'INDIVIDUAL_HOUSE' && 'Nhà ở riêng lẻ'}
+                              {prop.assetType === 'APARTMENT' && 'Căn hộ chung cư'}
+                              {prop.assetType === 'CONSTRUCTION_WORK' && 'Công trình xây dựng khác'}
+                              {prop.assetType === 'PERENNIAL_TREE' && 'Cây lâu năm'}
+                              {prop.assetType === 'PRODUCTION_FOREST' && 'Rừng sản xuất'}
+                              {' • '}{prop.grade} • {prop.floorsCount} tầng • Hoàn công: {prop.completionYear}
+                            </div>
+                          </div>
+                          <div>
+                            {prop.status === 'ACTIVE' ? (
+                              <Badge variant="success">Đang sử dụng</Badge>
+                            ) : (
+                              <Badge variant="neutral">Đã phá dỡ</Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-100 text-slate-700">
+                          <div>
+                            <span className="text-slate-500">Diện tích XD:</span> <strong>{prop.constructionArea} m²</strong> (Sàn: <strong>{prop.floorArea} m²</strong>)
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Kết cấu:</span> {prop.structure}
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Chủ sở hữu:</span> <strong>{prop.ownerName}</strong>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Giấy phép hoàn công:</span> {prop.completionCertificateNumber || 'N/A'}
+                          </div>
+                        </div>
+
+                        {prop.isJointSpouseOwnership && (
+                          <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded text-emerald-950 text-[11px]">
+                            <strong>Đồng sở hữu vợ chồng theo Luật Đất đai 2024:</strong> {prop.ownerName} (CCCD: {prop.ownerCitizenId}) &amp; {prop.spouseName} (CCCD: {prop.spouseCitizenId})
+                          </div>
+                        )}
+
+                        {prop.status === 'ACTIVE' && (
+                          <div className="flex justify-end mt-2 pt-1.5 border-t border-slate-100">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDemolishProperty(prop.id)}
+                              className="text-rose-700 hover:bg-rose-50 border-rose-200"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 mr-1 text-rose-600" />
+                              Ghi nhận phá dỡ
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* Biểu mẫu đăng ký tài sản mới */}
+            {showAddPropertyForm && (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
+                <h4 className="text-xs font-bold text-slate-900 uppercase">
+                  Khai báo tài sản công trình gắn liền với đất mới
+                </h4>
+
+                {propError && (
+                  <div className="p-2.5 bg-rose-50 border border-rose-200 rounded text-xs text-rose-900 flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                    <span>{propError}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Loại tài sản:</label>
+                    <Select
+                      value={propAssetType}
+                      onChange={e => setPropAssetType(e.target.value)}
+                      options={[
+                        { value: 'INDIVIDUAL_HOUSE', label: 'Nhà ở riêng lẻ' },
+                        { value: 'APARTMENT', label: 'Căn hộ chung cư' },
+                        { value: 'CONSTRUCTION_WORK', label: 'Công trình xây dựng khác' },
+                        { value: 'PERENNIAL_TREE', label: 'Cây lâu năm' },
+                        { value: 'PRODUCTION_FOREST', label: 'Rừng sản xuất' },
+                      ]}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Tên tài sản / công trình:</label>
+                    <Input
+                      value={propName}
+                      onChange={e => setPropName(e.target.value)}
+                      placeholder="Ví dụ: Nhà ở 3 tầng mái bê tông"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Diện tích xây dựng (m²):</label>
+                    <Input
+                      type="number"
+                      value={propConstructionArea}
+                      onChange={e => setPropConstructionArea(e.target.value)}
+                      placeholder="Ví dụ: 85"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Diện tích sàn (m²):</label>
+                    <Input
+                      type="number"
+                      value={propFloorArea}
+                      onChange={e => setPropFloorArea(e.target.value)}
+                      placeholder="Ví dụ: 255"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Số tầng:</label>
+                    <Input
+                      type="number"
+                      value={propFloorsCount}
+                      onChange={e => setPropFloorsCount(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Cấp công trình:</label>
+                    <Select
+                      value={propGrade}
+                      onChange={e => setPropGrade(e.target.value)}
+                      options={[
+                        { value: 'GRADE_1', label: 'Cấp I' },
+                        { value: 'GRADE_2', label: 'Cấp II' },
+                        { value: 'GRADE_3', label: 'Cấp III' },
+                        { value: 'GRADE_4', label: 'Cấp IV' },
+                      ]}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Kết cấu chính:</label>
+                    <Input
+                      value={propStructure}
+                      onChange={e => setPropStructure(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Số GP hoàn công / nghiệm thu:</label>
+                    <Input
+                      value={propCertNumber}
+                      onChange={e => setPropCertNumber(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Ngày hoàn công:</label>
+                    <Input
+                      type="date"
+                      value={propCertDate}
+                      onChange={e => setPropCertDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Họ tên chủ sở hữu:</label>
+                      <Input
+                        value={propOwnerName}
+                        onChange={e => setPropOwnerName(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Số CCCD chủ sở hữu (12 số):</label>
+                      <Input
+                        value={propOwnerCccd}
+                        onChange={e => setPropOwnerCccd(e.target.value)}
+                        placeholder="001090123456"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Đồng sở hữu vợ chồng (QTD-25) */}
+                  <div className="pt-2 border-t border-slate-100">
+                    <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={propIsJointSpouse}
+                        onChange={e => setPropIsJointSpouse(e.target.checked)}
+                        className="rounded text-primary-600 focus:ring-primary-500"
+                      />
+                      <span>Xác lập đồng sở hữu vợ chồng theo Luật Đất đai 2024</span>
+                    </label>
+
+                    {propIsJointSpouse && (
+                      <div className="grid grid-cols-2 gap-3 mt-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+                        <div>
+                          <label className="block text-xs font-bold text-emerald-950 mb-1">Họ tên người phối ngẫu (Vợ/Chồng):</label>
+                          <Input
+                            value={propSpouseName}
+                            onChange={e => setPropSpouseName(e.target.value)}
+                            placeholder="Nguyễn Thị B"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-emerald-950 mb-1">Số CCCD người phối ngẫu (12 số):</label>
+                          <Input
+                            value={propSpouseCccd}
+                            onChange={e => setPropSpouseCccd(e.target.value)}
+                            placeholder="001192654321"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" size="sm" onClick={() => setShowAddPropertyForm(false)}>
+                    Hủy nhập
+                  </Button>
+                  <Button variant="primary" size="sm" onClick={handleSaveProperty} isLoading={isSavingProp}>
+                    <Check className="w-4 h-4 mr-1" />
+                    Lưu đăng ký tài sản
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-3 border-t border-slate-200">
+              <Button variant="outline" size="sm" onClick={() => setIsPropertiesModalOpen(false)}>
+                Đóng
               </Button>
             </div>
           </div>
