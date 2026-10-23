@@ -10,12 +10,12 @@
 | Chỉ số | Số lượng | Tỷ lệ (%) | Ghi chú |
 |---|---|---|---|
 | **Tổng số User Stories** | **114** | **100%** | Toàn bộ 114 User Stories được số hóa tại `user_stories/` |
-| **Đã hoàn thành (Done)** | **14** | **12.3%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
+| **Đã hoàn thành (Done)** | **15** | **13.2%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
 | **Đang thực hiện (In Progress)** | **0** | **0.0%** | Không có Story nào đang dở dang |
-| **Chưa thực hiện (Backlog)** | **100** | **87.7%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
+| **Chưa thực hiện (Backlog)** | **99** | **86.8%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
 
-- **User Story hoàn thành gần nhất**: [`DCS-02-CN-001`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-001.md) - Khai báo thông tin thuộc tính thửa đất mới.
-- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-02-CN-002`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-002.md) - Sinh Mã định danh thửa đất quốc gia duy nhất.
+- **User Story hoàn thành gần nhất**: [`DCS-02-CN-005`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-005.md) - Quản lý thời hạn sử dụng đất và cảnh báo sắp hết hạn.
+- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-02-CN-006`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-006.md) - Quản lý tài sản gắn liền với đất trên thửa.
 
 ---
 
@@ -34,6 +34,10 @@
 | [`DCS-01-CN-009`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-009.md) | Đăng nhập và phân quyền tài khoản tổ chức qua Cổng Định danh Doanh nghiệp | 2026-10-22 | `main`<br>(feature `DCS-01-CN-009`) | `POST /api/v1/enterprise-idp/login`<br>`GET /api/v1/enterprise-idp/profile/:taxCode`<br>`GET /api/v1/enterprise-idp/parcels/:taxCode`<br>`POST /api/v1/enterprise-idp/staff/assign`<br>`POST /api/v1/enterprise-idp/staff/remove`<br>`GET /api/v1/enterprise-idp/audit/logs` | `/enterprise` | 10 tests PASS | **Hoàn thành** |
 | [`DCS-01-CN-010`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-010.md) | Nhật ký xác thực và phát hiện cảnh báo đăng nhập bất thường | 2026-10-22 | `main`<br>(feature `DCS-01-CN-010`) | `GET /api/v1/auth-audit/logs`<br>`GET /api/v1/auth-audit/alerts`<br>`GET /api/v1/auth-audit/stats`<br>`GET /api/v1/auth-audit/verify-chain`<br>`POST /api/v1/auth-audit/simulate`<br>`POST /api/v1/auth-audit/alerts/resolve` | `/auth-audit` | 11 tests PASS | **Hoàn thành** |
 | [`DCS-02-CN-001`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-001.md) | Khai báo thông tin thuộc tính thửa đất mới | 2026-10-23 | `main`<br>(feature `DCS-02-CN-001`) | `POST /api/v1/parcels/declare`<br>`GET /api/v1/parcels/stats`<br>`GET /api/v1/parcels`<br>`GET /api/v1/parcels/:id`<br>`GET /api/v1/parcels/by-code/:code` | `/parcels` | 12 tests PASS | **Hoàn thành** |
+| [`DCS-02-CN-002`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-002.md) | Sinh Mã định danh thửa đất quốc gia duy nhất | 2026-10-23 | `main`<br>(commit `93e4225`) | `POST /api/v1/parcels/generate-code`<br>`POST /api/v1/parcels/validate-code` | `/parcels` (Modal Mã định danh) | 20 tests PASS | **Hoàn thành** |
+| [`DCS-02-CN-003`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-003.md) | Quản lý vòng đời thửa đất: Tách thửa và hợp thửa | 2026-10-23 | `main`<br>(commit `62303ec`) | `POST /api/v1/parcels/:id/subdivide`<br>`POST /api/v1/parcels/merge`<br>`GET /api/v1/parcels/:id/lineage` | `/parcels` (Modal Tách/Hợp/Gia phả) | 32 tests PASS | **Hoàn thành** |
+| [`DCS-02-CN-004`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-004.md) | Quản lý nguồn gốc sử dụng đất theo Luật Đất đai 2024 | 2026-10-23 | `main`<br>(commit `84de696`) | `PUT /api/v1/parcels/:id/origin`<br>`POST /api/v1/parcels/:id/validate-agricultural-subdivision` | `/parcels` (Modal Nguồn gốc & Hạn mức) | 41 tests PASS | **Hoàn thành** |
+| [`DCS-02-CN-005`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-005.md) | Quản lý thời hạn sử dụng đất và cảnh báo sắp hết hạn | 2026-10-23 | `main`<br>(feature `DCS-02-CN-005`) | `PUT /api/v1/parcels/:id/term`<br>`GET /api/v1/parcels/expiring-soon`<br>`POST /api/v1/parcels/:id/notify-expiry` | `/parcels` (Modal Thời hạn, Danh sách hết hạn, Báo hạn) | 55 tests PASS | **Hoàn thành** |
 
 ---
 
