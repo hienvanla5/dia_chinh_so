@@ -1276,3 +1276,87 @@ export interface NotifyExpiryResponse {
   notifiedAt: string;
   message: string;
 }
+
+
+// ==========================================
+// Quản lý tài sản gắn liền với đất trên thửa (DCS-02-CN-006)
+// ==========================================
+
+export enum PropertyOnLandType {
+  INDIVIDUAL_HOUSE = 'INDIVIDUAL_HOUSE',     // Nhà ở riêng lẻ (nhà phố, biệt thự)
+  APARTMENT = 'APARTMENT',                   // Căn hộ chung cư
+  CONSTRUCTION_WORK = 'CONSTRUCTION_WORK',   // Công trình xây dựng khác (nhà xưởng, kho, văn phòng)
+  PERENNIAL_TREE = 'PERENNIAL_TREE',         // Cây lâu năm
+  PRODUCTION_FOREST = 'PRODUCTION_FOREST',   // Rừng sản xuất là rừng trồng
+}
+
+export enum ConstructionGrade {
+  GRADE_SPECIAL = 'GRADE_SPECIAL',           // Cấp đặc biệt
+  GRADE_1 = 'GRADE_1',                       // Cấp I
+  GRADE_2 = 'GRADE_2',                       // Cấp II
+  GRADE_3 = 'GRADE_3',                       // Cấp III
+  GRADE_4 = 'GRADE_4',                       // Cấp IV
+}
+
+export interface PropertyOnLandItem {
+  id: string;
+  parcelId: string;
+  parcelNationalCode: string;
+  assetType: PropertyOnLandType;
+  name: string;                              // Tên tài sản / công trình
+  constructionArea: number;                  // Diện tích xây dựng (m2)
+  floorArea: number;                         // Diện tích sàn xây dựng (m2)
+  structure: string;                         // Kết cấu chính (Bê tông cốt thép, khung thép...)
+  grade: ConstructionGrade;                  // Cấp công trình
+  floorsCount?: number;                      // Số tầng
+  completionYear?: number;                   // Năm hoàn công
+  ownershipTerm?: string;                    // Thời hạn sở hữu
+  completionCertificateNumber?: string;      // Số giấy phép hoàn công / quyết định nghiệm thu
+  completionCertificateDate?: string;        // Ngày cấp phép hoàn công (YYYY-MM-DD)
+  ownerName: string;                         // Tên chủ sở hữu tài sản
+  ownerCitizenId: string;                    // Số CCCD chủ sở hữu
+  isJointSpouseOwnership: boolean;           // Đồng sở hữu vợ chồng (QTD-25)
+  spouseName?: string;                       // Họ tên vợ/chồng đồng sở hữu
+  spouseCitizenId?: string;                  // Số CCCD vợ/chồng đồng sở hữu
+  status: 'ACTIVE' | 'DEMOLISHED' | 'DISPUTED' | 'LOCKED';
+  auditHash: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePropertyOnLandRequest {
+  parcelId: string;
+  assetType: PropertyOnLandType;
+  name: string;
+  constructionArea: number;
+  floorArea: number;
+  structure: string;
+  grade: ConstructionGrade;
+  floorsCount?: number;
+  completionYear?: number;
+  ownershipTerm?: string;
+  completionCertificateNumber?: string;
+  completionCertificateDate?: string;
+  ownerName: string;
+  ownerCitizenId: string;
+  isJointSpouseOwnership?: boolean;
+  spouseName?: string;
+  spouseCitizenId?: string;
+  officerId: string;
+  officerCommuneCode?: string;
+  notes?: string;
+}
+
+export interface CreatePropertyOnLandResponse {
+  success: boolean;
+  property: PropertyOnLandItem;
+  auditHash: string;
+  message: string;
+}
+
+export interface GetParcelPropertiesResponse {
+  total: number;
+  parcelId: string;
+  parcelNationalCode: string;
+  properties: PropertyOnLandItem[];
+}

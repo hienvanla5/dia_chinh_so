@@ -1,4 +1,6 @@
-import { LandOriginType, LandUseTermType, ExpiryWarningStatus } from '../types';
+import { LandOriginType,
+  PropertyOnLandType,
+  ConstructionGrade, LandUseTermType, ExpiryWarningStatus } from '../types';
 import { z } from 'zod';
 import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction, DigitalSignatureProvider, SignatureStandard, OcspCertificateStatus, SessionStatus, SensitiveOperationType, OfficerAccountStatus, DeactivationReasonType, DelegationScope, DelegationStatus, EnterpriseStaffPermission } from '../types';
 
@@ -502,3 +504,37 @@ export const NotifyExpirySchema = z.object({
 export type UpdateLandTermInput = z.infer<typeof UpdateLandTermSchema>;
 export type GetExpiringParcelsQueryInput = z.infer<typeof GetExpiringParcelsQuerySchema>;
 export type NotifyExpiryInput = z.infer<typeof NotifyExpirySchema>;
+
+
+// ==========================================
+// Schemas Quản lý tài sản gắn liền với đất trên thửa (DCS-02-CN-006)
+// ==========================================
+
+export const CreatePropertyOnLandSchema = z.object({
+  parcelId: z.string().min(1, 'ID thửa đất không được để trống'),
+  assetType: z.nativeEnum(PropertyOnLandType, {
+    errorMap: () => ({ message: 'Loại tài sản gắn liền với đất không hợp lệ theo Luật Đất đai 2024' }),
+  }),
+  name: z.string().min(3, 'Tên tài sản/công trình tối thiểu 3 ký tự'),
+  constructionArea: z.number().positive('Diện tích xây dựng phải là số dương lớn hơn 0'),
+  floorArea: z.number().positive('Diện tích sàn xây dựng phải là số dương lớn hơn 0'),
+  structure: z.string().min(2, 'Kết cấu công trình tối thiểu 2 ký tự'),
+  grade: z.nativeEnum(ConstructionGrade, {
+    errorMap: () => ({ message: 'Cấp công trình xây dựng không hợp lệ' }),
+  }),
+  floorsCount: z.number().int().positive('Số tầng phải là số nguyên dương').optional(),
+  completionYear: z.number().int().min(1900, 'Năm hoàn công tối thiểu 1900').max(2100).optional(),
+  ownershipTerm: z.string().optional(),
+  completionCertificateNumber: z.string().optional(),
+  completionCertificateDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày hoàn công phải theo định dạng YYYY-MM-DD').optional(),
+  ownerName: z.string().min(2, 'Họ tên chủ sở hữu tối thiểu 2 ký tự'),
+  ownerCitizenId: z.string().regex(/^\d{12}$/, 'CCCD chủ sở hữu phải gồm đúng 12 chữ số'),
+  isJointSpouseOwnership: z.boolean().optional(),
+  spouseName: z.string().optional(),
+  spouseCitizenId: z.string().regex(/^\d{12}$/, 'CCCD vợ/chồng phải gồm đúng 12 chữ số').optional().or(z.literal('')),
+  officerId: z.string().min(1, 'Mã cán bộ thực hiện không được để trống'),
+  officerCommuneCode: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export type CreatePropertyOnLandInput = z.infer<typeof CreatePropertyOnLandSchema>;
