@@ -1692,3 +1692,81 @@ sequenceDiagram
 - **Method**: `GET`
 - **Path**: `/api/v1/parcels/:id/lineage`
 - **Response `200 OK`**: Trả về cấu trúc cây quan hệ biến động gồm thửa cha (`PARENT`), thửa hiện hành (`CURRENT`), và các thửa con kế thừa (`CHILD`) kèm loại biến động (`SUBDIVISION` hoặc `MERGE`).
+
+
+---
+
+## 19. Nhóm API Quản Lý Nguồn Gốc Sử Dụng Đất [DCS-02-CN-004]
+
+### 19.1. [DCS-02-CN-004] Cập nhật nguồn gốc sử dụng đất theo Luật Đất đai 2024
+- **Method**: `PUT`
+- **Path**: `/api/v1/parcels/:id/origin`
+- **Yêu cầu quyền (RBAC)**: `LAND_REGISTRAR`, `COMMUNE_OFFICER`, `ADMIN` (QTD-16)
+- **Request Body**:
+  ```json
+  {
+    "originType": "ALLOCATED_WITH_FEE",
+    "decisionNumber": "QĐ-GIAO-2026/088/UBND-HN",
+    "decisionDate": "2026-05-15",
+    "grantingAuthority": "UBND Thành phố Hà Nội",
+    "financialStatus": "PAID",
+    "officerId": "CB-HN-001",
+    "officerCommuneCode": "01001"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "parcel": {
+      "id": "PARCEL-HN-001",
+      "originType": "ALLOCATED_WITH_FEE",
+      "originName": "Nhà nước giao đất có thu tiền sử dụng đất",
+      "originDecisionNumber": "QĐ-GIAO-2026/088/UBND-HN"
+    },
+    "originType": "ALLOCATED_WITH_FEE",
+    "originName": "Nhà nước giao đất có thu tiền sử dụng đất",
+    "legalRights": {
+      "canTransfer": true,
+      "canMortgage": true,
+      "canSublease": true,
+      "canDonate": true,
+      "description": "Được chuyển nhượng, tặng cho, thừa kế, thế chấp tại các TCTD và cho thuê lại quyền sử dụng đất theo quy định."
+    },
+    "auditHash": "d661563040b69a70979dd3385434da7844e878d37824e2731080dac6039f0151",
+    "message": "Cập nhật nguồn gốc sử dụng đất 'Nhà nước giao đất có thu tiền sử dụng đất' thành công theo quy chuẩn Luật Đất đai 2024."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Nguồn gốc đất sai danh mục, hoặc ngày quyết định sai định dạng.
+  - `403 Forbidden`: Thửa đất đang bị khóa hoặc cán bộ ngoài thẩm quyền địa giới (QTD-16).
+
+### 19.2. [DCS-02-CN-004] Thẩm định điều kiện tách thửa đất nông nghiệp chống manh mún
+- **Method**: `POST`
+- **Path**: `/api/v1/parcels/:id/validate-agricultural-subdivision`
+- **Request Body**:
+  ```json
+  {
+    "newParcelsArea": [700.0, 800.0],
+    "minCultivationArea": 500.0
+  }
+  ```
+- **Response `200 OK` (Đủ điều kiện)**:
+  ```json
+  {
+    "isEligible": true,
+    "minCultivationArea": 500,
+    "ineligibleAreas": [],
+    "message": "Hồ sơ tách thửa đất nông nghiệp đủ điều kiện hạn mức canh tác tối thiểu theo quy định của Luật Đất đai 2024."
+  }
+  ```
+- **Response `200 OK` (Không đủ điều kiện - QTD-26)**:
+  ```json
+  {
+    "isEligible": false,
+    "minCultivationArea": 500,
+    "ineligibleAreas": [450],
+    "errorReason": "Vi phạm quy định không tách thửa đất nông nghiệp dưới hạn mức canh tác tối thiểu (QTD-26): Có thửa hình thành diện tích 450m² nhỏ hơn hạn mức tối thiểu 500m².",
+    "message": "Từ chối hồ sơ tách thửa đất nông nghiệp do không đảm bảo hạn mức canh tác tối thiểu theo Luật Đất đai 2024."
+  }
+  ```
