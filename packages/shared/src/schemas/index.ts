@@ -364,3 +364,26 @@ export const DeclareNewParcelSchema = z.object({
 });
 
 export type DeclareNewParcelInput = z.infer<typeof DeclareNewParcelSchema>;
+
+
+// ==========================================
+// Schemas Sinh Mã định danh thửa đất quốc gia duy nhất (DCS-02-CN-002)
+// ==========================================
+
+export const GenerateNationalCodeSchema = z.object({
+  provinceCode: z.string().min(1, 'Mã tỉnh/thành phố không được để trống'),
+  communeCode: z.string().min(1, 'Mã xã/phường không được để trống'),
+  sheetNumber: z.number().int().positive('Số tờ bản đồ phải là số nguyên dương lớn hơn 0'),
+  parcelNumber: z.number().int().positive('Số thửa đất phải là số nguyên dương lớn hơn 0'),
+  centroidX: z.number().positive('Tọa độ trọng tâm X VN-2000 phải là số dương').optional(),
+  centroidY: z.number().positive('Tọa độ trọng tâm Y VN-2000 phải là số dương').optional(),
+  year: z.number().int().min(1990).max(2100).optional(),
+  subdivisionBranch: z.string().regex(/^\d{2}$/, 'Hậu tố nhánh tách thửa phải gồm 2 chữ số (ví dụ 00, 01)').optional(),
+});
+
+export const ValidateNationalCodeSchema = z.object({
+  code: z.string().min(5, 'Mã định danh thửa đất tối thiểu 5 ký tự'),
+});
+
+export type GenerateNationalCodeInput = z.infer<typeof GenerateNationalCodeSchema>;
+export type ValidateNationalCodeInput = z.infer<typeof ValidateNationalCodeSchema>;

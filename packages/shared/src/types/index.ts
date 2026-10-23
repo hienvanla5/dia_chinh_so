@@ -975,3 +975,52 @@ export interface DeclareNewParcelResponse {
   auditHash: string;
   message: string;
 }
+
+
+// ==========================================
+// Sinh Mã định danh thửa đất quốc gia duy nhất (DCS-02-CN-002)
+// ==========================================
+
+export interface GenerateNationalCodeRequest {
+  provinceCode: string;         // Mã tỉnh (ví dụ "01" hoặc "TINH_HN")
+  communeCode: string;          // Mã xã (5 số, ví dụ "01001")
+  sheetNumber: number;          // Số tờ bản đồ (> 0)
+  parcelNumber: number;         // Số thửa đất (> 0)
+  centroidX?: number;           // Tọa độ trọng tâm X VN-2000
+  centroidY?: number;           // Tọa độ trọng tâm Y VN-2000
+  year?: number;                // Năm hình thành thửa (ví dụ 2026)
+  subdivisionBranch?: string;   // Nhánh tách thửa (mặc định "00")
+}
+
+export interface NationalCodeComponents {
+  provinceCode: string;
+  communeCode: string;
+  sheetNumber: number;
+  parcelNumber: number;
+  branchSuffix: string;
+  checksum: string;
+}
+
+export interface GenerateNationalCodeResponse {
+  nationalCode: string;         // Mã định danh quốc gia chuẩn hóa: 01001-0012-00045-00
+  shortCode: string;            // Mã định danh ngắn gọn: 01001-0012-0045
+  spatialUid: string;           // Mã định danh không gian địa lý: VN-3405-01001-X2325410-Y589120
+  components: NationalCodeComponents;
+  qrCodePayload: string;        // Chuỗi mã hóa phục vụ in Giấy chứng nhận điện tử
+  isUnique: boolean;
+  auditHash: string;
+  message: string;
+}
+
+export interface ValidateNationalCodeRequest {
+  code: string;
+}
+
+export interface ValidateNationalCodeResponse {
+  isValid: boolean;
+  normalizedCode?: string;
+  components?: NationalCodeComponents;
+  isRegisteredInDatabase: boolean;
+  errorReason?: string;
+  message: string;
+}
