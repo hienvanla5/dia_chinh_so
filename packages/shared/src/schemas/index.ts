@@ -387,3 +387,56 @@ export const ValidateNationalCodeSchema = z.object({
 
 export type GenerateNationalCodeInput = z.infer<typeof GenerateNationalCodeSchema>;
 export type ValidateNationalCodeInput = z.infer<typeof ValidateNationalCodeSchema>;
+
+
+// ==========================================
+// Schemas Quản lý vòng đời thửa đất: Tách thửa và hợp thửa (DCS-02-CN-003)
+// ==========================================
+
+export const SubdivideChildParcelSchema = z.object({
+  parcelNumber: z.number().int().positive('Số thửa con phải là số nguyên dương lớn hơn 0'),
+  area: z.number().positive('Diện tích thửa con phải là số dương lớn hơn 0'),
+  address: z.string().optional(),
+  purposeCode: z.nativeEnum(LandPurposeCode).optional(),
+  verticesVN2000: z.array(
+    z.object({
+      x: z.number().positive(),
+      y: z.number().positive(),
+    })
+  ).optional(),
+  ownerName: z.string().optional(),
+  ownerCitizenId: z.string().regex(/^\d{12}$/, 'CCCD phải gồm 12 chữ số').optional().or(z.literal('')),
+});
+
+export const SubdivideParcelSchema = z.object({
+  parentParcelId: z.string().min(1, 'ID thửa đất gốc không được để trống'),
+  decisionNumber: z.string().min(3, 'Số quyết định / văn bản cho phép tách thửa tối thiểu 3 ký tự'),
+  officerId: z.string().min(1, 'Mã cán bộ thực hiện không được để trống'),
+  officerCommuneCode: z.string().optional(),
+  minSubdivisionArea: z.number().positive('Hạn mức diện tích tối thiểu phải lớn hơn 0').optional(),
+  newParcels: z.array(SubdivideChildParcelSchema).min(2, 'Thủ tục tách thửa yêu cầu hình thành tối thiểu 2 thửa đất con mới'),
+  notes: z.string().optional(),
+});
+
+export const MergeParcelsSchema = z.object({
+  sourceParcelIds: z.array(z.string().min(1)).min(2, 'Thủ tục hợp thửa yêu cầu tối thiểu 2 thửa đất thành phần'),
+  newParcelNumber: z.number().int().positive('Số thửa đất mới phải là số nguyên dương lớn hơn 0'),
+  sheetNumber: z.number().int().positive('Số tờ bản đồ mới phải là số nguyên dương lớn hơn 0').optional(),
+  address: z.string().optional(),
+  decisionNumber: z.string().min(3, 'Số quyết định / văn bản cho phép hợp thửa tối thiểu 3 ký tự'),
+  officerId: z.string().min(1, 'Mã cán bộ thực hiện không được để trống'),
+  officerCommuneCode: z.string().optional(),
+  verticesVN2000: z.array(
+    z.object({
+      x: z.number().positive(),
+      y: z.number().positive(),
+    })
+  ).optional(),
+  ownerName: z.string().optional(),
+  ownerCitizenId: z.string().regex(/^\d{12}$/, 'CCCD phải gồm 12 chữ số').optional().or(z.literal('')),
+  notes: z.string().optional(),
+});
+
+export type SubdivideChildParcelInput = z.infer<typeof SubdivideChildParcelSchema>;
+export type SubdivideParcelInput = z.infer<typeof SubdivideParcelSchema>;
+export type MergeParcelsInput = z.infer<typeof MergeParcelsSchema>;

@@ -17,6 +17,7 @@ export enum ParcelLegalStatus {
   FROZEN = 'FROZEN',           // Bị phong tỏa do lệnh Tòa án / Thi hành án kê biên
   REVOKED = 'REVOKED',         // Đã thu hồi / chuyển vào lịch sử sau khi tách/hợp thửa
   PENDING_APPRAISAL = 'PENDING_APPRAISAL', // Chờ Chi nhánh VPĐKĐĐ thẩm định thuộc tính
+  HISTORICAL = 'HISTORICAL',               // Đã đóng hiệu lực lịch sử sau khi tách/hợp thửa (QTD-02)
 }
 
 // Phân loại nhóm đất theo Luật Đất đai 2024
@@ -161,7 +162,13 @@ export interface CitizenAuthResponse {
     phoneNumber?: string;
     role: UserRole;
   };
-  auditHash: string; // Mã băm SHA-256 nhật ký kiểm toán bất biến
+  auditHash: string;
+  parentParcelId?: string;           // ID thửa đất cha (nếu do tách thửa)
+  parentNationalCode?: string;       // Mã thửa cha (nếu do tách thửa)
+  mergedFromParcelIds?: string[];    // Danh sách ID thửa đất tiền thân (nếu do hợp thửa)
+  mergedFromNationalCodes?: string[];// Danh sách Mã thửa tiền thân (nếu do hợp thửa)
+  childParcelIds?: string[];         // Danh sách ID các thửa con đã tách
+  isHistorical?: boolean;            // Cờ đánh dấu thửa đất đã chuyển vào lịch sử (QTD-02) // Mã băm SHA-256 nhật ký kiểm toán bất biến
   walletSummary?: {
     parcelCount: number;
     certificateCount: number;
@@ -965,6 +972,12 @@ export interface ParcelItem {
   boundaryGeojson: any;
   declaredByOfficerId: string;
   auditHash: string;
+  parentParcelId?: string;           // ID thửa đất cha (nếu do tách thửa)
+  parentNationalCode?: string;       // Mã thửa cha (nếu do tách thửa)
+  mergedFromParcelIds?: string[];    // Danh sách ID thửa đất tiền thân (nếu do hợp thửa)
+  mergedFromNationalCodes?: string[];// Danh sách Mã thửa tiền thân (nếu do hợp thửa)
+  childParcelIds?: string[];         // Danh sách ID các thửa con đã tách
+  isHistorical?: boolean;            // Cờ đánh dấu thửa đất đã chuyển vào lịch sử (QTD-02)
   createdAt: string;
   updatedAt: string;
 }
@@ -1023,4 +1036,84 @@ export interface ValidateNationalCodeResponse {
   isRegisteredInDatabase: boolean;
   errorReason?: string;
   message: string;
+}
+
+
+// ==========================================
+// Quản lý vòng đời thửa đất: Tách thửa và hợp thửa (DCS-02-CN-003)
+// ==========================================
+
+export interface SubdivideChildParcelItem {
+  parcelNumber: number;              // Số thứ tự thửa đất mới (> 0)
+  area: number;                      // Diện tích thửa con (m2, >= diện tích tối thiểu QTD-08)
+  address?: string;                  // Địa chỉ thửa đất con
+  purposeCode?: LandPurposeCode;     // Mã mục đích (mặc định kế thừa từ thửa cha)
+  verticesVN2000?: VertexVN2000[];   // Tọa độ đỉnh VN-2000 thửa con
+  ownerName?: string;                // Chủ sử dụng đất thừa kế/nhận chuyển nhượng
+  ownerCitizenId?: string;           // Số CCCD chủ sử dụng đất mới
+}
+
+export interface SubdivideParcelRequest {
+  parentParcelId: string;            // ID thửa đất gốc cần tách
+  decisionNumber: string;            // Số quyết định / văn bản cho phép tách thửa
+  officerId: string;                 // Mã cán bộ thực hiện
+  officerCommuneCode?: string;       // Mã xã thẩm quyền của cán bộ (QTD-16)
+  minSubdivisionArea?: number;       // Hạn mức diện tích tối thiểu theo quy định tỉnh (QTD-08, mặc định 30m2)
+  newParcels: SubdivideChildParcelItem[]; // Danh sách các thửa đất con hình thành (tối thiểu 2 thửa)
+  notes?: string;
+}
+
+export interface SubdivideParcelResponse {
+  success: boolean;
+  parentParcel: ParcelItem;          // Thửa gốc đã chuyển sang HISTORICAL (QTD-02)
+  childParcels: ParcelItem[];        // Danh sách các thửa con mới được tạo
+  auditHash: string;
+  message: string;
+}
+
+export interface MergeParcelsRequest {
+  sourceParcelIds: string[];         // Danh sách ID các thửa đất thành phần cần hợp (tối thiểu 2 thửa)
+  newParcelNumber: number;           // Số thứ tự thửa đất gộp mới (> 0)
+  sheetNumber?: number;              // Số tờ bản đồ mới (mặc định lấy theo thửa đầu tiên)
+  address?: string;                  // Địa chỉ thửa đất hợp nhất
+  decisionNumber: string;            // Số văn bản / quyết định cho phép hợp thửa
+  officerId: string;                 // Mã cán bộ thực hiện
+  officerCommuneCode?: string;       // Thẩm quyền địa giới (QTD-16)
+  verticesVN2000?: VertexVN2000[];   // Tọa độ ranh giới thửa đất mới gộp
+  ownerName?: string;                // Chủ sử dụng đất sau khi hợp nhất
+  ownerCitizenId?: string;           // CCCD chủ sử dụng đất
+  notes?: string;
+}
+
+export interface MergeParcelsResponse {
+  success: boolean;
+  sourceParcels: ParcelItem[];       // Các thửa đất cũ đã chuyển sang HISTORICAL (QTD-02)
+  mergedParcel: ParcelItem;          // Thửa đất mới hình thành sau hợp thửa
+  auditHash: string;
+  message: string;
+}
+
+export interface ParcelLineageNode {
+  parcelId: string;
+  nationalCode: string;
+  sheetNumber: number;
+  parcelNumber: number;
+  area: number;
+  purposeCode: LandPurposeCode;
+  legalStatus: ParcelLegalStatus;
+  isCurrent: boolean;
+  relationship: 'CURRENT' | 'PARENT' | 'CHILD' | 'ANCESTOR' | 'MERGED_SOURCE';
+  fluctuationType?: FluctuationType;
+  decisionNumber?: string;
+  timestamp: string;
+}
+
+export interface ParcelLineageResponse {
+  parcelId: string;
+  nationalCode: string;
+  currentParcel: ParcelItem;
+  parents: ParcelItem[];
+  children: ParcelItem[];
+  lineageNodes: ParcelLineageNode[];
+  totalGenerations: number;
 }
