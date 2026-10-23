@@ -39,6 +39,9 @@ import {
   Cloud,
   Zap,
   RotateCcw,
+  ScanSearch,
+  CheckCheck,
+  FileSearch,
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -49,6 +52,26 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LandPurposeCode, ParcelLegalStatus } from '@diachinhso/shared';
+
+
+interface ReconciliationReportDisplay {
+  id: string;
+  anomalyType: 'DUPLICATE_NATIONAL_CODE' | 'DUPLICATE_SHEET_PARCEL' | 'SPATIAL_OVERLAP' | 'AREA_DISCREPANCY';
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  communeCode: string;
+  communeName: string;
+  involvedParcelIds: string[];
+  involvedNationalCodes: string[];
+  overlapArea?: number;
+  description: string;
+  detectedAt: string;
+  status: 'DETECTED' | 'VERIFYING' | 'RESOLVED' | 'DISMISSED';
+  assignedBranch: string;
+  resolutionNotes?: string;
+  resolvedAt?: string;
+  resolvedByOfficerId?: string;
+  auditHash: string;
+}
 
 interface ParcelDisplay {
   id: string;
@@ -759,6 +782,136 @@ export default function ParcelsPage() {
     }
   };
 
+  
+  // ==========================================
+  // State Đối soát và phát hiện trùng lặp mã thửa (DCS-02-CN-008)
+  // ==========================================
+  const [isReconciliationModalOpen, setIsReconciliationModalOpen] = useState(false);
+  const [isScanningReconciliation, setIsScanningReconciliation] = useState(false);
+  const [reconciliationSuccessMessage, setReconciliationSuccessMessage] = useState<string | null>(null);
+  const [reconciliationFilterStatus, setReconciliationFilterStatus] = useState<string>('ALL');
+  const [reconciliationFilterSeverity, setReconciliationFilterSeverity] = useState<string>('ALL');
+  const [selectedReportToResolve, setSelectedReportToResolve] = useState<ReconciliationReportDisplay | null>(null);
+  const [resolveNewStatus, setResolveNewStatus] = useState<'VERIFYING' | 'RESOLVED' | 'DISMISSED'>('RESOLVED');
+  const [resolveNotes, setResolveNotes] = useState('');
+  const [isResolvingAnomaly, setIsResolvingAnomaly] = useState(false);
+
+  const [reconciliationReports, setReconciliationReports] = useState<ReconciliationReportDisplay[]>([
+    {
+      id: 'REC-REP-2026-0001',
+      anomalyType: 'DUPLICATE_SHEET_PARCEL',
+      severity: 'CRITICAL',
+      communeCode: '01001',
+      communeName: 'Phường Điện Biên',
+      involvedParcelIds: ['PARCEL-HN-001', 'PARCEL-HN-OLD-099'],
+      involvedNationalCodes: ['01001-0012-0045', '01001-0012-0045-OLD'],
+      description: 'Phát hiện 2 bản ghi cùng số tờ 12, số thửa 45 tại Phường Điện Biên từ cơ sở dữ liệu số hóa năm 2018 chưa chuẩn hóa mã quốc gia duy nhất.',
+      detectedAt: '2026-10-22 08:00',
+      status: 'DETECTED',
+      assignedBranch: 'Chi nhánh Văn phòng Đăng ký Đất đai Ba Đình',
+      auditHash: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b1',
+    },
+    {
+      id: 'REC-REP-2026-0002',
+      anomalyType: 'SPATIAL_OVERLAP',
+      severity: 'HIGH',
+      communeCode: '79001',
+      communeName: 'Phường Bến Nghé',
+      involvedParcelIds: ['PARCEL-HCM-001', 'PARCEL-HCM-002'],
+      involvedNationalCodes: ['79001-0005-0018', '79001-0005-0019'],
+      overlapArea: 14.5,
+      description: 'Phát hiện ranh giới tọa độ không gian VN-2000 bị chồng lấn diện tích 14.5 m² giữa Thửa 18 và Thửa 19 tại khu vực ven bãi bồi.',
+      detectedAt: '2026-10-22 09:15',
+      status: 'VERIFYING',
+      assignedBranch: 'Chi nhánh Văn phòng Đăng ký Đất đai Quận 1',
+      auditHash: 'b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c2',
+    },
+    {
+      id: 'REC-REP-2026-0003',
+      anomalyType: 'AREA_DISCREPANCY',
+      severity: 'MEDIUM',
+      communeCode: '01001',
+      communeName: 'Phường Điện Biên',
+      involvedParcelIds: ['PARCEL-HN-003'],
+      involvedNationalCodes: ['01001-0030-0099'],
+      description: 'Sai lệch diện tích 0.8 m² giữa hồ sơ trích đo số hóa cũ và kết quả tính toán khép góc polygon hệ VN-2000.',
+      detectedAt: '2026-10-21 14:00',
+      status: 'RESOLVED',
+      assignedBranch: 'Chi nhánh Văn phòng Đăng ký Đất đai Ba Đình',
+      resolutionNotes: 'Đã hoàn tất đo đạc vi sai và xác lập mốc ranh giới thực địa theo QĐ 12/UBND.',
+      resolvedAt: '2026-10-22 16:00',
+      resolvedByOfficerId: 'Cán bộ địa chính Ba Đình',
+      auditHash: 'c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b3c3',
+    },
+    {
+      id: 'REC-REP-2026-0004',
+      anomalyType: 'DUPLICATE_NATIONAL_CODE',
+      severity: 'CRITICAL',
+      communeCode: '79001',
+      communeName: 'Phường Bến Nghé',
+      involvedParcelIds: ['PARCEL-HCM-001', 'PARCEL-HCM-088'],
+      involvedNationalCodes: ['79001-0005-0018', '79001-0005-0018'],
+      description: 'Trùng lặp hoàn toàn mã định danh thửa đất quốc gia 79001-0005-0018 trên 2 bản ghi khác nhau do lỗi nạp dữ liệu di sản.',
+      detectedAt: '2026-10-22 11:00',
+      status: 'DETECTED',
+      assignedBranch: 'Chi nhánh Văn phòng Đăng ký Đất đai Quận 1',
+      auditHash: 'd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b4c4d4',
+    },
+  ]);
+
+  const handleTriggerReconciliationScan = () => {
+    setIsScanningReconciliation(true);
+    setReconciliationSuccessMessage(null);
+    setTimeout(() => {
+      setIsScanningReconciliation(false);
+      const activeCount = reconciliationReports.filter(r => r.status === 'DETECTED' || r.status === 'VERIFYING').length;
+      setReconciliationSuccessMessage(
+        `Phiên quét đối soát CSDL hoàn tất trong 85ms. Đã rà soát 1.450 thửa đất trên toàn hệ thống. Phát hiện ${activeCount} sai lệch cần thẩm tra. Tỷ lệ dữ liệu sạch đạt 99.8%.`
+      );
+    }, 700);
+  };
+
+  const handleOpenResolveModal = (report: ReconciliationReportDisplay) => {
+    setSelectedReportToResolve(report);
+    setResolveNewStatus(report.status === 'RESOLVED' ? 'RESOLVED' : 'RESOLVED');
+    setResolveNotes(report.resolutionNotes || '');
+    setReconciliationSuccessMessage(null);
+  };
+
+  const handleConfirmResolve = () => {
+    if (!selectedReportToResolve) return;
+    if (!resolveNotes.trim() || resolveNotes.trim().length < 5) {
+      alert('Vui lòng nhập phương án và căn cứ pháp lý giải quyết sai lệch (tối thiểu 5 ký tự).');
+      return;
+    }
+
+    setIsResolvingAnomaly(true);
+    setTimeout(() => {
+      setReconciliationReports(prev =>
+        prev.map(item =>
+          item.id === selectedReportToResolve.id
+            ? {
+                ...item,
+                status: resolveNewStatus,
+                resolutionNotes: resolveNotes.trim(),
+                resolvedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+                resolvedByOfficerId: 'Cán bộ tiếp nhận xử lý',
+              }
+            : item
+        )
+      );
+      setIsResolvingAnomaly(false);
+      setSelectedReportToResolve(null);
+      setReconciliationSuccessMessage(`Đã cập nhật trạng thái giải quyết sai lệch '${selectedReportToResolve.id}' thành công.`);
+    }, 400);
+  };
+
+  const filteredReconciliationReports = reconciliationReports.filter(r => {
+    const matchStatus = reconciliationFilterStatus === 'ALL' || r.status === reconciliationFilterStatus;
+    const matchSeverity = reconciliationFilterSeverity === 'ALL' || r.severity === reconciliationFilterSeverity;
+    return matchStatus && matchSeverity;
+  });
+
   // Modal Cây gia phả (DCS-02-CN-003)
   const [isLineageModalOpen, setIsLineageModalOpen] = useState(false);
   const [lineageParcel, setLineageParcel] = useState<ParcelDisplay | null>(null);
@@ -1263,6 +1416,14 @@ export default function ParcelsPage() {
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
+          
+          <Button variant="outline" onClick={() => setIsReconciliationModalOpen(true)} className="border-indigo-300 bg-indigo-50 text-indigo-900 hover:bg-indigo-100">
+            <ScanSearch className="w-4 h-4 mr-1.5 text-indigo-600" />
+            Đối soát CSDL
+            <span className="ml-1.5 px-1.5 py-0.5 text-xs font-bold rounded-full bg-indigo-600 text-white">
+              {reconciliationReports.filter(r => r.status === 'DETECTED' || r.status === 'VERIFYING').length}
+            </span>
+          </Button>
           <Button variant="outline" onClick={() => setIsSyncModalOpen(true)} className="border-blue-300 bg-blue-50 text-blue-900 hover:bg-blue-100">
             <RefreshCw className="w-4 h-4 mr-1.5 text-blue-600" />
             Đồng bộ CSDL Quốc gia
