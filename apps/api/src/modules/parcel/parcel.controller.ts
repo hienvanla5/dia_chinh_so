@@ -27,6 +27,8 @@ import {
   ValidateAgriculturalSubdivisionSchema,
   ParcelLegalStatus,
   UserRole,
+  SubmitOwnerFluctuationSchema,
+  SubmitOwnerFluctuationInput,
 } from '@diachinhso/shared';
 
 @ApiTags('Quản lý Thửa đất & Bản đồ số (Parcels)')
@@ -149,6 +151,26 @@ export class ParcelController {
     return this.parcelService.getParcelLineage(id);
   }
 
+
+
+  @Post(':id/owner-fluctuation')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Nộp hồ sơ cập nhật biến động thông tin chủ sở hữu qua Cổng DVC số hóa (DCS-02-CN-010, QTD-07, QTD-25)' })
+  @ApiResponse({ status: 200, description: 'Cập nhật biến động chủ sở hữu thành công' })
+  async submitOwnerFluctuation(
+    @Param('id') id: string,
+    @Body() body: Omit<SubmitOwnerFluctuationInput, 'parcelId'>,
+  ) {
+    const validated = SubmitOwnerFluctuationSchema.parse({ ...body, parcelId: id });
+    return this.parcelService.submitOwnerFluctuation(validated);
+  }
+
+  @Get(':id/owner-history')
+  @ApiOperation({ summary: 'Lấy lược sử biến động chủ sở hữu của thửa đất (DCS-02-CN-010)' })
+  @ApiResponse({ status: 200, description: 'Lược sử các lần đổi chủ / đính chính thông tin' })
+  async getOwnerHistory(@Param('id') id: string) {
+    return this.parcelService.getOwnerHistory(id);
+  }
 
   @Get(':id/pedigree-tree')
   @ApiOperation({ summary: 'Hiển thị đồ thị cây gia phả biến động thửa đất chi tiết qua các thời kỳ (DCS-02-CN-009, QTD-02)' })

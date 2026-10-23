@@ -54,6 +54,12 @@ import {
   PedigreeTimelineEvent,
   PedigreeTreeResponse,
   PedigreeNodeRole,
+  OwnerFluctuationType,
+  OwnerFluctuationStatus,
+  OwnerFluctuationDossier,
+  SubmitOwnerFluctuationInput,
+  SubmitOwnerFluctuationResponse,
+  GetOwnerHistoryResponse,
   FluctuationType,
 } from '@diachinhso/shared';
 
@@ -64,6 +70,7 @@ export class ParcelService {
   // Bộ nhớ đệm danh sách thửa đất trong CSDL Địa chính số
   private parcelsStore: ParcelItem[] = [];
   private propertiesStore: PropertyOnLandItem[] = [];
+  private ownerFluctuationsStore: OwnerFluctuationDossier[] = [];
 
   constructor(@Optional() @Inject(DRIZZLE) private readonly db?: DrizzleDB) {
     this.seedInitialParcels();
@@ -1042,7 +1049,135 @@ export class ParcelService {
   /**
    * Hiển thị lược sử biến động thửa đất dạng cây gia phả chi tiết (DCS-02-CN-009, QTD-02)
    */
-  async getPedigreeTree(
+/**
+   * Tiếp nhận và xử lý hồ sơ biến động thông tin chủ sở hữu qua Cổng Dịch vụ công số hóa (DCS-02-CN-010, QTD-07, QTD-25)
+   */
+  async submitOwnerFluctuation(input: SubmitOwnerFluctuationInput): Promise<SubmitOwnerFluctuationResponse> {
+    const parcel = this.parcelsStore.find(
+      (p) => p.id === input.parcelId || p.nationalCode === input.parcelId,
+    );
+    if (!parcel) {
+      throw new NotFoundException(`Không tìm thấy thửa đất có ID hoặc Mã định danh: ${input.parcelId}`);
+    }
+
+    if (parcel.legalStatus === ParcelLegalStatus.HISTORICAL || parcel.legalStatus === ParcelLegalStatus.REVOKED) {
+      throw new BadRequestException(`Thửa đất '${parcel.nationalCode}' đã chuyển vào lịch sử, không thể thực hiện biến động chủ sở hữu!`);
+    }
+
+    if (
+      parcel.legalStatus === ParcelLegalStatus.LOCKED ||
+      parcel.legalStatus === ParcelLegalStatus.DISPUTED ||
+      parcel.legalStatus === ParcelLegalStatus.FROZEN
+    ) {
+      throw new ForbiddenException(
+        `Thửa đất '${parcel.nationalCode}' đang bị khóa giao dịch hoặc có tranh chấp (${parcel.legalStatus}), không thể tiếp nhận biến động chủ sở hữu!`,
+      );
+    }
+
+    // Kiểm tra tính hợp lệ của người nộp và định dạng CCCD (QTD-07)
+    if (!input.applicantCitizenId || !/^\d{12}$/.test(input.applicantCitizenId)) {
+      throw new BadRequestException('Số CCCD người nộp hồ sơ phải gồm đúng 12 chữ số theo Đề án 06');
+    }
+
+    // Kiểm tra đồng sở hữu vợ chồng (QTD-25)
+    if (input.isJointSpouse) {
+      if (!input.spouseName || input.spouseName.trim().length < 2) {
+        throw new BadRequestException('Khi đăng ký đồng sở hữu vợ chồng (QTD-25), bắt buộc cung cấp họ tên người phối ngẫu');
+      }
+      if (!input.spouseCitizenId || !/^\d{12}$/.test(input.spouseCitizenId)) {
+        throw new BadRequestException('Số CCCD người phối ngẫu phải gồm đúng 12 chữ số theo Đề án 06');
+      }
+      if (input.spouseCitizenId === input.newCitizenId) {
+        throw new BadRequestException('Số CCCD của vợ/chồng không được trùng với số CCCD của chủ sở hữu mới');
+      }
+    }
+
+    const now = new Date().toISOString();
+    const dossierId = `DVC-BD-${Date.now()}`;
+    const dossierCode = `DVC-BD-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const oldOwnerName = parcel.ownerName || 'Chưa định danh';
+    const oldCitizenId = parcel.ownerCitizenId || 'Chưa định danh';
+
+    let registeredOwnerName = input.newOwnerName;
+    if (input.isJointSpouse && input.spouseName) {
+      registeredOwnerName = `${input.newOwnerName} và ${input.spouseName}`;
+    }
+
+    const auditPayload = `OWNER_FLUCTUATION:${dossierId}:${parcel.id}:${input.fluctuationType}:${oldCitizenId}->${input.newCitizenId}:${now}`;
+    const auditHash = createHash('sha256').update(auditPayload).digest('hex');
+
+    // Cập nhật thông tin chủ sở hữu trên thửa đất
+    parcel.ownerName = registeredOwnerName;
+    parcel.ownerCitizenId = input.newCitizenId;
+    parcel.updatedAt = now;
+    parcel.auditHash = auditHash;
+
+    const dossier: OwnerFluctuationDossier = {
+      dossierId,
+      dossierCode,
+      parcelId: parcel.id,
+      parcelNationalCode: parcel.nationalCode,
+      fluctuationType: input.fluctuationType,
+      applicantCitizenId: input.applicantCitizenId,
+      oldOwnerName,
+      oldCitizenId,
+      newOwnerName: registeredOwnerName,
+      newCitizenId: input.newCitizenId,
+      newAddress: input.newAddress,
+      newPhone: input.newPhone,
+      isJointSpouse: !!input.isJointSpouse,
+      spouseName: input.spouseName,
+      spouseCitizenId: input.spouseCitizenId,
+      documentNumber: input.documentNumber || input.newCitizenId,
+      documentImageUrl: input.documentImageUrl,
+      notes: input.notes,
+      status: OwnerFluctuationStatus.APPROVED,
+      submittedAt: now,
+      processedAt: now,
+      processedByOfficerId: 'DVC_PORTAL_AUTOMATION',
+      auditHash,
+    };
+
+    this.ownerFluctuationsStore.unshift(dossier);
+
+    this.logger.log(
+      `Đã tiếp nhận và cập nhật biến động chủ sở hữu hồ sơ '${dossierCode}' trên thửa '${parcel.nationalCode}' (${oldOwnerName} -> ${registeredOwnerName}, Audit: ${auditHash})`,
+    );
+
+    return {
+      success: true,
+      dossier,
+      updatedParcel: parcel,
+      auditHash,
+      message: `Nộp và chỉnh lý biến động thông tin chủ sở hữu hồ sơ '${dossierCode}' thành công qua Cổng Dịch vụ công. Hồ sơ địa chính đã được tự động cập nhật.`,
+    };
+  }
+
+  /**
+   * Lấy lịch sử biến động chủ sở hữu của thửa đất (DCS-02-CN-010)
+   */
+  async getOwnerHistory(idOrCode: string): Promise<GetOwnerHistoryResponse> {
+    const parcel = this.parcelsStore.find(
+      (p) => p.id === idOrCode || p.nationalCode === idOrCode,
+    );
+    if (!parcel) {
+      throw new NotFoundException(`Không tìm thấy thửa đất có ID hoặc Mã định danh: ${idOrCode}`);
+    }
+
+    const history = this.ownerFluctuationsStore.filter(
+      (d) => d.parcelId === parcel.id || d.parcelNationalCode === parcel.nationalCode,
+    );
+
+    return {
+      parcelId: parcel.id,
+      parcelNationalCode: parcel.nationalCode,
+      totalRecords: history.length,
+      history,
+    };
+  }
+
+    async getPedigreeTree(
     idOrCode: string,
     maxDepth: number = 5,
     includeTimeline: boolean = true,
