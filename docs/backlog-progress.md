@@ -10,12 +10,12 @@
 | Chỉ số | Số lượng | Tỷ lệ (%) | Ghi chú |
 |---|---|---|---|
 | **Tổng số User Stories** | **114** | **100%** | Toàn bộ 114 User Stories được số hóa tại `user_stories/` |
-| **Đã hoàn thành (Done)** | **10** | **8.8%** | Đã hoàn thành 100% Epic DCS-01 (10/10 Stories) gồm Shared, API, Web, Tests & Docs |
+| **Đã hoàn thành (Done)** | **11** | **9.6%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
 | **Đang thực hiện (In Progress)** | **0** | **0.0%** | Không có Story nào đang dở dang |
-| **Chưa thực hiện (Backlog)** | **104** | **91.2%** | Sẵn sàng triển khai theo thứ tự ưu tiên (Bắt đầu Epic DCS-02) |
+| **Chưa thực hiện (Backlog)** | **103** | **90.4%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
 
-- **User Story hoàn thành gần nhất**: [`DCS-01-CN-010`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-010.md) - Nhật ký xác thực và phát hiện cảnh báo đăng nhập bất thường *(Hoàn tất toàn diện 10/10 Stories của Epic DCS-01)*.
-- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-02-CN-001`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-001.md) - Tra cứu quy hoạch và dữ liệu địa chính thửa đất đa lớp trên nền bản đồ số VN-2000 *(Khởi động Epic DCS-02)*.
+- **User Story hoàn thành gần nhất**: [`DCS-02-CN-001`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-001.md) - Khai báo thông tin thuộc tính thửa đất mới.
+- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-02-CN-002`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-002.md) - Sinh Mã định danh thửa đất quốc gia duy nhất.
 
 ---
 
@@ -33,6 +33,7 @@
 | [`DCS-01-CN-008`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-008.md) | Quản lý ủy quyền giải quyết hồ sơ địa chính có thời hạn | 2026-10-22 | `main`<br>(feature `DCS-01-CN-008`) | `GET /api/v1/delegation/list`<br>`GET /api/v1/delegation/:id`<br>`POST /api/v1/delegation/create`<br>`POST /api/v1/delegation/revoke`<br>`POST /api/v1/delegation/verify-access`<br>`GET /api/v1/delegation/audit/logs` | `/delegation` | 8 tests PASS | **Hoàn thành** |
 | [`DCS-01-CN-009`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-009.md) | Đăng nhập và phân quyền tài khoản tổ chức qua Cổng Định danh Doanh nghiệp | 2026-10-22 | `main`<br>(feature `DCS-01-CN-009`) | `POST /api/v1/enterprise-idp/login`<br>`GET /api/v1/enterprise-idp/profile/:taxCode`<br>`GET /api/v1/enterprise-idp/parcels/:taxCode`<br>`POST /api/v1/enterprise-idp/staff/assign`<br>`POST /api/v1/enterprise-idp/staff/remove`<br>`GET /api/v1/enterprise-idp/audit/logs` | `/enterprise` | 10 tests PASS | **Hoàn thành** |
 | [`DCS-01-CN-010`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-01-CN-010.md) | Nhật ký xác thực và phát hiện cảnh báo đăng nhập bất thường | 2026-10-22 | `main`<br>(feature `DCS-01-CN-010`) | `GET /api/v1/auth-audit/logs`<br>`GET /api/v1/auth-audit/alerts`<br>`GET /api/v1/auth-audit/stats`<br>`GET /api/v1/auth-audit/verify-chain`<br>`POST /api/v1/auth-audit/simulate`<br>`POST /api/v1/auth-audit/alerts/resolve` | `/auth-audit` | 11 tests PASS | **Hoàn thành** |
+| [`DCS-02-CN-001`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-001.md) | Khai báo thông tin thuộc tính thửa đất mới | 2026-10-23 | `main`<br>(feature `DCS-02-CN-001`) | `POST /api/v1/parcels/declare`<br>`GET /api/v1/parcels/stats`<br>`GET /api/v1/parcels`<br>`GET /api/v1/parcels/:id`<br>`GET /api/v1/parcels/by-code/:code` | `/parcels` | 12 tests PASS | **Hoàn thành** |
 
 ---
 
@@ -220,6 +221,27 @@
   - `tests`: 11 test cases bao phủ đầy đủ 4 Tiêu chí chấp nhận (TC-01, TC-02, TC-03, TC-04).
 - **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#15-nhom-api-nhat-ky-xac-thuc--phat-hien-canh-bao-dang-nhap-bat-thuong-dcs-01-cn-010).
 
+### 3.11. [DCS-02-CN-001] Khai báo thông tin thuộc tính thửa đất mới
+- **Persona**: Cán bộ Địa chính xã/phường (`COMMUNE_OFFICER`)
+- **Kiến trúc triển khai**:
+  - `packages/shared`:
+    - Enums `ParcelLegalStatus` (bổ sung `PENDING_APPRAISAL` - Chờ Chi nhánh VPĐKĐĐ thẩm định).
+    - Interfaces `DeclareNewParcelRequest`, `DeclareNewParcelResponse`, `ParcelItem`.
+    - Zod schemas `DeclareNewParcelSchema`.
+  - `apps/api`:
+    - Service `ParcelService`:
+      - Kiểm soát thẩm quyền địa giới hành chính (QTD-16): cán bộ địa chính chỉ được khai báo thửa đất thuộc đúng đơn vị hành chính xã mình phụ trách.
+      - Quy tắc định danh quốc gia (QTD-01): Sinh mã thửa duy nhất cấu thành từ mã xã, số tờ và số thửa (`[communeCode]-[sheetNumber]-[parcelNumber]`), tự động phát hiện và chặn trùng lặp mã thửa trong cùng xã.
+      - Chuyển đổi tọa độ VN-2000 sang Polygon GeoJSON chuẩn WGS84 khép kín.
+      - Thiết lập trạng thái pháp lý ban đầu `PENDING_APPRAISAL` chờ Văn phòng Đăng ký Đất đai thẩm tra.
+      - Tích hợp kiểm toán bất biến chuỗi băm SHA-256 (QTD-20).
+    - Controller `ParcelController` cung cấp endpoints `/api/v1/parcels/declare`, `/api/v1/parcels/stats`, `/api/v1/parcels`.
+  - `apps/web`:
+    - Route `/parcels`: Bảng điều khiển quản lý thửa đất, 4 thẻ chỉ số KPI, thanh lọc theo đơn vị hành chính và trạng thái, bảng danh mục thửa đất kèm mã thửa quốc gia, diện tích, mục đích sử dụng (Luật Đất đai 2024), mã băm kiểm toán SHA-256, và modal khai báo thửa đất mới chuẩn hóa.
+    - Đảm bảo 100% ẩn các ID nội bộ kỹ thuật (`VT-xx`, `QTD-xx`, `DCS-xx`, `AC-xx`).
+  - `tests`: 12 test cases bao phủ đầy đủ 4 Tiêu chí chấp nhận (TC-01, TC-02, TC-03, TC-04).
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#16-nhom-api-khai-bao-thuoc-tinh-thua-dat-moi--quan-ly-csdl-thua-dat-dcs-02-cn-001).
+
 ---
 
 ## 4. Cơ Chế Kiểm Soát Tiến Trình Dành Cho Agent (Gatekeeper Protocol)
@@ -232,9 +254,9 @@ flowchart TD
     
     CheckTable -- "ĐÃ CÓ trong bảng Đã hoàn thành" --> WarnDup["CẢNH BÁO TRÙNG LẶP (Duplicate Warning):<br>1. Thông báo Story này đã xong ngày nào, commit nào, test nào<br>2. Dừng thực thi ghi đè<br>3. Hỏi người dùng muốn chỉnh sửa chi tiết nào"]
     
-    CheckTable -- "CHƯA LÀM nhưng cách quá xa tiến trình hiện tại (Nhảy cóc)" --> WarnGap["CẢNH BÁO NHẢY CÓC (Sequence Gap Warning):<br>1. Chỉ rõ Story xong gần nhất (Anchor: DCS-01-CN-010)<br>2. Liệt kê các Story nối tiếp bị bỏ qua (DCS-02-CN-001, ...)<br>3. Cảnh báo rủi ro đứt gãy phụ thuộc dữ liệu<br>4. Đề xuất làm tuần tự Story tiếp theo hoặc chờ xác nhận"]
+    CheckTable -- "CHƯA LÀM nhưng cách quá xa tiến trình hiện tại (Nhảy cóc)" --> WarnGap["CẢNH BÁO NHẢY CÓC (Sequence Gap Warning):<br>1. Chỉ rõ Story xong gần nhất (Anchor: DCS-02-CN-001)<br>2. Liệt kê các Story nối tiếp bị bỏ qua (DCS-02-CN-002, ...)<br>3. Cảnh báo rủi ro đứt gãy phụ thuộc dữ liệu<br>4. Đề xuất làm tuần tự Story tiếp theo hoặc chờ xác nhận"]
     
-    CheckTable -- "ĐÚNG TIẾN TRÌNH TUẦN TỰ (ví dụ: DCS-02-CN-001)" --> RunStory["Thực hiện GitHub Flow theo AGENTS.md & SKILL.md"]
+    CheckTable -- "ĐÚNG TIẾN TRÌNH TUẦN TỰ (ví dụ: DCS-02-CN-002)" --> RunStory["Thực hiện GitHub Flow theo AGENTS.md & SKILL.md"]
     WarnGap -- "Người dùng vẫn xác nhận làm tiếp" --> RunStory
     
     RunStory --> Done["Kiểm thử PASS, Build PASS, Merge main, Push origin"]

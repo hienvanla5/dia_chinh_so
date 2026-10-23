@@ -1407,3 +1407,93 @@ sequenceDiagram
     "message": "Đã xác nhận mối đe dọa an ninh, thực hiện khóa vĩnh viễn tài khoản và hủy phiên đăng nhập"
   }
   ```
+
+
+---
+
+## 16. Nhóm API Khai Báo Thuộc Tính Thửa Đất Mới & Quản Lý CSDL Thửa Đất [DCS-02-CN-001]
+
+### 16.1. [DCS-02-CN-001] Khai báo thông tin thuộc tính thửa đất mới hình thành
+- **Method**: `POST`
+- **Path**: `/api/v1/parcels/declare`
+- **Yêu cầu quyền (RBAC)**: `COMMUNE_OFFICER`, `LAND_REGISTRAR`, `ADMIN` (QTD-16)
+- **Request Body**:
+  ```json
+  {
+    "communeCode": "01001",
+    "communeName": "Phường Điện Biên",
+    "provinceCode": "TINH_HN",
+    "provinceName": "Thành phố Hà Nội",
+    "sheetNumber": 15,
+    "parcelNumber": 88,
+    "area": 150.5,
+    "purposeCode": "ODT",
+    "address": "Số 98 Hoàng Diệu, Phường Điện Biên",
+    "verticesVN2000": [
+      { "x": 2325500.1, "y": 589200.2 },
+      { "x": 2325515.5, "y": 589215.8 },
+      { "x": 2325505.2, "y": 589230.1 },
+      { "x": 2325490.0, "y": 589214.5 }
+    ],
+    "surveyDocumentNumber": "TĐ-2026/099/VPĐK-HN",
+    "ownerName": "Nguyễn Văn Minh",
+    "ownerCitizenId": "001095112233",
+    "officerId": "CB-HN-001",
+    "officerCommuneCode": "01001",
+    "notes": "Khai báo theo hồ sơ trích đo địa chính chính quy"
+  }
+  ```
+- **Response `201 Created`**:
+  ```json
+  {
+    "success": true,
+    "parcel": {
+      "id": "PARCEL-HN-004",
+      "nationalCode": "01001-0015-0088",
+      "communeCode": "01001",
+      "communeName": "Phường Điện Biên",
+      "provinceCode": "TINH_HN",
+      "provinceName": "Thành phố Hà Nội",
+      "sheetNumber": 15,
+      "parcelNumber": 88,
+      "area": 150.5,
+      "purposeCode": "ODT",
+      "address": "Số 98 Hoàng Diệu, Phường Điện Biên",
+      "legalStatus": "PENDING_APPRAISAL",
+      "surveyDocumentNumber": "TĐ-2026/099/VPĐK-HN",
+      "ownerName": "Nguyễn Văn Minh",
+      "ownerCitizenId": "001095112233",
+      "declaredByOfficerId": "CB-HN-001",
+      "auditHash": "16e6a7b1c7d3883d33cfdbb3f4fd5eb4b6239cc82727b6a436a465b44941d3bb",
+      "createdAt": "2026-10-23T07:18:27.000Z"
+    },
+    "auditHash": "16e6a7b1c7d3883d33cfdbb3f4fd5eb4b6239cc82727b6a436a465b44941d3bb",
+    "message": "Khai báo thông tin thuộc tính thửa đất mới '01001-0015-0088' thành công. Hồ sơ đã chuyển sang trạng thái chờ thẩm định tại Chi nhánh Văn phòng Đăng ký Đất đai."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Diện tích thửa đất $\le 0$, số tờ hoặc số thửa $\le 0$, hoặc danh sách đỉnh tọa độ VN-2000 ít hơn 3 đỉnh / tọa độ âm.
+  - `403 Forbidden`: Cán bộ khai báo thửa đất ngoài phạm vi đơn vị hành chính xã được phân công thẩm quyền (QTD-16).
+  - `409 Conflict`: Xung đột định danh: Mã định danh thửa đất hoặc cặp số tờ - số thửa đã tồn tại trên địa bàn xã (QTD-01).
+
+### 16.2. [DCS-02-CN-001] Lấy số liệu thống kê tổng quan quản lý thửa đất
+- **Method**: `GET`
+- **Path**: `/api/v1/parcels/stats`
+- **Response `200 OK`**:
+  ```json
+  {
+    "total": 4,
+    "pendingAppraisal": 1,
+    "available": 2,
+    "lockedOrDisputed": 1
+  }
+  ```
+
+### 16.3. [DCS-02-CN-001] Lấy danh sách thửa đất có lọc và tìm kiếm
+- **Method**: `GET`
+- **Path**: `/api/v1/parcels`
+- **Query Params**:
+  - `communeId` (string, tùy chọn): Lọc theo mã đơn vị hành chính cấp xã
+  - `status` (string, tùy chọn): `AVAILABLE`, `PENDING_APPRAISAL`, `LOCKED`, `DISPUTED`, `MORTGAGED`, `FROZEN`, `REVOKED`
+  - `search` (string, tùy chọn): Từ khóa tìm kiếm theo mã thửa, địa chỉ, tên chủ sử dụng
+- **Response `200 OK`**: Danh sách thửa đất kèm tọa độ đỉnh VN-2000, trạng thái pháp lý và mã băm SHA-256.
