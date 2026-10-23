@@ -10,12 +10,12 @@
 | Chỉ số | Số lượng | Tỷ lệ (%) | Ghi chú |
 |---|---|---|---|
 | **Tổng số User Stories** | **114** | **100%** | Toàn bộ 114 User Stories được số hóa tại `user_stories/` |
-| **Đã hoàn thành (Done)** | **16** | **14.0%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
+| **Đã hoàn thành (Done)** | **17** | **14.9%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
 | **Đang thực hiện (In Progress)** | **0** | **0.0%** | Không có Story nào đang dở dang |
-| **Chưa thực hiện (Backlog)** | **98** | **86.0%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
+| **Chưa thực hiện (Backlog)** | **97** | **85.1%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
 
-- **User Story hoàn thành gần nhất**: [`DCS-02-CN-006`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-006.md) - Quản lý tài sản gắn liền với đất trên thửa.
-- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-02-CN-007`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-007.md) - Đồng bộ thời gian thực với CSDL Đất đai Quốc gia.
+- **User Story hoàn thành gần nhất**: [`DCS-02-CN-007`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-007.md) - Đồng bộ thời gian thực với CSDL Đất đai Quốc gia.
+- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-02-CN-008`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-008.md) - Tự động đối soát và phát hiện trùng lặp mã thửa.
 
 ---
 
@@ -38,7 +38,8 @@
 | [`DCS-02-CN-003`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-003.md) | Quản lý vòng đời thửa đất: Tách thửa và hợp thửa | 2026-10-23 | `main`<br>(commit `62303ec`) | `POST /api/v1/parcels/:id/subdivide`<br>`POST /api/v1/parcels/merge`<br>`GET /api/v1/parcels/:id/lineage` | `/parcels` (Modal Tách/Hợp/Gia phả) | 32 tests PASS | **Hoàn thành** |
 | [`DCS-02-CN-004`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-004.md) | Quản lý nguồn gốc sử dụng đất theo Luật Đất đai 2024 | 2026-10-23 | `main`<br>(commit `84de696`) | `PUT /api/v1/parcels/:id/origin`<br>`POST /api/v1/parcels/:id/validate-agricultural-subdivision` | `/parcels` (Modal Nguồn gốc & Hạn mức) | 41 tests PASS | **Hoàn thành** |
 | [`DCS-02-CN-005`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-005.md) | Quản lý thời hạn sử dụng đất và cảnh báo sắp hết hạn | 2026-10-23 | `main`<br>(commit `5dbfc43`) | `PUT /api/v1/parcels/:id/term`<br>`GET /api/v1/parcels/expiring-soon`<br>`POST /api/v1/parcels/:id/notify-expiry` | `/parcels` (Modal Thời hạn, Danh sách hết hạn, Báo hạn) | 55 tests PASS | **Hoàn thành** |
-| [`DCS-02-CN-006`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-006.md) | Quản lý tài sản gắn liền với đất trên thửa | 2026-10-23 | `main`<br>(feature `DCS-02-CN-006`) | `POST /api/v1/parcels/:id/properties`<br>`GET /api/v1/parcels/:id/properties`<br>`GET /api/v1/parcels/properties/:propertyId`<br>`DELETE /api/v1/parcels/:id/properties/:propertyId` | `/parcels` (Modal Quản lý tài sản trên đất) | 67 tests PASS | **Hoàn thành** |
+| [`DCS-02-CN-006`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-006.md) | Quản lý tài sản gắn liền với đất trên thửa | 2026-10-23 | `main`<br>(commit `7801460`) | `POST /api/v1/parcels/:id/properties`<br>`GET /api/v1/parcels/:id/properties`<br>`GET /api/v1/parcels/properties/:propertyId`<br>`DELETE /api/v1/parcels/:id/properties/:propertyId` | `/parcels` (Modal Quản lý tài sản trên đất) | 67 tests PASS | **Hoàn thành** |
+| [`DCS-02-CN-007`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-007.md) | Đồng bộ thời gian thực với CSDL Đất đai Quốc gia | 2026-10-23 | `main`<br>(feature `DCS-02-CN-007`) | `GET /api/v1/national-sync/stats`<br>`GET /api/v1/national-sync/events`<br>`POST /api/v1/national-sync/trigger`<br>`POST /api/v1/national-sync/retry/:eventId` | `/parcels` (Modal Đồng bộ NDXP Quốc gia) | 10 tests PASS | **Hoàn thành** |
 
 ---
 
