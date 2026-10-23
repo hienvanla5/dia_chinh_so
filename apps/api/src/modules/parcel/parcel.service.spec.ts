@@ -9,6 +9,7 @@ import {
   LandPurposeCode,
   ParcelLegalStatus,
   DeclareNewParcelInput,
+  LandOriginType,
 } from '@diachinhso/shared';
 
 describe('ParcelService [DCS-02-CN-001] Khai báo thông tin thuộc tính thửa đất mới', () => {
@@ -637,6 +638,179 @@ describe('ParcelService [DCS-02-CN-003] Quản lý vòng đời thửa đất: T
       expect(parentInDb).toBeDefined();
       expect(parentInDb.legalStatus).toBe(ParcelLegalStatus.HISTORICAL);
       expect(parentInDb.isHistorical).toBe(true);
+    });
+  });
+});
+
+
+describe('ParcelService [DCS-02-CN-004] Quản lý nguồn gốc sử dụng đất theo Luật Đất đai 2024', () => {
+  let service: ParcelService;
+
+  beforeEach(() => {
+    service = new ParcelService();
+  });
+
+  describe('DCS-02-CN-004-TC-01: Luồng thành công - Phân loại nguồn gốc đất và xác định quyền năng', () => {
+    it('phải cập nhật nguồn gốc Nhà nước giao đất có thu tiền sử dụng đất và kích hoạt đầy đủ quyền chuyển nhượng/thế chấp', async () => {
+      const res = await service.updateLandOrigin({
+        parcelId: 'PARCEL-HN-001',
+        originType: LandOriginType.ALLOCATED_WITH_FEE,
+        decisionNumber: 'QĐ-GIAO-2026/088/UBND-HN',
+        decisionDate: '2026-05-15',
+        grantingAuthority: 'UBND Thành phố Hà Nội',
+        financialStatus: 'PAID',
+        officerId: 'CB-HN-001',
+        officerCommuneCode: '01001',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.originType).toBe(LandOriginType.ALLOCATED_WITH_FEE);
+      expect(res.originName).toBe('Nhà nước giao đất có thu tiền sử dụng đất');
+      expect(res.legalRights.canTransfer).toBe(true);
+      expect(res.legalRights.canMortgage).toBe(true);
+      expect(res.parcel.originType).toBe(LandOriginType.ALLOCATED_WITH_FEE);
+      expect(res.auditHash).toHaveLength(64);
+    });
+
+    it('phải giới hạn quyền chuyển nhượng quyền sử dụng đất khi thuê đất trả tiền hàng năm (LEASED_ANNUAL)', async () => {
+      const res = await service.updateLandOrigin({
+        parcelId: 'PARCEL-HCM-001',
+        originType: LandOriginType.LEASED_ANNUAL,
+        decisionNumber: 'QĐ-THUÊ-2026/012/UBND-HCM',
+        decisionDate: '2026-06-20',
+        grantingAuthority: 'UBND Thành phố Hồ Chí Minh',
+        financialStatus: 'ANNUAL_PAYMENT',
+        officerId: 'ADMIN',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.legalRights.canTransfer).toBe(false);
+      expect(res.legalRights.canMortgage).toBe(false);
+      expect(res.legalRights.description.toLowerCase()).toContain('không được chuyển nhượng quyền sử dụng đất');
+    });
+
+    it('phải thẩm định hợp lệ khi tách thửa đất nông nghiệp đạt hạn mức canh tác tối thiểu (>= 500m2)', async () => {
+      // Khai báo một thửa đất nông nghiệp LUC diện tích 1500m2
+      const agriParcel = await service.declareNewParcel({
+        communeCode: '01001',
+        provinceCode: 'TINH_HN',
+        sheetNumber: 50,
+        parcelNumber: 888,
+        area: 1500.0,
+        purposeCode: LandPurposeCode.LUC,
+        address: 'Khu đồng Bãi Cát, Xã Điện Biên',
+        verticesVN2000: [{ x: 2325000, y: 589000 }, { x: 2325050, y: 589050 }, { x: 2325000, y: 589050 }],
+        surveyDocumentNumber: 'HS-LUC-2026',
+        officerId: 'CB-HN-001',
+        officerCommuneCode: '01001',
+      });
+
+      const res = await service.validateAgriculturalSubdivision({
+        parcelId: agriParcel.parcel.id,
+        newParcelsArea: [700.0, 800.0],
+        minCultivationArea: 500.0,
+      });
+
+      expect(res.isEligible).toBe(true);
+      expect(res.ineligibleAreas).toHaveLength(0);
+      expect(res.message).toContain('đủ điều kiện');
+    });
+  });
+
+  describe('DCS-02-CN-004-TC-02: Dữ liệu không hợp lệ & Validation', () => {
+    it('phải từ chối thẩm định đất nông nghiệp trên thửa đất phi nông nghiệp (ODT)', async () => {
+      await expect(
+        service.validateAgriculturalSubdivision({
+          parcelId: 'PARCEL-HN-001', // Thửa đất ODT
+          newParcelsArea: [60.0, 65.8],
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('phải ném NotFoundException khi cập nhật nguồn gốc thửa đất không tồn tại', async () => {
+      await expect(
+        service.updateLandOrigin({
+          parcelId: 'PARCEL-NOT-FOUND',
+          originType: LandOriginType.TRANSFERRED,
+          decisionNumber: 'QĐ-01',
+          decisionDate: '2026-01-01',
+          grantingAuthority: 'UBND',
+          officerId: 'ADMIN',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('DCS-02-CN-004-TC-03: Ràng buộc nghiệp vụ (QTD-26, QTD-16, Lock)', () => {
+    it('phải từ chối tách thửa đất nông nghiệp dưới hạn mức canh tác tối thiểu (QTD-26)', async () => {
+      const agriParcel = await service.declareNewParcel({
+        communeCode: '01001',
+        provinceCode: 'TINH_HN',
+        sheetNumber: 55,
+        parcelNumber: 777,
+        area: 900.0,
+        purposeCode: LandPurposeCode.CLN,
+        address: 'Vườn cây lâu năm Xã Điện Biên',
+        verticesVN2000: [{ x: 2325000, y: 589000 }, { x: 2325030, y: 589030 }, { x: 2325000, y: 589030 }],
+        surveyDocumentNumber: 'HS-CLN-2026',
+        officerId: 'CB-HN-001',
+        officerCommuneCode: '01001',
+      });
+
+      const res = await service.validateAgriculturalSubdivision({
+        parcelId: agriParcel.parcel.id,
+        newParcelsArea: [450.0, 450.0], // Cả hai thửa đều < 500m2
+        minCultivationArea: 500.0,
+      });
+
+      expect(res.isEligible).toBe(false);
+      expect(res.ineligibleAreas).toContain(450.0);
+      expect(res.errorReason).toContain('QTD-26');
+    });
+
+    it('phải chặn cán bộ ngoài địa bàn quản lý cập nhật nguồn gốc sử dụng đất (QTD-16)', async () => {
+      await expect(
+        service.updateLandOrigin({
+          parcelId: 'PARCEL-HN-001', // Thuộc xã 01001
+          originType: LandOriginType.ALLOCATED_WITH_FEE,
+          decisionNumber: 'QĐ-01',
+          decisionDate: '2026-01-01',
+          grantingAuthority: 'UBND',
+          officerId: 'CB-HCM-001',
+          officerCommuneCode: '79001', // Cán bộ thuộc xã 79001
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('phải chặn cập nhật nguồn gốc trên thửa đất đang bị khóa hoặc tranh chấp', async () => {
+      // PARCEL-HN-002 đang LOCKED
+      await expect(
+        service.updateLandOrigin({
+          parcelId: 'PARCEL-HN-002',
+          originType: LandOriginType.ALLOCATED_WITH_FEE,
+          decisionNumber: 'QĐ-01',
+          decisionDate: '2026-01-01',
+          grantingAuthority: 'UBND',
+          officerId: 'ADMIN',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('DCS-02-CN-004-TC-04: Kiểm toán & Toàn vẹn', () => {
+    it('phải gắn mã băm SHA-256 bất biến khi cập nhật nguồn gốc đất', async () => {
+      const res = await service.updateLandOrigin({
+        parcelId: 'PARCEL-HN-001',
+        originType: LandOriginType.RECOGNIZED_WITH_FEE,
+        decisionNumber: 'QĐ-CN-2026/099/UBND',
+        decisionDate: '2026-07-01',
+        grantingAuthority: 'UBND Quận Ba Đình',
+        officerId: 'ADMIN',
+      });
+
+      expect(res.auditHash).toBeDefined();
+      expect(res.auditHash).toHaveLength(64);
+      expect(res.parcel.originDecisionNumber).toBe('QĐ-CN-2026/099/UBND');
     });
   });
 });
