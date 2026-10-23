@@ -2017,3 +2017,127 @@ sequenceDiagram
     "auditHash": "8ba804f6964adad9b6657e75745934283abb4ff0fac2fc00737b017e1fb2cde2"
   }
   ```
+
+
+---
+
+## 22. Nhóm API Đồng Bộ Thời Gian Thực Với CSDL Đất Đai Quốc Gia [DCS-02-CN-007]
+
+### 22.1. [DCS-02-CN-007] Lấy số liệu thống kê tình trạng đồng bộ thời gian thực CSDL Quốc gia
+- **Method**: `GET`
+- **Path**: `/api/v1/national-sync/stats`
+- **Yêu cầu quyền (RBAC)**: `ADMIN`, `INSPECTOR`, `LAND_REGISTRAR`
+- **Response `200 OK`**:
+  ```json
+  {
+    "totalEvents": 5,
+    "syncedCount": 3,
+    "pendingCount": 1,
+    "failedCount": 1,
+    "conflictCount": 0,
+    "syncedRate": 60.0,
+    "averageLatencyMs": 78,
+    "lastSyncedAt": "2026-10-22T09:30:00.000Z",
+    "ndxpGatewayStatus": "ONLINE"
+  }
+  ```
+
+### 22.2. [DCS-02-CN-007] Tra cứu danh sách sự kiện đồng bộ với CSDL Đất đai Quốc gia
+- **Method**: `GET`
+- **Path**: `/api/v1/national-sync/events`
+- **Query Params**:
+  - `status` (string, tùy chọn: `SYNCED` | `PENDING` | `FAILED` | `CONFLICT`)
+  - `eventType` (string, tùy chọn)
+  - `parcelNationalCode` (string, tùy chọn)
+  - `limit` (number, tùy chọn, mặc định: 50)
+- **Response `200 OK`**:
+  ```json
+  {
+    "total": 5,
+    "items": [
+      {
+        "id": "SYNC-EVT-2026-0005",
+        "eventType": "TRANSACTION_LOCKED",
+        "parcelId": "PARCEL-HN-002",
+        "parcelNationalCode": "01001-0012-0046",
+        "ndxpTransactionId": "NDXP-TX-2026-00816",
+        "status": "FAILED",
+        "retryCount": 2,
+        "syncLatencyMs": 310,
+        "checksumSha256": "9f8e7d6c5b4a3928172635445566778899aabbccddeeff001122334455667788",
+        "syncedAt": "2026-10-22T10:30:00.000Z",
+        "errorMessage": "NDXP Gateway timeout sau 300ms",
+        "payloadSummary": "Khóa phiên giao dịch công chứng 90 phút theo QTD-07"
+      }
+    ]
+  }
+  ```
+
+### 22.3. [DCS-02-CN-007] Kích hoạt đồng bộ thời gian thực thửa đất về CSDL Quốc gia qua NDXP
+- **Method**: `POST`
+- **Path**: `/api/v1/national-sync/trigger`
+- **Yêu cầu quyền (RBAC)**: `ADMIN`, `INSPECTOR`, `LAND_REGISTRAR` (QTD-01, QTD-20)
+- **Request Body**:
+  ```json
+  {
+    "parcelNationalCode": "01001-0012-0045",
+    "eventType": "PARCEL_DECLARED",
+    "officerId": "ADMIN",
+    "forceSync": false
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "event": {
+      "id": "SYNC-EVT-2026-0006",
+      "eventType": "PARCEL_DECLARED",
+      "parcelId": "PARCEL-HN-001",
+      "parcelNationalCode": "01001-0012-0045",
+      "ndxpTransactionId": "NDXP-TX-1792719880224-2741",
+      "status": "SYNCED",
+      "retryCount": 0,
+      "syncLatencyMs": 77,
+      "checksumSha256": "4621d0668e0dd204c5385cfb446ff95b7d93cc117f61e51462d4fcc6eeff5b7b",
+      "syncedAt": "2026-10-23T08:44:40.000Z"
+    },
+    "ndxpTransactionId": "NDXP-TX-1792719880224-2741",
+    "syncLatencyMs": 77,
+    "auditHash": "4621d0668e0dd204c5385cfb446ff95b7d93cc117f61e51462d4fcc6eeff5b7b",
+    "message": "Đồng bộ dữ liệu thời gian thực thửa đất '01001-0012-0045' về CSDL Đất đai Quốc gia thành công qua Trục liên thông NDXP (77 ms)."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Thiếu mã thửa đất hoặc mã cán bộ thực hiện.
+
+### 22.4. [DCS-02-CN-007] Thử lại sự kiện đồng bộ bị lỗi qua Trục liên thông NDXP
+- **Method**: `POST`
+- **Path**: `/api/v1/national-sync/retry/:eventId`
+- **Request Body**:
+  ```json
+  {
+    "officerId": "ADMIN"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "event": {
+      "id": "SYNC-EVT-2026-0005",
+      "status": "SYNCED",
+      "retryCount": 3,
+      "syncLatencyMs": 95,
+      "ndxpTransactionId": "NDXP-TX-1792719880234-RETRY",
+      "checksumSha256": "79c047ee7d4d0c78da5cd0466e31284b530655995c500b7154c42a07d83e5e59"
+    },
+    "ndxpTransactionId": "NDXP-TX-1792719880234-RETRY",
+    "syncLatencyMs": 95,
+    "auditHash": "79c047ee7d4d0c78da5cd0466e31284b530655995c500b7154c42a07d83e5e59",
+    "message": "Đã thử lại đồng bộ sự kiện 'SYNC-EVT-2026-0005' thành công về CSDL Đất đai Quốc gia (95 ms)."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Sự kiện đã ở trạng thái SYNCED, không cần thử lại.
+  - `404 Not Found`: Không tìm thấy sự kiện đồng bộ.
