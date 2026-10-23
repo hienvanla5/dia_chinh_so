@@ -10,12 +10,12 @@
 | Chỉ số | Số lượng | Tỷ lệ (%) | Ghi chú |
 |---|---|---|---|
 | **Tổng số User Stories** | **114** | **100%** | Toàn bộ 114 User Stories được số hóa tại `user_stories/` |
-| **Đã hoàn thành (Done)** | **19** | **16.7%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
+| **Đã hoàn thành (Done)** | **20** | **17.5%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
 | **Đang thực hiện (In Progress)** | **0** | **0.0%** | Không có Story nào đang dở dang |
-| **Chưa thực hiện (Backlog)** | **95** | **83.3%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
+| **Chưa thực hiện (Backlog)** | **94** | **82.5%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
 
-- **User Story hoàn thành gần nhất**: [`DCS-02-CN-009`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-009.md) - Hiển thị lược sử biến động thửa đất dạng cây gia phả.
-- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-02-CN-010`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-010.md) - Cập nhật biến động thông tin chủ sở hữu qua Cổng Dịch vụ công số hóa.
+- **User Story hoàn thành gần nhất**: [`DCS-02-CN-010`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-010.md) - Cập nhật biến động thông tin chủ sở hữu qua Cổng Dịch vụ công số hóa (Hoàn thành 100% Epic DCS-02).
+- **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-03-CN-001`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-03-CN-001.md) - Khóa phiên giao dịch công chứng thời gian thực 90 phút (Khởi động Epic DCS-03).
 
 ---
 
@@ -371,3 +371,13 @@ flowchart TD
   - `apps/web`: Route `/parcels` nâng cấp Modal Cây gia phả tương tác với 2 chế độ xem: Đồ thị cây phả hệ trực quan (phóng to/thu nhỏ, chọn nút xem chi tiết) và Dòng thời gian biến động tuần tự.
   - `tests`: 72 tests trong `parcel.service.spec.ts` PASS trọn vẹn 4 tiêu chí chấp nhận TC-01, TC-02, TC-03, TC-04.
 - **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#24-nhóm-api-hiển-thị-lược-sử-biến-động-thửa-đất-dạng-cây-gia-phả-pedigree-tree-lineage-dcs-02-cn-009).
+
+
+### 3.20. [DCS-02-CN-010] Cập nhật biến động thông tin chủ sở hữu qua Cổng Dịch vụ công số hóa
+- **Persona**: Chủ sử dụng đất (Người dân), Văn phòng Đăng ký Đất đai
+- **Kiến trúc triển khai**:
+  - `packages/shared`: Enum `OwnerFluctuationType` (`IDENTITY_CORRECTION`, `MARRIAGE_ADDITION`, `OWNER_TRANSFER`, `INHERITANCE`, `DONATION`), `OwnerFluctuationStatus`, Schema `SubmitOwnerFluctuationSchema` với quy tắc xác thực CCCD 12 số Đề án 06 (QTD-07) và đồng sở hữu vợ chồng (QTD-25).
+  - `apps/api`: Dịch vụ `ParcelService.submitOwnerFluctuation`, `ParcelService.getOwnerHistory` và các controller endpoints tiếp nhận hồ sơ DVC, tự động đính chính nhân thân/đổi chủ/bổ sung người phối ngẫu, kiểm tra trạng thái khóa giao dịch và gắn mã băm SHA-256 bất biến.
+  - `apps/web`: Route `/parcels` bổ sung nút hành động "Đổi chủ / DVC" và Modal tiếp nhận hồ sơ trực tuyến, hỗ trợ chọn 5 loại biến động, checkbox đồng sở hữu vợ chồng và bảng tra cứu lịch sử các lần đổi chủ.
+  - `tests`: 81 tests trong `parcel.service.spec.ts` PASS trọn vẹn 4 tiêu chí chấp nhận TC-01, TC-02, TC-03, TC-04.
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#25-nhóm-api-cập-nhật-biến-động-thông-tin-chủ-sở-hữu-qua-cổng-dịch-vụ-công-owner-fluctuation-dcs-02-cn-010).
