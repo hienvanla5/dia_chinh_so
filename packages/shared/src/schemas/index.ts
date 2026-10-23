@@ -2,7 +2,10 @@ import { LandOriginType,
   PropertyOnLandType,
   ConstructionGrade,
   NationalSyncStatus,
-  NationalSyncEventType, LandUseTermType, ExpiryWarningStatus } from '../types';
+  NationalSyncEventType,
+  ReconciliationAnomalyType,
+  ReconciliationSeverity,
+  AnomalyResolutionStatus, LandUseTermType, ExpiryWarningStatus } from '../types';
 import { z } from 'zod';
 import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction, DigitalSignatureProvider, SignatureStandard, OcspCertificateStatus, SessionStatus, SensitiveOperationType, OfficerAccountStatus, DeactivationReasonType, DelegationScope, DelegationStatus, EnterpriseStaffPermission } from '../types';
 
@@ -565,3 +568,28 @@ export const QueryNationalSyncEventsSchema = z.object({
 
 export type TriggerNationalSyncInput = z.infer<typeof TriggerNationalSyncSchema>;
 export type QueryNationalSyncEventsInput = z.infer<typeof QueryNationalSyncEventsSchema>;
+
+
+// ==========================================
+// Schemas Tự động đối soát và phát hiện trùng lặp mã thửa (DCS-02-CN-008)
+// ==========================================
+
+export const TriggerReconciliationScanSchema = z.object({
+  communeCode: z.string().optional(),
+  anomalyTypes: z.array(z.nativeEnum(ReconciliationAnomalyType)).optional(),
+  officerId: z.string().min(1, 'Mã cán bộ thực hiện không được để trống'),
+  notes: z.string().optional(),
+});
+
+export const ResolveReconciliationAnomalySchema = z.object({
+  reportId: z.string().min(1, 'Mã báo cáo sai lệch không được để trống'),
+  newStatus: z.nativeEnum(AnomalyResolutionStatus, {
+    errorMap: () => ({ message: 'Trạng thái xử lý không hợp lệ' }),
+  }),
+  resolutionNotes: z.string().min(5, 'Ghi chú phương án xử lý tối thiểu 5 ký tự'),
+  legalDecisionNumber: z.string().optional(),
+  officerId: z.string().min(1, 'Mã cán bộ thực hiện không được để trống'),
+});
+
+export type TriggerReconciliationScanInput = z.infer<typeof TriggerReconciliationScanSchema>;
+export type ResolveReconciliationAnomalyInput = z.infer<typeof ResolveReconciliationAnomalySchema>;

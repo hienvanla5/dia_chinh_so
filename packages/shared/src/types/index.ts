@@ -1434,3 +1434,96 @@ export interface QueryNationalSyncEventsRequest {
   parcelNationalCode?: string;
   limit?: number;
 }
+
+
+// ==========================================
+// Tự động đối soát và phát hiện trùng lặp mã thửa (DCS-02-CN-008)
+// ==========================================
+
+export enum ReconciliationAnomalyType {
+  DUPLICATE_NATIONAL_CODE = 'DUPLICATE_NATIONAL_CODE',           // Trùng lặp mã định danh thửa đất quốc gia
+  DUPLICATE_SHEET_PARCEL = 'DUPLICATE_SHEET_PARCEL',             // Trùng số tờ, số thửa trong cùng xã/phường
+  SPATIAL_OVERLAP = 'SPATIAL_OVERLAP',                           // Chồng lấn ranh giới tọa độ không gian VN-2000 (QTD-06)
+  AREA_DISCREPANCY = 'AREA_DISCREPANCY',                         // Sai lệch bảo toàn diện tích giữa thửa mẹ và thửa con
+}
+
+export enum ReconciliationSeverity {
+  CRITICAL = 'CRITICAL', // Nguy cơ cấp trùng sổ đỏ / tranh chấp nghiêm trọng
+  HIGH = 'HIGH',         // Chồng lấn ranh giới > 5% diện tích
+  MEDIUM = 'MEDIUM',     // Sai lệch sai số đo đạc vi sai (< 5%)
+  LOW = 'LOW',           // Sai lệch thuộc tính mô tả
+}
+
+export enum AnomalyResolutionStatus {
+  DETECTED = 'DETECTED',     // Mới phát hiện qua công cụ đối soát
+  VERIFYING = 'VERIFYING',   // Đang chuyển Chi nhánh VPĐKĐĐ xác minh thực địa
+  RESOLVED = 'RESOLVED',     // Đã đính chính / xử lý triệt để
+  DISMISSED = 'DISMISSED',   // Bác bỏ (Hồ sơ hợp lệ theo quyết định tư pháp)
+}
+
+export interface ReconciliationReportItem {
+  id: string;
+  anomalyType: ReconciliationAnomalyType;
+  severity: AnomalySeverity;
+  communeCode: string;
+  communeName: string;
+  involvedParcelIds: string[];
+  involvedNationalCodes: string[];
+  description: string;
+  overlapArea?: number;                                          // Diện tích chồng lấn (m2)
+  detectedAt: string;
+  status: AnomalyResolutionStatus;
+  assignedBranch?: string;                                       // Chi nhánh VPĐKĐĐ thụ lý
+  resolutionNotes?: string;
+  resolvedAt?: string;
+  resolvedByOfficerId?: string;
+  auditHash: string;
+}
+
+export interface TriggerReconciliationScanRequest {
+  communeCode?: string;
+  anomalyTypes?: ReconciliationAnomalyType[];
+  officerId: string;
+  notes?: string;
+}
+
+export interface TriggerReconciliationScanResponse {
+  scanId: string;
+  scannedParcelsCount: number;
+  anomaliesFoundCount: number;
+  newReports: ReconciliationReportItem[];
+  cleanDataRate: number;                                         // Tỷ lệ dữ liệu sạch (%)
+  durationMs: number;
+  auditHash: string;
+  message: string;
+}
+
+export interface ReconciliationStatsResponse {
+  totalScannedParcels: number;
+  totalAnomalies: number;
+  criticalCount: number;
+  highCount: number;
+  mediumCount: number;
+  lowCount: number;
+  duplicateCodeCount: number;
+  spatialOverlapCount: number;
+  resolvedCount: number;
+  verifyingCount: number;
+  cleanDataRate: number;
+  lastScannedAt: string;
+}
+
+export interface ResolveReconciliationAnomalyRequest {
+  reportId: string;
+  newStatus: AnomalyResolutionStatus;
+  resolutionNotes: string;
+  legalDecisionNumber?: string;
+  officerId: string;
+}
+
+export interface ResolveReconciliationAnomalyResponse {
+  success: boolean;
+  report: ReconciliationReportItem;
+  auditHash: string;
+  message: string;
+}
