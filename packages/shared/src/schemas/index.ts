@@ -1,4 +1,4 @@
-import { LandOriginType } from '../types';
+import { LandOriginType, LandUseTermType, ExpiryWarningStatus } from '../types';
 import { z } from 'zod';
 import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction, DigitalSignatureProvider, SignatureStandard, OcspCertificateStatus, SessionStatus, SensitiveOperationType, OfficerAccountStatus, DeactivationReasonType, DelegationScope, DelegationStatus, EnterpriseStaffPermission } from '../types';
 
@@ -468,3 +468,37 @@ export const ValidateAgriculturalSubdivisionSchema = z.object({
 
 export type UpdateLandOriginInput = z.infer<typeof UpdateLandOriginSchema>;
 export type ValidateAgriculturalSubdivisionInput = z.infer<typeof ValidateAgriculturalSubdivisionSchema>;
+
+
+// ==========================================
+// Schemas Quản lý thời hạn sử dụng đất và cảnh báo sắp hết hạn (DCS-02-CN-005)
+// ==========================================
+
+export const UpdateLandTermSchema = z.object({
+  parcelId: z.string().min(1, 'ID thửa đất không được để trống'),
+  termType: z.nativeEnum(LandUseTermType, {
+    errorMap: () => ({ message: 'Loại hình thời hạn sử dụng đất không hợp lệ theo Luật Đất đai 2024' }),
+  }),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày bắt đầu phải theo định dạng YYYY-MM-DD').optional(),
+  durationYears: z.number().int().positive('Thời hạn sử dụng đất (năm) phải là số nguyên dương').optional(),
+  expiryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày hết hạn phải theo định dạng YYYY-MM-DD').optional(),
+  officerId: z.string().min(1, 'Mã cán bộ thực hiện không được để trống'),
+  officerCommuneCode: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const GetExpiringParcelsQuerySchema = z.object({
+  daysThreshold: z.coerce.number().int().positive().optional(),
+  communeCode: z.string().optional(),
+  warningStatus: z.nativeEnum(ExpiryWarningStatus).optional(),
+});
+
+export const NotifyExpirySchema = z.object({
+  parcelId: z.string().min(1, 'ID thửa đất không được để trống'),
+  channels: z.array(z.enum(['SMS', 'APP_PUSH', 'EMAIL'])).optional(),
+  officerId: z.string().optional(),
+});
+
+export type UpdateLandTermInput = z.infer<typeof UpdateLandTermSchema>;
+export type GetExpiringParcelsQueryInput = z.infer<typeof GetExpiringParcelsQuerySchema>;
+export type NotifyExpiryInput = z.infer<typeof NotifyExpirySchema>;

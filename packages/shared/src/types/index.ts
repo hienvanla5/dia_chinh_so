@@ -990,6 +990,12 @@ export interface ParcelItem {
   originDecisionNumber?: string;     // Số quyết định giao/thuê/công nhận
   originDecisionDate?: string;       // Ngày quyết định
   financialStatus?: string;          // Tình trạng nghĩa vụ tài chính
+  termType?: LandUseTermType;        // Loại hình thời hạn: Ổn định lâu dài vs Có thời hạn
+  termStartDate?: string;            // Ngày bắt đầu sử dụng
+  termDurationYears?: number;        // Thời hạn giao/thuê đất (số năm)
+  termExpiryDate?: string;           // Ngày hết hạn sử dụng đất
+  expiryWarningStatus?: ExpiryWarningStatus; // Trạng thái cảnh báo hết hạn
+  lastExpiryNotifiedAt?: string;     // Lần thông báo cảnh báo gần nhất
   createdAt: string;
   updatedAt: string;
 }
@@ -1172,5 +1178,101 @@ export interface ValidateAgriculturalSubdivisionResponse {
   minCultivationArea: number;
   ineligibleAreas: number[];
   errorReason?: string;
+  message: string;
+}
+
+
+// ==========================================
+// Quản lý thời hạn sử dụng đất và cảnh báo sắp hết hạn (DCS-02-CN-005)
+// ==========================================
+
+export enum LandUseTermType {
+  STABLE_LONG_TERM = 'STABLE_LONG_TERM', // Sử dụng ổn định lâu dài (vô thời hạn - e.g. Đất ở ODT, ONT)
+  DEFINITE = 'DEFINITE',                 // Sử dụng có thời hạn (e.g. Đất nông nghiệp 50 năm, TMD 50-70 năm)
+}
+
+export enum ExpiryWarningStatus {
+  VALID = 'VALID',                       // Còn hạn an toàn (> 180 ngày)
+  EXPIRING_SOON_6M = 'EXPIRING_SOON_6M', // Sắp hết hạn trước 6 tháng (<= 180 ngày)
+  CRITICAL_3M = 'CRITICAL_3M',           // Cảnh báo khẩn cấp trước 3 tháng (<= 90 ngày)
+  EXPIRED = 'EXPIRED',                   // Đã hết hạn (<= 0 ngày)
+}
+
+export interface UpdateLandTermRequest {
+  parcelId: string;
+  termType: LandUseTermType;
+  startDate?: string;                    // Ngày bắt đầu giao/thuê (YYYY-MM-DD)
+  durationYears?: number;                // Thời hạn giao đất (năm, ví dụ 50)
+  expiryDate?: string;                   // Ngày hết hạn tính toán hoặc chỉ định (YYYY-MM-DD)
+  officerId: string;
+  officerCommuneCode?: string;
+  notes?: string;
+}
+
+export interface UpdateLandTermResponse {
+  success: boolean;
+  parcel: ParcelItem;
+  termType: LandUseTermType;
+  expiryDate?: string;
+  daysRemaining?: number;
+  warningStatus: ExpiryWarningStatus;
+  auditHash: string;
+  message: string;
+}
+
+export interface ExpiringParcelItem {
+  parcelId: string;
+  nationalCode: string;
+  sheetNumber: number;
+  parcelNumber: number;
+  communeCode: string;
+  communeName: string;
+  purposeCode: LandPurposeCode;
+  purposeName: string;
+  area: number;
+  ownerName: string;
+  ownerCitizenId: string;
+  ownerPhone?: string;
+  termStartDate?: string;
+  termExpiryDate: string;
+  daysRemaining: number;
+  warningStatus: ExpiryWarningStatus;
+  legalExtensionGuidance: string;        // Hướng dẫn thủ tục theo Điều 172 Luật Đất đai 2024
+  lastNotifiedAt?: string;
+}
+
+export interface GetExpiringParcelsQuery {
+  daysThreshold?: number;                // Ngưỡng số ngày cảnh báo (mặc định 180 ngày = 6 tháng)
+  communeCode?: string;
+  warningStatus?: ExpiryWarningStatus;
+}
+
+export interface GetExpiringParcelsResponse {
+  total: number;
+  daysThreshold: number;
+  items: ExpiringParcelItem[];
+  summary: {
+    criticalCount: number;               // Sắp hết hạn < 90 ngày
+    warningCount: number;                // Sắp hết hạn < 180 ngày
+    expiredCount: number;                // Đã hết hạn
+  };
+}
+
+export interface NotifyExpiryRequest {
+  parcelId: string;
+  channels?: ('SMS' | 'APP_PUSH' | 'EMAIL')[];
+  officerId?: string;
+}
+
+export interface NotifyExpiryResponse {
+  success: boolean;
+  parcelId: string;
+  nationalCode: string;
+  ownerName: string;
+  ownerPhone?: string;
+  sentChannels: string[];
+  notificationContent: string;
+  auditHash: string;
+  notifiedAt: string;
   message: string;
 }
