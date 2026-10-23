@@ -22,6 +22,10 @@ import {
   Network,
   ArrowDown,
   ArrowRight,
+  FileCheck,
+  Check,
+  X,
+  Sprout,
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -58,6 +62,11 @@ interface ParcelDisplay {
   mergedFromNationalCodes?: string[];
   childParcelIds?: string[];
   isHistorical?: boolean;
+  originType?: string;
+  originName?: string;
+  originDecisionNumber?: string;
+  originDecisionDate?: string;
+  financialStatus?: string;
 }
 
 export default function ParcelsPage() {
@@ -207,6 +216,96 @@ export default function ParcelsPage() {
   const [mergeNewParcelNum, setMergeNewParcelNum] = useState('');
   const [mergeNewOwner, setMergeNewOwner] = useState('');
   const [mergeError, setMergeError] = useState<string | null>(null);
+
+
+  // Modal Nguồn gốc sử dụng đất (DCS-02-CN-004)
+  const [isOriginModalOpen, setIsOriginModalOpen] = useState(false);
+  const [selectedOriginParcel, setSelectedOriginParcel] = useState<ParcelDisplay | null>(null);
+  const [formOriginType, setFormOriginType] = useState('ALLOCATED_WITH_FEE');
+  const [formOriginDecision, setFormOriginDecision] = useState('QĐ-GIAO-2026/088/UBND');
+  const [formOriginDate, setFormOriginDate] = useState('2026-05-15');
+  const [formGrantingAuthority, setFormGrantingAuthority] = useState('UBND Thành phố Hà Nội');
+  const [formFinancialStatus, setFormFinancialStatus] = useState('PAID');
+
+  // Modal Thẩm định đất nông nghiệp (QTD-26)
+  const [isAgriModalOpen, setIsAgriModalOpen] = useState(false);
+  const [agriArea1, setAgriArea1] = useState('600');
+  const [agriArea2, setAgriArea2] = useState('700');
+  const [agriCheckResult, setAgriCheckResult] = useState<{
+    isEligible: boolean;
+    message: string;
+    ineligibleAreas: number[];
+  } | null>(null);
+
+  // Mở modal nguồn gốc
+  const handleOpenOriginModal = (parcel: ParcelDisplay) => {
+    setSelectedOriginParcel(parcel);
+    setFormOriginType(parcel.originType || 'ALLOCATED_WITH_FEE');
+    setFormOriginDecision(parcel.originDecisionNumber || `QĐ-GIAO-${new Date().getFullYear()}/088/UBND`);
+    setFormOriginDate(parcel.originDecisionDate || '2026-05-15');
+    setFormGrantingAuthority(parcel.provinceName || 'UBND Thành phố Hà Nội');
+    setFormFinancialStatus(parcel.financialStatus || 'PAID');
+    setIsOriginModalOpen(true);
+  };
+
+  // Xác nhận cập nhật nguồn gốc
+  const handleConfirmOrigin = () => {
+    if (!selectedOriginParcel) return;
+
+    const originNameMap: Record<string, string> = {
+      ALLOCATED_WITH_FEE: 'Nhà nước giao đất có thu tiền',
+      ALLOCATED_WITHOUT_FEE: 'Nhà nước giao đất không thu tiền',
+      LEASED_LUMP_SUM: 'Nhà nước cho thuê đất thu tiền một lần',
+      LEASED_ANNUAL: 'Nhà nước cho thuê đất thu tiền hàng năm',
+      RECOGNIZED_WITH_FEE: 'Công nhận QSDĐ có thu tiền',
+      RECOGNIZED_WITHOUT_FEE: 'Công nhận QSDĐ không thu tiền',
+      TRANSFERRED: 'Nhận chuyển nhượng quyền sử dụng đất',
+      INHERITED_OR_DONATED: 'Nhận thừa kế / tặng cho quyền sử dụng đất',
+    };
+
+    setParcels(prev =>
+      prev.map(item =>
+        item.id === selectedOriginParcel.id
+          ? {
+              ...item,
+              originType: formOriginType,
+              originName: originNameMap[formOriginType] || 'Nhà nước giao đất có thu tiền',
+              originDecisionNumber: formOriginDecision,
+              originDecisionDate: formOriginDate,
+              financialStatus: formFinancialStatus,
+            }
+          : item
+      )
+    );
+
+    setIsOriginModalOpen(false);
+  };
+
+  // Thẩm định đất nông nghiệp chống manh mún (QTD-26)
+  const handleCheckAgriSubdivision = () => {
+    const a1 = parseFloat(agriArea1);
+    const a2 = parseFloat(agriArea2);
+    if (isNaN(a1) || isNaN(a2) || a1 <= 0 || a2 <= 0) {
+      alert('Diện tích các thửa con phải là số dương');
+      return;
+    }
+    const minCultivationArea = 500;
+    const areas = [a1, a2];
+    const ineligible = areas.filter(a => a < minCultivationArea);
+    if (ineligible.length > 0) {
+      setAgriCheckResult({
+        isEligible: false,
+        ineligibleAreas: ineligible,
+        message: `Từ chối tách thửa đất nông nghiệp: Thửa có diện tích ${ineligible.join(', ')} m² nhỏ hơn hạn mức canh tác tối thiểu ${minCultivationArea} m² nhằm chống manh mún đất đai theo Luật Đất đai 2024.`,
+      });
+    } else {
+      setAgriCheckResult({
+        isEligible: true,
+        ineligibleAreas: [],
+        message: 'Hồ sơ tách thửa đất nông nghiệp đủ điều kiện hạn mức canh tác tối thiểu theo quy định của Luật Đất đai 2024.',
+      });
+    }
+  };
 
   // Modal Cây gia phả (DCS-02-CN-003)
   const [isLineageModalOpen, setIsLineageModalOpen] = useState(false);
@@ -712,6 +811,10 @@ export default function ParcelsPage() {
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
+          <Button variant="outline" onClick={() => setIsAgriModalOpen(true)}>
+            <Sprout className="w-4 h-4 mr-1.5" />
+            Đất nông nghiệp
+          </Button>
           <Button variant="outline" onClick={handleOpenMerge}>
             <Merge className="w-4 h-4 mr-1.5" />
             Hợp thửa đất
@@ -1626,6 +1729,241 @@ export default function ParcelsPage() {
           )}
         </Modal>
       )}
+
+      {/* Modal Cập nhật Nguồn gốc sử dụng đất (DCS-02-CN-004) */}
+      {isOriginModalOpen && selectedOriginParcel && (
+        <Modal
+          isOpen={isOriginModalOpen}
+          onClose={() => setIsOriginModalOpen(false)}
+          title="Quản lý Nguồn gốc sử dụng đất theo Luật Đất đai 2024"
+        >
+          <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Mã định danh thửa đất:</span>
+                <span className="font-mono font-bold text-primary-950">{selectedOriginParcel.nationalCode}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Diện tích & Mục đích:</span>
+                <span className="font-semibold text-slate-900">{selectedOriginParcel.area} m² ({selectedOriginParcel.purposeName})</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Địa chỉ thửa đất:</span>
+                <span className="text-slate-700 truncate max-w-xs">{selectedOriginParcel.address}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Phân loại Nguồn gốc sử dụng đất (Luật Đất đai 2024):
+              </label>
+              <Select
+                value={formOriginType}
+                onChange={e => setFormOriginType(e.target.value)}
+                options={[
+                  { value: 'ALLOCATED_WITH_FEE', label: 'Nhà nước giao đất có thu tiền sử dụng đất' },
+                  { value: 'ALLOCATED_WITHOUT_FEE', label: 'Nhà nước giao đất không thu tiền sử dụng đất' },
+                  { value: 'LEASED_LUMP_SUM', label: 'Nhà nước cho thuê đất thu tiền một lần cho cả thời gian thuê' },
+                  { value: 'LEASED_ANNUAL', label: 'Nhà nước cho thuê đất thu tiền thuê đất hàng năm' },
+                  { value: 'RECOGNIZED_WITH_FEE', label: 'Công nhận QSDĐ như giao đất có thu tiền sử dụng đất' },
+                  { value: 'RECOGNIZED_WITHOUT_FEE', label: 'Công nhận QSDĐ như giao đất không thu tiền sử dụng đất' },
+                  { value: 'TRANSFERRED', label: 'Nhận chuyển nhượng quyền sử dụng đất hợp pháp' },
+                  { value: 'INHERITED_OR_DONATED', label: 'Nhận thừa kế, tặng cho quyền sử dụng đất' },
+                ]}
+              />
+            </div>
+
+            {/* Thẻ Quyền năng pháp lý tương ứng */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg space-y-2 text-xs">
+              <span className="font-bold text-slate-800 block">Quyền và nghĩa vụ pháp lý tương ứng:</span>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-1.5">
+                  {formOriginType === 'LEASED_ANNUAL' || formOriginType === 'ALLOCATED_WITHOUT_FEE' ? (
+                    <X className="w-4 h-4 text-rose-600 shrink-0" />
+                  ) : (
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                  )}
+                  <span className={formOriginType === 'LEASED_ANNUAL' || formOriginType === 'ALLOCATED_WITHOUT_FEE' ? 'text-rose-700 font-semibold' : 'text-slate-800'}>
+                    Chuyển nhượng QSDĐ
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {formOriginType === 'LEASED_ANNUAL' || formOriginType === 'ALLOCATED_WITHOUT_FEE' ? (
+                    <X className="w-4 h-4 text-rose-600 shrink-0" />
+                  ) : (
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                  )}
+                  <span className={formOriginType === 'LEASED_ANNUAL' || formOriginType === 'ALLOCATED_WITHOUT_FEE' ? 'text-rose-700 font-semibold' : 'text-slate-800'}>
+                    Thế chấp tại Ngân hàng
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {formOriginType === 'LEASED_LUMP_SUM' || formOriginType === 'ALLOCATED_WITH_FEE' || formOriginType === 'TRANSFERRED' ? (
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <X className="w-4 h-4 text-slate-400 shrink-0" />
+                  )}
+                  <span className="text-slate-800">Cho thuê lại QSDĐ</span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {formOriginType === 'ALLOCATED_WITHOUT_FEE' || formOriginType === 'LEASED_ANNUAL' ? (
+                    <X className="w-4 h-4 text-rose-600 shrink-0" />
+                  ) : (
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                  )}
+                  <span className="text-slate-800">Tặng cho QSDĐ</span>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-slate-600 pt-1 leading-relaxed border-t border-slate-200 mt-2">
+                {formOriginType === 'LEASED_ANNUAL' && 'Theo Luật Đất đai 2024: Thuê đất trả tiền hàng năm chỉ được bán, thế chấp tài sản gắn liền và quyền thuê trong hợp đồng, không được chuyển nhượng quyền sử dụng đất trần.'}
+                {formOriginType === 'ALLOCATED_WITHOUT_FEE' && 'Theo Luật Đất đai 2024: Đất được Nhà nước giao không thu tiền không được phép chuyển nhượng, thế chấp hoặc góp vốn bằng quyền sử dụng đất.'}
+                {formOriginType === 'ALLOCATED_WITH_FEE' && 'Theo Luật Đất đai 2024: Người sử dụng đất có đầy đủ quyền chuyển nhượng, thế chấp, tặng cho, cho thuê lại sau khi hoàn thành nghĩa vụ tài chính.'}
+                {formOriginType === 'LEASED_LUMP_SUM' && 'Theo Luật Đất đai 2024: Thuê đất trả tiền một lần có quyền chuyển nhượng, thế chấp, cho thuê lại trong thời hạn thuê.'}
+                {(formOriginType === 'TRANSFERRED' || formOriginType === 'INHERITED_OR_DONATED' || formOriginType === 'RECOGNIZED_WITH_FEE' || formOriginType === 'RECOGNIZED_WITHOUT_FEE') && 'Theo Luật Đất đai 2024: Người sử dụng đất được bảo hộ đầy đủ các quyền theo Giấy chứng nhận quyền sử dụng đất đã cấp.'}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Số quyết định giao/thuê đất:
+                </label>
+                <Input
+                  value={formOriginDecision}
+                  onChange={e => setFormOriginDecision(e.target.value)}
+                  placeholder="Ví dụ: QĐ-GIAO-2026/088/UBND"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Ngày quyết định (YYYY-MM-DD):
+                </label>
+                <Input
+                  value={formOriginDate}
+                  onChange={e => setFormOriginDate(e.target.value)}
+                  placeholder="2026-05-15"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Cơ quan ban hành quyết định:
+                </label>
+                <Input
+                  value={formGrantingAuthority}
+                  onChange={e => setFormGrantingAuthority(e.target.value)}
+                  placeholder="UBND Thành phố Hà Nội"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Nghĩa vụ tài chính:
+                </label>
+                <Select
+                  value={formFinancialStatus}
+                  onChange={e => setFormFinancialStatus(e.target.value)}
+                  options={[
+                    { value: 'PAID', label: 'Đã hoàn thành nghĩa vụ tài chính' },
+                    { value: 'EXEMPTED', label: 'Được miễn nộp tiền sử dụng đất' },
+                    { value: 'ANNUAL_PAYMENT', label: 'Nộp tiền thuê đất hàng năm' },
+                    { value: 'DEFERRED', label: 'Được ghi nợ nghĩa vụ tài chính' },
+                  ]}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <Button variant="outline" size="sm" onClick={() => setIsOriginModalOpen(false)}>
+                Hủy bỏ
+              </Button>
+              <Button variant="primary" size="sm" onClick={handleConfirmOrigin}>
+                <FileCheck className="w-4 h-4 mr-1.5" />
+                Lưu nguồn gốc đất
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Thẩm định đất nông nghiệp chống manh mún (DCS-02-CN-004, QTD-26) */}
+      {isAgriModalOpen && (
+        <Modal
+          isOpen={isAgriModalOpen}
+          onClose={() => setIsAgriModalOpen(false)}
+          title="Thẩm định Điều kiện Tách thửa Đất Nông nghiệp"
+        >
+          <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Theo Luật Đất đai 2024, không cho phép tách thửa đối với đất nông nghiệp (đất trồng lúa, cây lâu năm, hàng năm) dưới hạn mức canh tác tối thiểu (500 m²) nhằm chống manh mún tư liệu sản xuất.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Diện tích thửa con 1 (m²):
+                </label>
+                <Input
+                  type="number"
+                  value={agriArea1}
+                  onChange={e => setAgriArea1(e.target.value)}
+                  placeholder="Ví dụ: 600"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Diện tích thửa con 2 (m²):
+                </label>
+                <Input
+                  type="number"
+                  value={agriArea2}
+                  onChange={e => setAgriArea2(e.target.value)}
+                  placeholder="Ví dụ: 700"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <Button variant="primary" size="sm" onClick={handleCheckAgriSubdivision}>
+                <Sprout className="w-4 h-4 mr-1.5" />
+                Kiểm tra hạn mức canh tác
+              </Button>
+            </div>
+
+            {agriCheckResult && (
+              <div className={`p-3.5 rounded-lg border text-xs space-y-1.5 ${
+                agriCheckResult.isEligible
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                  : 'bg-rose-50 border-rose-200 text-rose-950'
+              }`}>
+                <div className="flex items-center gap-2 font-bold">
+                  {agriCheckResult.isEligible ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-rose-600" />
+                  )}
+                  <span>{agriCheckResult.isEligible ? 'Đủ điều kiện tách thửa đất nông nghiệp' : 'Không đủ điều kiện tách thửa'}</span>
+                </div>
+                <p className="leading-relaxed">{agriCheckResult.message}</p>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-3 border-t border-slate-200">
+              <Button variant="outline" size="sm" onClick={() => setIsAgriModalOpen(false)}>
+                Đóng
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
     </div>
   );
 }
