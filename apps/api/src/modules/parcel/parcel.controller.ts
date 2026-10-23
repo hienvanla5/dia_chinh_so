@@ -149,6 +149,18 @@ export class ParcelController {
     return this.parcelService.getParcelLineage(id);
   }
 
+
+  @Get(':id/pedigree-tree')
+  @ApiOperation({ summary: 'Hiển thị đồ thị cây gia phả biến động thửa đất chi tiết qua các thời kỳ (DCS-02-CN-009, QTD-02)' })
+  @ApiResponse({ status: 200, description: 'Cấu trúc đồ thị cây gia phả và dòng thời gian biến động' })
+  async getPedigreeTree(
+    @Param('id') id: string,
+    @Query('maxDepth') maxDepth?: number,
+    @Query('includeTimeline') includeTimeline?: boolean,
+  ) {
+    return this.parcelService.getPedigreeTree(id, maxDepth !== undefined ? Number(maxDepth) : undefined, includeTimeline !== undefined ? String(includeTimeline) === 'true' : undefined);
+  }
+
   @Put(':id/origin')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cập nhật nguồn gốc sử dụng đất theo Luật Đất đai 2024 (DCS-02-CN-004)' })

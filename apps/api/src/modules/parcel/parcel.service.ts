@@ -49,6 +49,11 @@ import {
   MergeParcelsResponse,
   ParcelLineageResponse,
   ParcelLineageNode,
+  PedigreeTreeNode,
+  PedigreeTreeEdge,
+  PedigreeTimelineEvent,
+  PedigreeTreeResponse,
+  PedigreeNodeRole,
   FluctuationType,
 } from '@diachinhso/shared';
 
@@ -111,7 +116,7 @@ export class ParcelService {
           ],
         },
         declaredByOfficerId: 'CB-HN-001',
-        auditHash: 'a710296e8c4b92f7d1a5e30894b1592c68f1234567890abcdef1234567890abc1',
+        auditHash: 'a710296e8c4b92f7d1a5e30894b1592c68f1234567890abcdef1234567890abc',
         createdAt: '2026-10-15T08:00:00.000Z',
         updatedAt: '2026-10-15T08:00:00.000Z',
       },
@@ -1034,6 +1039,197 @@ export class ParcelService {
   /**
    * Cập nhật nguồn gốc sử dụng đất theo Luật Đất đai 2024 (DCS-02-CN-004)
    */
+  /**
+   * Hiển thị lược sử biến động thửa đất dạng cây gia phả chi tiết (DCS-02-CN-009, QTD-02)
+   */
+  async getPedigreeTree(
+    idOrCode: string,
+    maxDepth: number = 5,
+    includeTimeline: boolean = true,
+  ): Promise<PedigreeTreeResponse> {
+    const target = this.parcelsStore.find(
+      (p) => p.id === idOrCode || p.nationalCode === idOrCode,
+    );
+    if (!target) {
+      throw new NotFoundException(`Không tìm thấy thửa đất có ID hoặc Mã định danh: ${idOrCode}`);
+    }
+
+    // 1. Tìm ngược về nút gốc (Root Ancestor - F0)
+    let root = target;
+    const visitedUp = new Set<string>();
+    while (root.parentParcelId && !visitedUp.has(root.parentParcelId)) {
+      visitedUp.add(root.id);
+      const parent = this.parcelsStore.find((p) => p.id === root.parentParcelId);
+      if (parent) {
+        root = parent;
+      } else {
+        break;
+      }
+    }
+
+    const nodesMap = new Map<string, PedigreeTreeNode>();
+    const edges: PedigreeTreeEdge[] = [];
+    const timeline: PedigreeTimelineEvent[] = [];
+
+    // Helper BFS duyệt toàn bộ cây từ root
+    const queue: { parcel: ParcelItem; gen: number; role: PedigreeNodeRole }[] = [
+      {
+        parcel: root,
+        gen: 0,
+        role: root.id === target.id ? (root.childParcelIds?.length ? 'ROOT' : 'CURRENT') : 'ROOT',
+      },
+    ];
+
+    const visitedDown = new Set<string>();
+
+    while (queue.length > 0) {
+      const { parcel, gen, role } = queue.shift()!;
+      if (visitedDown.has(parcel.id) || gen > maxDepth) continue;
+      visitedDown.add(parcel.id);
+
+      let assignedRole: PedigreeNodeRole = role;
+      if (parcel.id === target.id) {
+        assignedRole = 'CURRENT';
+      } else if (gen === 0) {
+        assignedRole = 'ROOT';
+      } else if (parcel.parentParcelId === target.id || (target.childParcelIds && target.childParcelIds.includes(parcel.id))) {
+        assignedRole = 'CHILD';
+      } else if (target.parentParcelId === parcel.id) {
+        assignedRole = 'PARENT';
+      } else if (gen > 1) {
+        assignedRole = 'DESCENDANT';
+      }
+
+      const nodeAuditHash = createHash('sha256')
+        .update(`PEDIGREE_NODE:${parcel.id}:${parcel.nationalCode}:${parcel.area}:${gen}`)
+        .digest('hex');
+
+      nodesMap.set(parcel.id, {
+        id: parcel.id,
+        nationalCode: parcel.nationalCode,
+        sheetNumber: parcel.sheetNumber,
+        parcelNumber: parcel.parcelNumber,
+        area: parcel.area,
+        purposeCode: parcel.purposeCode,
+        ownerName: parcel.ownerName,
+        ownerCitizenId: parcel.ownerCitizenId,
+        legalStatus: parcel.legalStatus,
+        generation: gen,
+        role: assignedRole,
+        fluctuationType: parcel.parentParcelId ? 'Tách thửa đất' : parcel.mergedFromParcelIds ? 'Hợp thửa đất' : 'Đăng ký ban đầu',
+        decisionNumber: parcel.surveyDocumentNumber,
+        decisionDate: parcel.createdAt.slice(0, 10),
+        auditHash: nodeAuditHash,
+      });
+
+      // Tìm các thửa con sinh ra từ thửa này
+      const childParcels = this.parcelsStore.filter(
+        (p) =>
+          p.parentParcelId === parcel.id ||
+          (p.mergedFromParcelIds && p.mergedFromParcelIds.includes(parcel.id)),
+      );
+
+      for (const child of childParcels) {
+        const isMerge = child.mergedFromParcelIds && child.mergedFromParcelIds.includes(parcel.id);
+        edges.push({
+          source: parcel.id,
+          target: child.id,
+          relationship: isMerge ? 'MERGED_INTO' : 'SUBDIVIDED_TO',
+          decisionNumber: child.surveyDocumentNumber,
+          transferredArea: child.area,
+        });
+
+        queue.push({
+          parcel: child,
+          gen: gen + 1,
+          role: child.id === target.id ? 'CURRENT' : 'CHILD',
+        });
+      }
+    }
+
+    if (!nodesMap.has(target.id)) {
+      const nodeAuditHash = createHash('sha256')
+        .update(`PEDIGREE_NODE:${target.id}:${target.nationalCode}:${target.area}:0`)
+        .digest('hex');
+
+      nodesMap.set(target.id, {
+        id: target.id,
+        nationalCode: target.nationalCode,
+        sheetNumber: target.sheetNumber,
+        parcelNumber: target.parcelNumber,
+        area: target.area,
+        purposeCode: target.purposeCode,
+        ownerName: target.ownerName,
+        ownerCitizenId: target.ownerCitizenId,
+        legalStatus: target.legalStatus,
+        generation: 0,
+        role: 'CURRENT',
+        decisionNumber: target.surveyDocumentNumber,
+        decisionDate: target.createdAt.slice(0, 10),
+        auditHash: nodeAuditHash,
+      });
+    }
+
+    if (includeTimeline) {
+      timeline.push({
+        eventId: `EVT-REG-${root.id}`,
+        timestamp: root.createdAt,
+        eventType: 'INITIAL_REGISTRATION',
+        eventTitle: `Đăng ký xác lập thửa đất ban đầu [${root.nationalCode}]`,
+        description: `Thửa đất ${root.nationalCode} diện tích ${root.area} m² được cấp GCN lần đầu. Chủ sử dụng: ${root.ownerName || 'Chưa định danh'}.`,
+        decisionNumber: root.surveyDocumentNumber,
+        involvedParcelCodes: [root.nationalCode],
+        officerName: 'Cán bộ thụ lý ban đầu',
+        auditHash: root.auditHash,
+      });
+
+      for (const edge of edges) {
+        const sourceNode = nodesMap.get(edge.source);
+        const targetNode = nodesMap.get(edge.target);
+        if (sourceNode && targetNode) {
+          const isMerge = edge.relationship === 'MERGED_INTO';
+          const eventId = `EVT-FLUC-${edge.source}-${edge.target}`;
+          const hash = createHash('sha256').update(`${eventId}:${edge.decisionNumber}`).digest('hex');
+          timeline.push({
+            eventId,
+            timestamp: targetNode.decisionDate || new Date().toISOString(),
+            eventType: isMerge ? 'MERGE' : 'SUBDIVISION',
+            eventTitle: isMerge
+              ? `Hợp thửa đất: ${sourceNode.nationalCode} hợp vào ${targetNode.nationalCode}`
+              : `Tách thửa đất: ${sourceNode.nationalCode} tách thành ${targetNode.nationalCode}`,
+            description: isMerge
+              ? `Hợp nhất diện tích ${sourceNode.area} m² vào thửa mới ${targetNode.nationalCode} theo quyết định ${edge.decisionNumber || 'UBND'}.`
+              : `Tách thửa diện tích ${targetNode.area} m² thành lập thửa mới ${targetNode.nationalCode} theo quyết định ${edge.decisionNumber || 'UBND'}. Thửa cha chuyển sang trạng thái lịch sử (QTD-02).`,
+            decisionNumber: edge.decisionNumber,
+            involvedParcelCodes: [sourceNode.nationalCode, targetNode.nationalCode],
+            officerName: 'Chuyên viên thẩm định VPĐKĐĐ',
+            auditHash: hash,
+          });
+        }
+      }
+    }
+
+    const nodesList = Array.from(nodesMap.values()).sort((a, b) => a.generation - b.generation);
+    const maxGen = Math.max(...nodesList.map((n) => n.generation), 0);
+    const totalGenerations = maxGen + 1;
+
+    const treeAuditPayload = `PEDIGREE_TREE:${target.id}:${root.id}:${nodesList.length}:${edges.length}:${Date.now()}`;
+    const auditHash = createHash('sha256').update(treeAuditPayload).digest('hex');
+
+    return {
+      parcelId: target.id,
+      nationalCode: target.nationalCode,
+      rootNodeId: root.id,
+      totalGenerations,
+      totalNodes: nodesList.length,
+      nodes: nodesList,
+      edges,
+      timeline,
+      auditHash,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
   async updateLandOrigin(input: UpdateLandOriginInput): Promise<UpdateLandOriginResponse> {
     const parcel = this.parcelsStore.find((p) => p.id === input.parcelId);
     if (!parcel) {
