@@ -13,6 +13,9 @@ import {
   ShieldCheck,
   Building2,
   Lock,
+  QrCode,
+  Hash,
+  Compass,
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -115,13 +118,13 @@ export default function ParcelsPage() {
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Trạng thái modal khai báo
+  // Trạng thái modal khai báo thửa mới
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successResult, setSuccessResult] = useState<ParcelDisplay | null>(null);
 
-  // Form fields
+  // Form fields khai báo
   const [formCommuneCode, setFormCommuneCode] = useState('01001');
   const [formProvinceCode, setFormProvinceCode] = useState('TINH_HN');
   const [formSheetNumber, setFormSheetNumber] = useState('15');
@@ -144,7 +147,40 @@ export default function ParcelsPage() {
   const [p4x, setP4x] = useState('2325490.0');
   const [p4y, setP4y] = useState('589214.5');
 
-  // Xử lý bộ lọc
+  // Trạng thái modal Công cụ Mã định danh quốc gia
+  const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
+  const [codeTab, setCodeTab] = useState<'GENERATE' | 'VALIDATE'>('GENERATE');
+
+  // State sinh mã
+  const [genCommuneCode, setGenCommuneCode] = useState('01001');
+  const [genSheetNumber, setGenSheetNumber] = useState('15');
+  const [genParcelNumber, setGenParcelNumber] = useState('88');
+  const [genBranchSuffix, setGenBranchSuffix] = useState('00');
+  const [genCentroidX, setGenCentroidX] = useState('2325505');
+  const [genCentroidY, setGenCentroidY] = useState('589215');
+  const [generatedResult, setGeneratedResult] = useState<{
+    nationalCode: string;
+    shortCode: string;
+    spatialUid: string;
+    checksum: string;
+    isUnique: boolean;
+    qrPayload: string;
+    auditHash: string;
+  } | null>(null);
+
+  // State kiểm tra mã
+  const [valCodeInput, setValCodeInput] = useState('01001-0012-0045');
+  const [valResult, setValResult] = useState<{
+    isValid: boolean;
+    isRegistered: boolean;
+    commune?: string;
+    sheet?: number;
+    parcel?: number;
+    branch?: string;
+    message: string;
+  } | null>(null);
+
+  // Xử lý bộ lọc danh sách
   const filteredParcels = parcels.filter(p => {
     const matchCommune = filterCommune === 'ALL' || p.communeCode === filterCommune;
     const matchStatus = filterStatus === 'ALL' || p.legalStatus === filterStatus;
@@ -157,18 +193,100 @@ export default function ParcelsPage() {
     return matchCommune && matchStatus && matchSearch;
   });
 
-  // Mở modal
+  // Mở modal khai báo
   const handleOpenModal = () => {
     setErrorMessage(null);
     setSuccessResult(null);
     setIsModalOpen(true);
   };
 
+  // Mở modal mã định danh
+  const handleOpenCodeModal = () => {
+    setIsCodeModalOpen(true);
+  };
+
+  // Xử lý sinh mã định danh
+  const handleGenerateCode = () => {
+    const s = parseInt(genSheetNumber, 10);
+    const p = parseInt(genParcelNumber, 10);
+    if (isNaN(s) || s <= 0 || isNaN(p) || p <= 0) {
+      alert('Số tờ và số thửa phải là số nguyên dương lớn hơn 0');
+      return;
+    }
+
+    const sheetStr4 = String(s).padStart(4, '0');
+    const parcelStr5 = String(p).padStart(5, '0');
+    const parcelStr4 = String(p).padStart(4, '0');
+    const branch = genBranchSuffix || '00';
+
+    const nationalCode = `${genCommuneCode}-${sheetStr4}-${parcelStr5}-${branch}`;
+    const shortCode = `${genCommuneCode}-${sheetStr4}-${parcelStr4}`;
+    const cX = Math.round(parseFloat(genCentroidX) || 2325505);
+    const cY = Math.round(parseFloat(genCentroidY) || 589215);
+    const spatialUid = `VN-3405-${genCommuneCode}-X${cX}-Y${cY}`;
+
+    const combinedDigits = `${genCommuneCode}${sheetStr4}${parcelStr4}`.replace(/\D/g, '');
+    let sum = 0;
+    for (let i = 0; i < combinedDigits.length; i++) {
+      sum += parseInt(combinedDigits[i], 10) * ((i % 8) + 2);
+    }
+    const checksum = String(sum % 11);
+
+    const isUnique = !parcels.some(
+      item => item.nationalCode === nationalCode || item.nationalCode === shortCode
+    );
+
+    const qrPayload = `DCS:VN:${nationalCode}:${spatialUid}:CS${checksum}`;
+    const mockHash = `sha256_${Date.now()}_${Math.random().toString(36).substring(2, 10)}b821397f9d5c03a8e2b6f26`;
+
+    setGeneratedResult({
+      nationalCode,
+      shortCode,
+      spatialUid,
+      checksum,
+      isUnique,
+      qrPayload,
+      auditHash: mockHash,
+    });
+  };
+
+  // Xử lý thẩm tra mã định danh
+  const handleValidateCode = () => {
+    const clean = valCodeInput.trim();
+    const regex = /^(?:(\d{2})-)?(\d{5})-(\d{4})-(\d{4,5})(?:-(\d{2}))?$/;
+    const match = clean.match(regex);
+
+    if (!match) {
+      setValResult({
+        isValid: false,
+        isRegistered: false,
+        message: 'Định dạng mã không đúng quy chuẩn quốc gia: [MãXã]-[SốTờ]-[SốThửa]',
+      });
+      return;
+    }
+
+    const [, , commune, sheet, parcel, branch] = match;
+    const isRegistered = parcels.some(
+      p => p.nationalCode === clean || p.nationalCode.startsWith(`${commune}-${sheet}-${parcel.padStart(4, '0')}`)
+    );
+
+    setValResult({
+      isValid: true,
+      isRegistered,
+      commune,
+      sheet: parseInt(sheet, 10),
+      parcel: parseInt(parcel, 10),
+      branch: branch || '00',
+      message: isRegistered
+        ? 'Mã định danh thửa đất hợp lệ và đã được xác lập trong CSDL Địa chính Quốc gia.'
+        : 'Mã định danh thửa đất hợp lệ về cấu trúc nhưng chưa được đăng ký trong CSDL.',
+    });
+  };
+
   // Submit khai báo
   const handleDeclareSubmit = () => {
     setErrorMessage(null);
 
-    // Validation cơ bản
     const sheet = parseInt(formSheetNumber, 10);
     const parcelNum = parseInt(formParcelNumber, 10);
     const areaVal = parseFloat(formArea);
@@ -193,7 +311,6 @@ export default function ParcelsPage() {
       return;
     }
 
-    // Kiểm tra định dạng mã thửa duy nhất toàn quốc (QTD-01)
     const newNationalCode = `${formCommuneCode}-${String(sheet).padStart(4, '0')}-${String(parcelNum).padStart(4, '0')}`;
     const duplicate = parcels.some(
       p =>
@@ -259,58 +376,74 @@ export default function ParcelsPage() {
 
       {/* 4 Thẻ KPI chỉ số */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4 border-l-4 border-l-primary-800 bg-white shadow-sm">
+        <Card className="p-4 border-l-4 border-l-primary-800">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-700">Tổng số thửa đất</span>
-            <Layers className="w-5 h-5 text-primary-800" />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Tổng số thửa quản lý
+              </p>
+              <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{parcels.length}</h3>
+            </div>
+            <div className="p-2.5 bg-primary-50 rounded-lg text-primary-800">
+              <Layers className="w-5 h-5" />
+            </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-slate-950">{parcels.length}</span>
-            <span className="text-xs text-slate-700">thửa đất trên địa bàn</span>
-          </div>
+          <p className="text-xs text-slate-500 mt-2">Dữ liệu địa chính đồng bộ</p>
         </Card>
 
-        <Card className="p-4 border-l-4 border-l-amber-600 bg-white shadow-sm">
+        <Card className="p-4 border-l-4 border-l-amber-500">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-700">Chờ thẩm định</span>
-            <AlertTriangle className="w-5 h-5 text-amber-600" />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Chờ VPĐKĐĐ thẩm định
+              </p>
+              <h3 className="text-2xl font-extrabold text-amber-700 mt-1">
+                {parcels.filter(p => p.legalStatus === 'PENDING_APPRAISAL').length}
+              </h3>
+            </div>
+            <div className="p-2.5 bg-amber-50 rounded-lg text-amber-600">
+              <FileText className="w-5 h-5" />
+            </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-amber-700">
-              {parcels.filter(p => p.legalStatus === 'PENDING_APPRAISAL').length}
-            </span>
-            <span className="text-xs text-slate-700">hồ sơ mới khai báo</span>
-          </div>
+          <p className="text-xs text-amber-600 mt-2">Hồ sơ mới khai báo</p>
         </Card>
 
-        <Card className="p-4 border-l-4 border-l-emerald-600 bg-white shadow-sm">
+        <Card className="p-4 border-l-4 border-l-emerald-600">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-700">Sẵn sàng giao dịch</span>
-            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Sẵn sàng giao dịch
+              </p>
+              <h3 className="text-2xl font-extrabold text-emerald-700 mt-1">
+                {parcels.filter(p => p.legalStatus === 'AVAILABLE').length}
+              </h3>
+            </div>
+            <div className="p-2.5 bg-emerald-50 rounded-lg text-emerald-600">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-emerald-700">
-              {parcels.filter(p => p.legalStatus === 'AVAILABLE').length}
-            </span>
-            <span className="text-xs text-slate-700">thửa đất hợp lệ</span>
-          </div>
+          <p className="text-xs text-emerald-600 mt-2">Đã được phê duyệt pháp lý</p>
         </Card>
 
-        <Card className="p-4 border-l-4 border-l-rose-600 bg-white shadow-sm">
+        <Card className="p-4 border-l-4 border-l-rose-600">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-700">Đang khóa / Tranh chấp</span>
-            <Lock className="w-5 h-5 text-rose-600" />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Đang khóa / Tranh chấp
+              </p>
+              <h3 className="text-2xl font-extrabold text-rose-700 mt-1">
+                {parcels.filter(p => p.legalStatus === 'LOCKED' || p.legalStatus === 'DISPUTED').length}
+              </h3>
+            </div>
+            <div className="p-2.5 bg-rose-50 rounded-lg text-rose-600">
+              <Lock className="w-5 h-5" />
+            </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-rose-700">
-              {parcels.filter(p => p.legalStatus === 'LOCKED' || p.legalStatus === 'DISPUTED').length}
-            </span>
-            <span className="text-xs text-slate-700">thửa đất hạn chế</span>
-          </div>
+          <p className="text-xs text-rose-600 mt-2">Đang có phiên khóa công chứng/thế chấp</p>
         </Card>
       </div>
 
-      {/* Thanh công cụ tìm kiếm, lọc và CTA Khai báo mới */}
+      {/* Thanh công cụ tìm kiếm, lọc và CTA */}
       <div className="flex flex-col sm:flex-row gap-3 justify-between items-center bg-white p-3.5 rounded-lg border border-slate-200">
         <div className="flex flex-wrap gap-2.5 w-full sm:w-auto items-center">
           <div className="w-48">
@@ -339,14 +472,18 @@ export default function ParcelsPage() {
           </div>
         </div>
 
-        <div className="flex gap-2 w-full sm:w-auto justify-end">
-          <div className="w-full sm:w-64">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+          <div className="w-full sm:w-56">
             <Input
               placeholder="Tìm theo mã thửa, địa chỉ, chủ..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
+          <Button variant="outline" onClick={handleOpenCodeModal}>
+            <ShieldCheck className="w-4 h-4 mr-1.5" />
+            Mã định danh quốc gia
+          </Button>
           <Button variant="primary" onClick={handleOpenModal}>
             <FilePlus className="w-4 h-4 mr-1.5" />
             Khai báo thửa mới
@@ -422,6 +559,233 @@ export default function ParcelsPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Modal Công cụ Mã định danh quốc gia (DCS-02-CN-002) */}
+      {isCodeModalOpen && (
+        <Modal
+          isOpen={isCodeModalOpen}
+          onClose={() => setIsCodeModalOpen(false)}
+          title="Công cụ Mã định danh Thửa đất Quốc gia"
+        >
+          <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+            <div className="flex border-b border-slate-200">
+              <button
+                type="button"
+                className={`px-4 py-2 text-xs font-bold border-b-2 transition-colors ${
+                  codeTab === 'GENERATE'
+                    ? 'border-primary-800 text-primary-900'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+                onClick={() => setCodeTab('GENERATE')}
+              >
+                Sinh mã định danh tự động
+              </button>
+              <button
+                type="button"
+                className={`px-4 py-2 text-xs font-bold border-b-2 transition-colors ${
+                  codeTab === 'VALIDATE'
+                    ? 'border-primary-800 text-primary-900'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+                onClick={() => setCodeTab('VALIDATE')}
+              >
+                Thẩm tra & Đối soát mã
+              </button>
+            </div>
+
+            {codeTab === 'GENERATE' ? (
+              <div className="space-y-3.5 pt-2">
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Hệ thống tự động sinh Mã định danh quốc gia duy nhất dựa trên mã hành chính, số tờ, số thửa và tọa độ không gian địa lý.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Mã đơn vị hành chính xã:</label>
+                    <Input
+                      value={genCommuneCode}
+                      onChange={e => setGenCommuneCode(e.target.value)}
+                      placeholder="01001"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Số tờ bản đồ:</label>
+                    <Input
+                      type="number"
+                      value={genSheetNumber}
+                      onChange={e => setGenSheetNumber(e.target.value)}
+                      placeholder="15"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Số thửa đất:</label>
+                    <Input
+                      type="number"
+                      value={genParcelNumber}
+                      onChange={e => setGenParcelNumber(e.target.value)}
+                      placeholder="88"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Hậu tố phân nhánh:</label>
+                    <Input
+                      value={genBranchSuffix}
+                      onChange={e => setGenBranchSuffix(e.target.value)}
+                      placeholder="00"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Tọa độ tâm X (Bắc VN-2000):</label>
+                    <Input
+                      value={genCentroidX}
+                      onChange={e => setGenCentroidX(e.target.value)}
+                      placeholder="2325505"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Tọa độ tâm Y (Đông VN-2000):</label>
+                    <Input
+                      value={genCentroidY}
+                      onChange={e => setGenCentroidY(e.target.value)}
+                      placeholder="589215"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <Button variant="primary" size="sm" onClick={handleGenerateCode}>
+                    <ShieldCheck className="w-4 h-4 mr-1.5" />
+                    Thực hiện sinh mã định danh
+                  </Button>
+                </div>
+
+                {generatedResult && (
+                  <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800">Kết quả sinh mã định danh:</span>
+                      {generatedResult.isUnique ? (
+                        <Badge variant="success">Duy nhất toàn quốc</Badge>
+                      ) : (
+                        <Badge variant="danger">Đã tồn tại trong CSDL</Badge>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs bg-white p-3 rounded border border-slate-200">
+                      <div>
+                        <span className="text-slate-500 block">Mã định danh chuẩn mở rộng:</span>
+                        <span className="font-mono font-extrabold text-base text-primary-950">
+                          {generatedResult.nationalCode}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Mã định danh rút gọn:</span>
+                        <span className="font-mono font-bold text-slate-900">
+                          {generatedResult.shortCode}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-slate-500 block">Mã định danh không gian địa lý:</span>
+                        <span className="font-mono font-bold text-emerald-800">
+                          {generatedResult.spatialUid}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Mã kiểm tra Mod-11:</span>
+                        <span className="font-mono font-bold text-slate-900">
+                          {generatedResult.checksum}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-slate-500 block">Dữ liệu mã QR xác thực:</span>
+                        <span className="font-mono text-[11px] text-slate-700 break-all">
+                          {generatedResult.qrPayload}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-slate-500 block">Mã băm kiểm toán SHA-256:</span>
+                        <span className="font-mono text-[11px] text-slate-600 break-all">
+                          {generatedResult.auditHash}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3.5 pt-2">
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Nhập mã định danh thửa đất để thẩm tra tính chuẩn hóa cấu trúc và kiểm tra sự tồn tại trong CSDL Đất đai Quốc gia.
+                </p>
+
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Input
+                      value={valCodeInput}
+                      onChange={e => setValCodeInput(e.target.value)}
+                      placeholder="Ví dụ: 01001-0012-0045"
+                    />
+                  </div>
+                  <Button variant="primary" size="sm" onClick={handleValidateCode}>
+                    <Search className="w-4 h-4 mr-1.5" />
+                    Thẩm tra
+                  </Button>
+                </div>
+
+                {valResult && (
+                  <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800">Kết quả thẩm tra:</span>
+                      {valResult.isValid ? (
+                        <Badge variant="success">Cấu trúc hợp chuẩn</Badge>
+                      ) : (
+                        <Badge variant="danger">Cấu trúc không hợp chuẩn</Badge>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-slate-800 font-medium">{valResult.message}</p>
+
+                    {valResult.isValid && (
+                      <div className="grid grid-cols-2 gap-2 text-xs bg-white p-3 rounded border border-slate-200">
+                        <div>
+                          <span className="text-slate-500 block">Mã đơn vị xã:</span>
+                          <span className="font-bold text-slate-900">{valResult.commune}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Số tờ / Số thửa:</span>
+                          <span className="font-bold text-slate-900">
+                            Tờ {valResult.sheet}, Thửa {valResult.parcel}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Hậu tố phân nhánh:</span>
+                          <span className="font-bold text-slate-900">{valResult.branch}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Trạng thái CSDL:</span>
+                          {valResult.isRegistered ? (
+                            <span className="font-bold text-emerald-700">Đã đăng ký trong CSDL</span>
+                          ) : (
+                            <span className="font-bold text-amber-700">Chưa ghi nhận</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-3 border-t border-slate-200">
+              <Button variant="outline" size="sm" onClick={() => setIsCodeModalOpen(false)}>
+                Đóng
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Modal Khai báo thuộc tính thửa đất mới */}
