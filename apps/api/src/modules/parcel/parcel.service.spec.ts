@@ -14,6 +14,8 @@ import {
   PropertyOnLandType,
   ConstructionGrade,
   ExpiryWarningStatus,
+  OwnerFluctuationType,
+  OwnerFluctuationStatus,
 } from '@diachinhso/shared';
 
 describe('ParcelService [DCS-02-CN-001] Khai báo thông tin thuộc tính thửa đất mới', () => {
@@ -1349,6 +1351,166 @@ describe('ParcelService [DCS-02-CN-009] Hiển thị lược sử biến động
       for (const evt of tree.timeline) {
         expect(evt.auditHash).toMatch(/^[a-f0-9]{64}$/);
       }
+    });
+  });
+});
+
+
+describe('ParcelService [DCS-02-CN-010] Cập nhật biến động thông tin chủ sở hữu qua Cổng Dịch vụ công số hóa', () => {
+  let service: ParcelService;
+
+  beforeEach(() => {
+    service = new ParcelService();
+  });
+
+  describe('DCS-02-CN-010-TC-01: Luồng thành công - Chỉnh lý thông tin nhân thân & Chuyển quyền', () => {
+    it('phải tiếp nhận hồ sơ đính chính thông tin CCCD và địa chỉ thường trú thành công', async () => {
+      const res = await service.submitOwnerFluctuation({
+        parcelId: 'PARCEL-HN-001',
+        fluctuationType: OwnerFluctuationType.IDENTITY_CORRECTION,
+        applicantCitizenId: '001090123456',
+        newOwnerName: 'Trần Văn Hoàng (Đã chuẩn hóa)',
+        newCitizenId: '001090123456',
+        newAddress: 'Số 12A Phố Hoàng Hoa Thám, Phường Điện Biên',
+        newPhone: '0912345678',
+        notes: 'Đính chính theo thẻ CCCD gắn chip mới',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.dossier.dossierCode).toMatch(/^DVC-BD-2026-/);
+      expect(res.dossier.status).toBe(OwnerFluctuationStatus.APPROVED);
+      expect(res.updatedParcel.ownerName).toBe('Trần Văn Hoàng (Đã chuẩn hóa)');
+      expect(res.updatedParcel.ownerCitizenId).toBe('001090123456');
+      expect(res.auditHash).toHaveLength(64);
+
+      // Tra cứu lại lịch sử chủ sở hữu
+      const history = await service.getOwnerHistory('PARCEL-HN-001');
+      expect(history.totalRecords).toBeGreaterThanOrEqual(1);
+      expect(history.history[0].newOwnerName).toBe('Trần Văn Hoàng (Đã chuẩn hóa)');
+    });
+
+    it('phải ghi nhận đồng sở hữu vợ chồng đứng tên cả hai theo quy định QTD-25', async () => {
+      const res = await service.submitOwnerFluctuation({
+        parcelId: 'PARCEL-HN-001',
+        fluctuationType: OwnerFluctuationType.MARRIAGE_ADDITION,
+        applicantCitizenId: '001090123456',
+        newOwnerName: 'Trần Văn Hoàng',
+        newCitizenId: '001090123456',
+        isJointSpouse: true,
+        spouseName: 'Nguyễn Thị Hồng',
+        spouseCitizenId: '001095678901',
+        documentNumber: 'GĐKKH-2026/088/UBND',
+        notes: 'Bổ sung tên vợ theo giấy chứng nhận kết hôn',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.dossier.isJointSpouse).toBe(true);
+      expect(res.updatedParcel.ownerName).toBe('Trần Văn Hoàng và Nguyễn Thị Hồng');
+      expect(res.dossier.spouseName).toBe('Nguyễn Thị Hồng');
+    });
+
+    it('phải tiếp nhận hồ sơ nhận chuyển nhượng quyền sử dụng đất sang chủ mới', async () => {
+      const res = await service.submitOwnerFluctuation({
+        parcelId: 'PARCEL-HN-001',
+        fluctuationType: OwnerFluctuationType.OWNER_TRANSFER,
+        applicantCitizenId: '001088999888',
+        newOwnerName: 'Phạm Đức Thành',
+        newCitizenId: '001088999888',
+        newPhone: '0988776655',
+        documentNumber: 'HĐ-CN-2026/123/CC',
+        notes: 'Hợp đồng chuyển nhượng công chứng số 123/CC',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.updatedParcel.ownerName).toBe('Phạm Đức Thành');
+      expect(res.updatedParcel.ownerCitizenId).toBe('001088999888');
+    });
+  });
+
+  describe('DCS-02-CN-010-TC-02: Dữ liệu không hợp lệ & Validation', () => {
+    it('phải từ chối nếu số CCCD người nộp không đúng 12 chữ số (QTD-07)', async () => {
+      await expect(
+        service.submitOwnerFluctuation({
+          parcelId: 'PARCEL-HN-001',
+          fluctuationType: OwnerFluctuationType.IDENTITY_CORRECTION,
+          applicantCitizenId: '12345',
+          newOwnerName: 'Trần Văn Hoàng',
+          newCitizenId: '001090123456',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('phải từ chối nếu khai báo đồng sở hữu vợ chồng nhưng thiếu thông tin người phối ngẫu (QTD-25)', async () => {
+      await expect(
+        service.submitOwnerFluctuation({
+          parcelId: 'PARCEL-HN-001',
+          fluctuationType: OwnerFluctuationType.MARRIAGE_ADDITION,
+          applicantCitizenId: '001090123456',
+          newOwnerName: 'Trần Văn Hoàng',
+          newCitizenId: '001090123456',
+          isJointSpouse: true,
+          spouseName: '',
+          spouseCitizenId: '001095678901',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('phải từ chối nếu số CCCD của vợ/chồng trùng với số CCCD của chủ sở hữu', async () => {
+      await expect(
+        service.submitOwnerFluctuation({
+          parcelId: 'PARCEL-HN-001',
+          fluctuationType: OwnerFluctuationType.MARRIAGE_ADDITION,
+          applicantCitizenId: '001090123456',
+          newOwnerName: 'Trần Văn Hoàng',
+          newCitizenId: '001090123456',
+          isJointSpouse: true,
+          spouseName: 'Trần Thị Vợ',
+          spouseCitizenId: '001090123456', // Trùng CCCD
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('phải báo lỗi không tìm thấy khi ID thửa đất không tồn tại', async () => {
+      await expect(
+        service.submitOwnerFluctuation({
+          parcelId: 'PARCEL-UNKNOWN-999',
+          fluctuationType: OwnerFluctuationType.IDENTITY_CORRECTION,
+          applicantCitizenId: '001090123456',
+          newOwnerName: 'Trần Văn Hoàng',
+          newCitizenId: '001090123456',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('DCS-02-CN-010-TC-03: Ràng buộc nghiệp vụ (QTD-07, Thửa đất bị khóa)', () => {
+    it('phải từ chối biến động chủ sở hữu khi thửa đất đang bị khóa giao dịch (LOCKED)', async () => {
+      await expect(
+        service.submitOwnerFluctuation({
+          parcelId: 'PARCEL-HN-002', // Trạng thái LOCKED
+          fluctuationType: OwnerFluctuationType.OWNER_TRANSFER,
+          applicantCitizenId: '001090123456',
+          newOwnerName: 'Người mua mới',
+          newCitizenId: '001099888777',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('DCS-02-CN-010-TC-04: Toàn vẹn & Mã băm kiểm toán SHA-256', () => {
+    it('phải gắn mã băm SHA-256 bất biến khi tiếp nhận hồ sơ biến động', async () => {
+      const res = await service.submitOwnerFluctuation({
+        parcelId: 'PARCEL-HN-001',
+        fluctuationType: OwnerFluctuationType.DONATION,
+        applicantCitizenId: '001090123456',
+        newOwnerName: 'Trần Quốc Tuấn (Con trai)',
+        newCitizenId: '001098765432',
+        notes: 'Hợp đồng tặng cho quyền sử dụng đất',
+      });
+
+      expect(res.auditHash).toMatch(/^[a-f0-9]{64}$/);
+      expect(res.dossier.auditHash).toBe(res.auditHash);
+      expect(res.updatedParcel.auditHash).toBe(res.auditHash);
     });
   });
 });
