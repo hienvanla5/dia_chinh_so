@@ -19,6 +19,7 @@ import { PasswordPolicyModule } from './modules/password-policy/password-policy.
 import { DelegationModule } from './modules/delegation/delegation.module';
 import { EnterpriseIdpModule } from './modules/enterprise-idp/enterprise-idp.module';
 import { AuthAuditModule } from './modules/auth-audit/auth-audit.module';
+import { NationalSyncModule } from './modules/national-sync/national-sync.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { AuthAuditModule } from './modules/auth-audit/auth-audit.module';
     DelegationModule,
     EnterpriseIdpModule,
     AuthAuditModule,
+    NationalSyncModule,
   ],
   controllers: [AppController],
   providers: [AppService],
