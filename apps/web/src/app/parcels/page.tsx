@@ -40,6 +40,8 @@ import {
   Zap,
   RotateCcw,
   ScanSearch,
+  UserCheck,
+  UserCog,
   CalendarRange,
   GitBranch,
   GitCommit,
@@ -791,6 +793,158 @@ export default function ParcelsPage() {
   // ==========================================
   // State Đối soát và phát hiện trùng lặp mã thửa (DCS-02-CN-008)
   // ==========================================
+  
+  // State Cập nhật biến động chủ sở hữu qua Cổng Dịch vụ công (DCS-02-CN-010)
+  const [isOwnerFluctuationModalOpen, setIsOwnerFluctuationModalOpen] = useState(false);
+  const [selectedOwnerParcel, setSelectedOwnerParcel] = useState<ParcelDisplay | null>(null);
+  const [formFluctuationType, setFormFluctuationType] = useState<string>('IDENTITY_CORRECTION');
+  const [formApplicantCitizenId, setFormApplicantCitizenId] = useState<string>('001090123456');
+  const [formNewOwnerName, setFormNewOwnerName] = useState<string>('');
+  const [formNewCitizenId, setFormNewCitizenId] = useState<string>('');
+  const [formNewAddress, setFormNewAddress] = useState<string>('');
+  const [formNewPhone, setFormNewPhone] = useState<string>('');
+  const [formIsJointSpouse, setFormIsJointSpouse] = useState<boolean>(false);
+  const [formSpouseName, setFormSpouseName] = useState<string>('');
+  const [formSpouseCitizenId, setFormSpouseCitizenId] = useState<string>('');
+  const [formDocNumber, setFormDocNumber] = useState<string>('');
+  const [formFluctuationNotes, setFormFluctuationNotes] = useState<string>('');
+  const [isSubmittingFluctuation, setIsSubmittingFluctuation] = useState<boolean>(false);
+  const [fluctuationSuccessMessage, setFluctuationSuccessMessage] = useState<string | null>(null);
+  const [fluctuationErrorMessage, setFluctuationErrorMessage] = useState<string | null>(null);
+
+  interface OwnerHistoryItem {
+    dossierCode: string;
+    fluctuationType: string;
+    oldOwner: string;
+    newOwner: string;
+    newCitizenId: string;
+    documentNumber: string;
+    date: string;
+    auditHash: string;
+  }
+
+  const [ownerHistoryList, setOwnerHistoryList] = useState<OwnerHistoryItem[]>([
+    {
+      dossierCode: 'DVC-BD-2026-1024',
+      fluctuationType: 'Cấp GCN lần đầu',
+      oldOwner: 'Chưa xác lập',
+      newOwner: 'Trần Văn Hoàng',
+      newCitizenId: '001090123456',
+      documentNumber: 'HỒ SƠ TRÍCH ĐO SỐ 12/2026/VPĐKĐĐ',
+      date: '2020-01-15',
+      auditHash: 'e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2',
+    },
+  ]);
+
+  const handleOpenOwnerFluctuation = (p: ParcelDisplay) => {
+    setSelectedOwnerParcel(p);
+    setFormFluctuationType('IDENTITY_CORRECTION');
+    setFormApplicantCitizenId(p.ownerCitizenId || '001090123456');
+    setFormNewOwnerName(p.ownerName || '');
+    setFormNewCitizenId(p.ownerCitizenId || '');
+    setFormNewAddress(p.address);
+    setFormNewPhone('0912345678');
+    setFormIsJointSpouse(false);
+    setFormSpouseName('');
+    setFormSpouseCitizenId('');
+    setFormDocNumber(`CCCD-${p.ownerCitizenId || '001090123456'}-CHIP`);
+    setFormFluctuationNotes('');
+    setFluctuationSuccessMessage(null);
+    setFluctuationErrorMessage(null);
+    setIsOwnerFluctuationModalOpen(true);
+  };
+
+  const handleSubmitOwnerFluctuation = () => {
+    if (!selectedOwnerParcel) return;
+    setFluctuationErrorMessage(null);
+    setFluctuationSuccessMessage(null);
+
+    if (selectedOwnerParcel.legalStatus === 'LOCKED' || selectedOwnerParcel.legalStatus === 'DISPUTED') {
+      setFluctuationErrorMessage('Thửa đất đang bị khóa giao dịch hoặc có tranh chấp, không thể tiếp nhận biến động chủ sở hữu.');
+      return;
+    }
+
+    if (!formApplicantCitizenId || !/^\d{12}$/.test(formApplicantCitizenId)) {
+      setFluctuationErrorMessage('Số CCCD người nộp hồ sơ phải đúng 12 chữ số theo Đề án 06.');
+      return;
+    }
+
+    if (!formNewOwnerName.trim() || formNewOwnerName.trim().length < 2) {
+      setFluctuationErrorMessage('Họ tên chủ sở hữu mới phải có tối thiểu 2 ký tự.');
+      return;
+    }
+
+    if (!formNewCitizenId || !/^\d{12}$/.test(formNewCitizenId)) {
+      setFluctuationErrorMessage('Số CCCD chủ sở hữu mới phải đúng 12 chữ số theo Đề án 06.');
+      return;
+    }
+
+    if (formIsJointSpouse) {
+      if (!formSpouseName.trim() || formSpouseName.trim().length < 2) {
+        setFluctuationErrorMessage('Theo Luật Đất đai 2024 về đồng sở hữu vợ chồng, bắt buộc nhập đầy đủ họ tên người phối ngẫu.');
+        return;
+      }
+      if (!formSpouseCitizenId || !/^\d{12}$/.test(formSpouseCitizenId)) {
+        setFluctuationErrorMessage('Số CCCD người phối ngẫu phải gồm đúng 12 chữ số theo Đề án 06.');
+        return;
+      }
+      if (formSpouseCitizenId === formNewCitizenId) {
+        setFluctuationErrorMessage('Số CCCD của vợ/chồng không được trùng với số CCCD của chủ sở hữu mới.');
+        return;
+      }
+    }
+
+    setIsSubmittingFluctuation(true);
+    setTimeout(() => {
+      const registeredName = formIsJointSpouse && formSpouseName.trim()
+        ? `${formNewOwnerName.trim()} và ${formSpouseName.trim()}`
+        : formNewOwnerName.trim();
+
+      const dossierCode = `DVC-BD-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      const mockHash = `sha256_${Date.now()}_${Math.random().toString(36).substring(2, 10)}bd010`;
+
+      // Cập nhật state thửa đất
+      setParcels(prev =>
+        prev.map(item =>
+          item.id === selectedOwnerParcel.id
+            ? {
+                ...item,
+                ownerName: registeredName,
+                ownerCitizenId: formNewCitizenId,
+                address: formNewAddress || item.address,
+              }
+            : item
+        )
+      );
+
+      // Thêm vào lịch sử biến động
+      const typeLabelMap: Record<string, string> = {
+        IDENTITY_CORRECTION: 'Đính chính thông tin CCCD / thường trú',
+        MARRIAGE_ADDITION: 'Bổ sung người phối ngẫu (Đồng sở hữu vợ chồng)',
+        OWNER_TRANSFER: 'Chuyển nhượng quyền sử dụng đất',
+        INHERITANCE: 'Thừa kế quyền sử dụng đất',
+        DONATION: 'Tặng cho quyền sử dụng đất',
+      };
+
+      const newHistoryItem: OwnerHistoryItem = {
+        dossierCode,
+        fluctuationType: typeLabelMap[formFluctuationType] || 'Biến động chủ sở hữu',
+        oldOwner: selectedOwnerParcel.ownerName || 'Chưa định danh',
+        newOwner: registeredName,
+        newCitizenId: formNewCitizenId,
+        documentNumber: formDocNumber || 'Hồ sơ DVC trực tuyến',
+        date: new Date().toISOString().slice(0, 10),
+        auditHash: mockHash,
+      };
+
+      setOwnerHistoryList(prev => [newHistoryItem, ...prev]);
+      setIsSubmittingFluctuation(false);
+      setFluctuationSuccessMessage(
+        `Hồ sơ DVC số '${dossierCode}' đã được phê duyệt và cập nhật thành công vào CSDL Địa chính số. Chủ sở hữu mới: ${registeredName}.`
+      );
+    }, 600);
+  };
+
   const [isReconciliationModalOpen, setIsReconciliationModalOpen] = useState(false);
   const [isScanningReconciliation, setIsScanningReconciliation] = useState(false);
   const [reconciliationSuccessMessage, setReconciliationSuccessMessage] = useState<string | null>(null);
@@ -1553,6 +1707,16 @@ export default function ParcelsPage() {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => handleOpenOwnerFluctuation(p)}
+                        title="Cập nhật biến động chủ sở hữu qua Cổng DVC"
+                        className="text-emerald-700 hover:bg-emerald-50 border-emerald-300"
+                      >
+                        <UserCheck className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                        Đổi chủ / DVC
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleOpenLineage(p)}
                         title="Xem cây phả hệ biến động"
                       >
@@ -1829,6 +1993,223 @@ export default function ParcelsPage() {
               <Button variant="primary" size="sm" onClick={handleConfirmMerge}>
                 <Merge className="w-4 h-4 mr-1.5" />
                 Xác nhận hợp thửa
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      
+      {/* Modal Cập nhật biến động chủ sở hữu qua Cổng DVC số hóa (DCS-02-CN-010, QTD-07, QTD-25) */}
+      {isOwnerFluctuationModalOpen && selectedOwnerParcel && (
+        <Modal
+          isOpen={isOwnerFluctuationModalOpen}
+          onClose={() => setIsOwnerFluctuationModalOpen(false)}
+          title="Cập Nhật Biến Động Chủ Sở Hữu (Cổng Dịch Vụ Công Số Hóa)"
+          size="lg"
+        >
+          <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1 text-sm text-slate-800">
+            {/* Header thông tin thửa đất */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Mã thửa quốc gia:</span>
+                <span className="font-mono font-bold text-primary-950 text-sm">{selectedOwnerParcel.nationalCode}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Chủ sở hữu hiện thời:</span>
+                <span className="font-bold text-slate-900">{selectedOwnerParcel.ownerName || 'Chưa định danh'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Số CCCD chủ hiện thời:</span>
+                <span className="font-mono text-slate-700">{selectedOwnerParcel.ownerCitizenId || 'Chưa xác lập'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Địa chỉ thửa đất:</span>
+                <span className="text-slate-700">{selectedOwnerParcel.address}</span>
+              </div>
+            </div>
+
+            {/* Thông báo lỗi & thành công */}
+            {fluctuationErrorMessage && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{fluctuationErrorMessage}</span>
+              </div>
+            )}
+
+            {fluctuationSuccessMessage && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{fluctuationSuccessMessage}</span>
+              </div>
+            )}
+
+            {/* Form khai báo DVC */}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Loại thủ tục biến động chủ sở hữu:</label>
+                <Select
+                  value={formFluctuationType}
+                  onChange={e => setFormFluctuationType(e.target.value)}
+                  options={[
+                    { value: 'IDENTITY_CORRECTION', label: 'Đính chính thông tin CCCD / Hộ khẩu thường trú' },
+                    { value: 'MARRIAGE_ADDITION', label: 'Bổ sung người phối ngẫu (Đồng sở hữu vợ chồng)' },
+                    { value: 'OWNER_TRANSFER', label: 'Chuyển nhượng quyền sử dụng đất' },
+                    { value: 'INHERITANCE', label: 'Thừa kế quyền sử dụng đất' },
+                    { value: 'DONATION', label: 'Tặng cho quyền sử dụng đất' },
+                  ]}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Số CCCD người nộp hồ sơ DVC (12 số):</label>
+                  <Input
+                    placeholder="001090123456"
+                    value={formApplicantCitizenId}
+                    onChange={e => setFormApplicantCitizenId(e.target.value)}
+                    maxLength={12}
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Số hợp đồng / Căn cứ pháp lý:</label>
+                  <Input
+                    placeholder="HĐ-CN-2026/01/CC hoặc CCCD mới"
+                    value={formDocNumber}
+                    onChange={e => setFormDocNumber(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 bg-indigo-50/50 border border-indigo-200 rounded-lg space-y-3">
+                <div className="text-xs font-bold text-indigo-950 uppercase">Thông tin chủ sở hữu mới (Chỉnh lý / Kế thừa)</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Họ và tên chủ sở hữu mới:</label>
+                    <Input
+                      placeholder="Nguyễn Văn A"
+                      value={formNewOwnerName}
+                      onChange={e => setFormNewOwnerName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Số CCCD mới (12 chữ số):</label>
+                    <Input
+                      placeholder="001090123456"
+                      value={formNewCitizenId}
+                      onChange={e => setFormNewCitizenId(e.target.value)}
+                      maxLength={12}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Nơi thường trú mới:</label>
+                    <Input
+                      placeholder="Số nhà, đường/phố, phường/xã..."
+                      value={formNewAddress}
+                      onChange={e => setFormNewAddress(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Số điện thoại liên hệ:</label>
+                    <Input
+                      placeholder="0912345678"
+                      value={formNewPhone}
+                      onChange={e => setFormNewPhone(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Checkbox đồng sở hữu vợ chồng (QTD-25) */}
+                <div className="pt-2 border-t border-indigo-200">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-indigo-900">
+                    <input
+                      type="checkbox"
+                      checked={formIsJointSpouse}
+                      onChange={e => setFormIsJointSpouse(e.target.checked)}
+                      className="w-4 h-4 text-indigo-600 rounded"
+                    />
+                    <span>Xác lập đồng sở hữu vợ chồng trong Sổ Đỏ Số theo Luật Đất đai 2024</span>
+                  </label>
+
+                  {formIsJointSpouse && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs mt-2.5 p-2.5 bg-white rounded border border-indigo-200">
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">Họ tên người phối ngẫu (Vợ/Chồng):</label>
+                        <Input
+                          placeholder="Trần Thị B"
+                          value={formSpouseName}
+                          onChange={e => setFormSpouseName(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">Số CCCD người phối ngẫu (12 số):</label>
+                        <Input
+                          placeholder="001095678901"
+                          value={formSpouseCitizenId}
+                          onChange={e => setFormSpouseCitizenId(e.target.value)}
+                          maxLength={12}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Ghi chú hồ sơ nộp trực tuyến:</label>
+                <Input
+                  placeholder="Ghi chú thêm về hồ sơ, giấy tờ đính kèm..."
+                  value={formFluctuationNotes}
+                  onChange={e => setFormFluctuationNotes(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Bảng lược sử các lần đổi chủ / đính chính trên thửa này */}
+            <div className="pt-2">
+              <div className="text-xs font-bold text-slate-800 uppercase mb-1.5 flex items-center gap-1.5">
+                <History className="w-3.5 h-3.5 text-slate-600" />
+                Lược sử các lần biến động chủ sở hữu ({ownerHistoryList.length})
+              </div>
+              <div className="border border-slate-200 rounded-lg overflow-x-auto max-h-[160px] overflow-y-auto">
+                <table className="min-w-full divide-y divide-slate-200 text-xs">
+                  <thead className="bg-slate-50 text-slate-700 font-bold sticky top-0">
+                    <tr>
+                      <th className="px-2.5 py-1.5 text-left">Mã hồ sơ</th>
+                      <th className="px-2.5 py-1.5 text-left">Loại biến động</th>
+                      <th className="px-2.5 py-1.5 text-left">Chủ sở hữu mới</th>
+                      <th className="px-2.5 py-1.5 text-left">Căn cứ pháp lý</th>
+                      <th className="px-2.5 py-1.5 text-left">Ngày chỉnh lý</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 bg-white">
+                    {ownerHistoryList.map(h => (
+                      <tr key={h.dossierCode} className="hover:bg-slate-50">
+                        <td className="px-2.5 py-1.5 font-mono font-bold text-indigo-900 whitespace-nowrap">{h.dossierCode}</td>
+                        <td className="px-2.5 py-1.5 whitespace-nowrap">{h.fluctuationType}</td>
+                        <td className="px-2.5 py-1.5 font-semibold text-slate-900">{h.newOwner}</td>
+                        <td className="px-2.5 py-1.5 text-slate-600 truncate max-w-[140px]">{h.documentNumber}</td>
+                        <td className="px-2.5 py-1.5 text-slate-500 whitespace-nowrap">{h.date}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <Button variant="outline" size="sm" onClick={() => setIsOwnerFluctuationModalOpen(false)}>
+                Đóng
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSubmitOwnerFluctuation}
+                disabled={isSubmittingFluctuation}
+                className="bg-emerald-700 hover:bg-emerald-800 text-white"
+              >
+                <Send className={`w-3.5 h-3.5 mr-1.5 ${isSubmittingFluctuation ? 'animate-spin' : ''}`} />
+                {isSubmittingFluctuation ? 'Đang gửi hồ sơ DVC...' : 'Nộp hồ sơ trực tuyến qua Cổng DVC'}
               </Button>
             </div>
           </div>
