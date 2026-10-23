@@ -1909,3 +1909,111 @@ sequenceDiagram
 - **Mã lỗi**:
   - `400 Bad Request`: Thửa đất không thuộc loại có thời hạn sử dụng xác định, hoặc đang bị khóa giao dịch.
   - `404 Not Found`: Không tìm thấy thửa đất.
+
+
+---
+
+## 21. Nhóm API Quản Lý Tài Sản Gắn Liền Với Đất Trên Thửa [DCS-02-CN-006]
+
+### 21.1. [DCS-02-CN-006] Đăng ký tài sản gắn liền với đất trên thửa
+- **Method**: `POST`
+- **Path**: `/api/v1/parcels/:id/properties`
+- **Yêu cầu quyền (RBAC)**: `LAND_REGISTRAR`, `COMMUNE_OFFICER`, `ADMIN` (QTD-16, QTD-25)
+- **Request Body**:
+  ```json
+  {
+    "assetType": "INDIVIDUAL_HOUSE",
+    "name": "Nhà ở riêng lẻ 3 tầng mái bê tông cốt thép",
+    "constructionArea": 85.0,
+    "floorArea": 255.0,
+    "structure": "Khung bê tông cốt thép, tường gạch chịu lực",
+    "grade": "GRADE_3",
+    "floorsCount": 3,
+    "completionYear": 2023,
+    "ownershipTerm": "Lâu dài",
+    "completionCertificateNumber": "GP-HC-2023/045/SXD-HN",
+    "completionCertificateDate": "2023-08-15",
+    "ownerName": "Trần Văn Hoàng",
+    "ownerCitizenId": "001090123456",
+    "isJointSpouseOwnership": true,
+    "spouseName": "Vũ Thị Mai",
+    "spouseCitizenId": "001192556677",
+    "officerId": "CB-HN-001",
+    "officerCommuneCode": "01001",
+    "notes": "Đăng ký theo hồ sơ hoàn công xây dựng hợp lệ"
+  }
+  ```
+- **Response `201 Created`**:
+  ```json
+  {
+    "success": true,
+    "property": {
+      "id": "PROP-HN-002",
+      "parcelId": "PARCEL-HN-001",
+      "parcelNationalCode": "01001-0012-0045",
+      "assetType": "INDIVIDUAL_HOUSE",
+      "name": "Nhà ở riêng lẻ 3 tầng mái bê tông cốt thép",
+      "constructionArea": 85,
+      "floorArea": 255,
+      "structure": "Khung bê tông cốt thép, tường gạch chịu lực",
+      "grade": "GRADE_3",
+      "floorsCount": 3,
+      "completionYear": 2023,
+      "ownershipTerm": "Lâu dài",
+      "completionCertificateNumber": "GP-HC-2023/045/SXD-HN",
+      "completionCertificateDate": "2023-08-15",
+      "ownerName": "Trần Văn Hoàng",
+      "ownerCitizenId": "001090123456",
+      "isJointSpouseOwnership": true,
+      "spouseName": "Vũ Thị Mai",
+      "spouseCitizenId": "001192556677",
+      "status": "ACTIVE",
+      "auditHash": "a38257b32205e3daf534291ef07466a88795469ccd55b95a204da7fb874966d2"
+    },
+    "auditHash": "a38257b32205e3daf534291ef07466a88795469ccd55b95a204da7fb874966d2",
+    "message": "Đăng ký tài sản gắn liền với đất 'Nhà ở riêng lẻ 3 tầng mái bê tông cốt thép' thành công trên thửa đất 01001-0012-0045."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Diện tích xây dựng vượt quá diện tích thửa đất; hoặc đánh dấu đồng sở hữu vợ chồng (QTD-25) nhưng thiếu thông tin người phối ngẫu; hoặc thửa đất đang bị khóa.
+  - `403 Forbidden`: Cán bộ vi phạm thẩm quyền địa giới hành chính (QTD-16).
+  - `404 Not Found`: Không tìm thấy thửa đất.
+
+### 21.2. [DCS-02-CN-006] Lấy danh sách tài sản gắn liền với đất trên thửa
+- **Method**: `GET`
+- **Path**: `/api/v1/parcels/:id/properties`
+- **Response `200 OK`**:
+  ```json
+  {
+    "total": 1,
+    "parcelId": "PARCEL-HN-001",
+    "parcelNationalCode": "01001-0012-0045",
+    "properties": [
+      {
+        "id": "PROP-HN-001",
+        "parcelId": "PARCEL-HN-001",
+        "assetType": "INDIVIDUAL_HOUSE",
+        "name": "Nhà ở riêng lẻ 3 tầng mái bê tông cốt thép",
+        "constructionArea": 85,
+        "floorArea": 255,
+        "grade": "GRADE_3",
+        "ownerName": "Trần Văn Hoàng",
+        "isJointSpouseOwnership": true,
+        "spouseName": "Vũ Thị Mai",
+        "status": "ACTIVE"
+      }
+    ]
+  }
+  ```
+
+### 21.3. [DCS-02-CN-006] Ghi nhận phá dỡ / xóa tài sản gắn liền với đất
+- **Method**: `DELETE`
+- **Path**: `/api/v1/parcels/:id/properties/:propertyId`
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "message": "Đã ghi nhận phá dỡ tài sản 'Nhà ở riêng lẻ 3 tầng mái bê tông cốt thép' thành công.",
+    "auditHash": "8ba804f6964adad9b6657e75745934283abb4ff0fac2fc00737b017e1fb2cde2"
+  }
+  ```
