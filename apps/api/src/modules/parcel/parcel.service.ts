@@ -22,6 +22,13 @@ import {
   ParcelItem,
   ParcelLegalStatus,
   LandPurposeCode,
+  SubdivideParcelInput,
+  SubdivideParcelResponse,
+  MergeParcelsInput,
+  MergeParcelsResponse,
+  ParcelLineageResponse,
+  ParcelLineageNode,
+  FluctuationType,
 } from '@diachinhso/shared';
 
 @Injectable()
@@ -538,6 +545,382 @@ export class ParcelService {
       message: isRegistered
         ? 'Mã định danh thửa đất hợp lệ và đã được xác lập trong CSDL Địa chính Quốc gia.'
         : 'Mã định danh thửa đất hợp lệ về cấu trúc nhưng chưa được đăng ký trong CSDL.',
+    };
+  }
+
+  /**
+   * Tách thửa đất và thiết lập quan hệ phả hệ cha-con (DCS-02-CN-003, QTD-02, QTD-08)
+   */
+  async subdivideParcel(input: SubdivideParcelInput): Promise<SubdivideParcelResponse> {
+    const parent = this.parcelsStore.find((p) => p.id === input.parentParcelId);
+    if (!parent) {
+      throw new NotFoundException(`Không tìm thấy thửa đất gốc có ID: ${input.parentParcelId}`);
+    }
+
+    // Kiểm tra trạng thái thửa đất: Không được tách thửa nếu đang bị khóa, thế chấp, tranh chấp, phong tỏa (AC-03)
+    if (
+      parent.legalStatus === ParcelLegalStatus.LOCKED ||
+      parent.legalStatus === ParcelLegalStatus.DISPUTED ||
+      parent.legalStatus === ParcelLegalStatus.FROZEN
+    ) {
+      throw new ForbiddenException(
+        `Thửa đất '${parent.nationalCode}' đang ở trạng thái '${parent.legalStatus}' (bị khóa hoặc tranh chấp). Không được phép thực hiện thủ tục tách thửa!`,
+      );
+    }
+
+    if (
+      parent.legalStatus === ParcelLegalStatus.HISTORICAL ||
+      parent.legalStatus === ParcelLegalStatus.REVOKED
+    ) {
+      throw new BadRequestException(
+        `Thửa đất '${parent.nationalCode}' đã chuyển vào lịch sử hoặc bị thu hồi. Không thể thực hiện tách thửa!`,
+      );
+    }
+
+    // Kiểm tra thẩm quyền địa giới (QTD-16)
+    if (
+      input.officerCommuneCode &&
+      input.officerCommuneCode !== parent.communeCode &&
+      input.officerId !== 'ADMIN'
+    ) {
+      throw new ForbiddenException(
+        `Cán bộ không có thẩm quyền trên địa bàn xã '${parent.communeCode}'. Thẩm quyền được phân công: '${input.officerCommuneCode}'.`,
+      );
+    }
+
+    if (!input.newParcels || input.newParcels.length < 2) {
+      throw new BadRequestException('Thủ tục tách thửa yêu cầu hình thành tối thiểu 2 thửa đất con mới');
+    }
+
+    // Kiểm tra diện tích tối thiểu theo quy định tỉnh (QTD-08)
+    const minArea = input.minSubdivisionArea || (parent.purposeCode === LandPurposeCode.ODT ? 30 : 50);
+    for (const child of input.newParcels) {
+      if (child.area < minArea) {
+        throw new BadRequestException(
+          `Diện tích thửa đất mới hình thành (${child.area}m²) nhỏ hơn hạn mức tối thiểu cho phép (${minArea}m²) theo quy định của UBND tỉnh (QTD-08).`,
+        );
+      }
+    }
+
+    // Kiểm tra bảo toàn tổng diện tích (cho phép dung sai 0.5%)
+    const sumChildArea = input.newParcels.reduce((acc, c) => acc + c.area, 0);
+    const areaDiff = Math.abs(sumChildArea - parent.area);
+    if (areaDiff > parent.area * 0.005 && areaDiff > 0.5) {
+      throw new BadRequestException(
+        `Tổng diện tích các thửa đất con (${sumChildArea}m²) không khớp với diện tích thửa đất gốc (${parent.area}m²) vượt quá dung sai cho phép (QTD-08).`,
+      );
+    }
+
+    // Kiểm tra trùng số thửa con
+    const parcelNumbers = input.newParcels.map((c) => c.parcelNumber);
+    const uniqueNumbers = new Set(parcelNumbers);
+    if (uniqueNumbers.size !== parcelNumbers.length) {
+      throw new BadRequestException('Các thửa đất con mới hình thành không được trùng số thứ tự thửa');
+    }
+
+    const now = new Date().toISOString();
+    const childParcels: ParcelItem[] = [];
+
+    // Tạo các thửa đất con mới
+    for (let i = 0; i < input.newParcels.length; i++) {
+      const childInput = input.newParcels[i];
+      const sheetStr = String(parent.sheetNumber).padStart(4, '0');
+      const parcelStr = String(childInput.parcelNumber).padStart(4, '0');
+      const nationalCode = `${parent.communeCode}-${sheetStr}-${parcelStr}`;
+
+      // Kiểm tra xem số thửa đã tồn tại chưa
+      const exists = this.parcelsStore.some(
+        (p) => p.nationalCode === nationalCode && p.id !== parent.id,
+      );
+      if (exists) {
+        throw new ConflictException(
+          `Mã định danh thửa đất '${nationalCode}' đã tồn tại trên địa bàn. Vui lòng chọn số thửa khác!`,
+        );
+      }
+
+      const childAuditHash = createHash('sha256')
+        .update(`${nationalCode}|SUBDIVISION|${parent.id}|${input.decisionNumber}|${now}`)
+        .digest('hex');
+
+      const childParcel: ParcelItem = {
+        id: `PARCEL-SUB-${Date.now()}-${i + 1}`,
+        nationalCode,
+        communeCode: parent.communeCode,
+        communeName: parent.communeName,
+        provinceCode: parent.provinceCode,
+        provinceName: parent.provinceName,
+        sheetNumber: parent.sheetNumber,
+        parcelNumber: childInput.parcelNumber,
+        area: childInput.area,
+        purposeCode: childInput.purposeCode || parent.purposeCode,
+        address: childInput.address || parent.address,
+        legalStatus: ParcelLegalStatus.AVAILABLE,
+        surveyDocumentNumber: input.decisionNumber,
+        ownerName: childInput.ownerName || parent.ownerName,
+        ownerCitizenId: childInput.ownerCitizenId || parent.ownerCitizenId,
+        verticesVN2000: childInput.verticesVN2000 || parent.verticesVN2000,
+        boundaryGeojson: parent.boundaryGeojson,
+        declaredByOfficerId: input.officerId,
+        parentParcelId: parent.id,
+        parentNationalCode: parent.nationalCode,
+        isHistorical: false,
+        auditHash: childAuditHash,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      childParcels.push(childParcel);
+      this.parcelsStore.unshift(childParcel);
+    }
+
+    // Đóng trạng thái lịch sử của thửa gốc (QTD-02)
+    parent.legalStatus = ParcelLegalStatus.HISTORICAL;
+    parent.isHistorical = true;
+    parent.childParcelIds = childParcels.map((c) => c.id);
+    parent.updatedAt = now;
+
+    const auditHash = createHash('sha256')
+      .update(`SUBDIVISION|${parent.id}|${childParcels.map((c) => c.id).join(',')}|${input.decisionNumber}|${now}`)
+      .digest('hex');
+
+    this.logger.log(
+      `Đã thực hiện tách thửa đất '${parent.nationalCode}' thành ${childParcels.length} thửa mới theo QĐ '${input.decisionNumber}'. Thửa gốc đã chuyển sang HISTORICAL (Audit: ${auditHash}).`,
+    );
+
+    return {
+      success: true,
+      parentParcel: parent,
+      childParcels,
+      auditHash,
+      message: `Tách thửa đất '${parent.nationalCode}' thành công thành ${childParcels.length} thửa mới. Thửa đất gốc đã được chuyển sang trạng thái lịch sử và lưu vết phả hệ.`,
+    };
+  }
+
+  /**
+   * Hợp các thửa đất liền kề thành thửa mới (DCS-02-CN-003, QTD-02, QTD-31)
+   */
+  async mergeParcels(input: MergeParcelsInput): Promise<MergeParcelsResponse> {
+    if (!input.sourceParcelIds || input.sourceParcelIds.length < 2) {
+      throw new BadRequestException('Thủ tục hợp thửa yêu cầu tối thiểu 2 thửa đất thành phần');
+    }
+
+    // Tra cứu các thửa đất nguồn
+    const sourceParcels = input.sourceParcelIds.map((id) => {
+      const p = this.parcelsStore.find((item) => item.id === id);
+      if (!p) {
+        throw new NotFoundException(`Không tìm thấy thửa đất thành phần có ID: ${id}`);
+      }
+      return p;
+    });
+
+    // Kiểm tra trạng thái: không thửa nào được đang bị khóa, tranh chấp, phong tỏa (AC-03)
+    for (const p of sourceParcels) {
+      if (
+        p.legalStatus === ParcelLegalStatus.LOCKED ||
+        p.legalStatus === ParcelLegalStatus.DISPUTED ||
+        p.legalStatus === ParcelLegalStatus.FROZEN
+      ) {
+        throw new ForbiddenException(
+          `Thửa đất '${p.nationalCode}' đang ở trạng thái '${p.legalStatus}' (bị khóa hoặc tranh chấp). Không được phép thực hiện thủ tục hợp thửa!`,
+        );
+      }
+      if (p.legalStatus === ParcelLegalStatus.HISTORICAL || p.legalStatus === ParcelLegalStatus.REVOKED) {
+        throw new BadRequestException(
+          `Thửa đất '${p.nationalCode}' đã chuyển vào lịch sử hoặc bị thu hồi. Không thể tham gia hợp thửa!`,
+        );
+      }
+    }
+
+    // Kiểm tra QTD-31: Cấm hợp thửa đất không cùng mục đích sử dụng!
+    const targetPurpose = sourceParcels[0].purposeCode;
+    const samePurpose = sourceParcels.every((p) => p.purposeCode === targetPurpose);
+    if (!samePurpose) {
+      const purposeList = sourceParcels.map((p) => `${p.nationalCode}: ${p.purposeCode}`).join(', ');
+      throw new BadRequestException(
+        `Vi phạm quy định cấm hợp thửa đất không cùng mục đích sử dụng (QTD-31): Các thửa đất có mục đích khác nhau (${purposeList}). Vui lòng làm thủ tục chuyển mục đích sử dụng đất đồng nhất trước khi hợp thửa!`,
+      );
+    }
+
+    // Kiểm tra đơn vị hành chính: phải cùng một xã/phường
+    const communeCode = sourceParcels[0].communeCode;
+    const sameCommune = sourceParcels.every((p) => p.communeCode === communeCode);
+    if (!sameCommune) {
+      throw new BadRequestException('Không được phép hợp các thửa đất nằm ở các đơn vị hành chính xã khác nhau');
+    }
+
+    // Kiểm tra thẩm quyền địa bàn của cán bộ (QTD-16)
+    if (
+      input.officerCommuneCode &&
+      input.officerCommuneCode !== communeCode &&
+      input.officerId !== 'ADMIN'
+    ) {
+      throw new ForbiddenException(
+        `Cán bộ không có thẩm quyền trên địa bàn xã '${communeCode}'. Thẩm quyền được phân công: '${input.officerCommuneCode}'.`,
+      );
+    }
+
+    // Tính tổng diện tích
+    const totalArea = sourceParcels.reduce((sum, p) => sum + p.area, 0);
+    const sheetNumber = input.sheetNumber || sourceParcels[0].sheetNumber;
+    const sheetStr = String(sheetNumber).padStart(4, '0');
+    const parcelStr = String(input.newParcelNumber).padStart(4, '0');
+    const newNationalCode = `${communeCode}-${sheetStr}-${parcelStr}`;
+
+    // Kiểm tra xem mã thửa mới có bị trùng không
+    const exists = this.parcelsStore.some((p) => p.nationalCode === newNationalCode);
+    if (exists) {
+      throw new ConflictException(
+        `Mã định danh thửa đất mới '${newNationalCode}' đã tồn tại trên địa bàn. Vui lòng chọn số thửa khác!`,
+      );
+    }
+
+    const now = new Date().toISOString();
+    const mergedAuditHash = createHash('sha256')
+      .update(`MERGE|${sourceParcels.map((p) => p.id).join(',')}|${newNationalCode}|${input.decisionNumber}|${now}`)
+      .digest('hex');
+
+    const mergedParcel: ParcelItem = {
+      id: `PARCEL-MRG-${Date.now()}`,
+      nationalCode: newNationalCode,
+      communeCode,
+      communeName: sourceParcels[0].communeName,
+      provinceCode: sourceParcels[0].provinceCode,
+      provinceName: sourceParcels[0].provinceName,
+      sheetNumber,
+      parcelNumber: input.newParcelNumber,
+      area: totalArea,
+      purposeCode: targetPurpose,
+      address: input.address || sourceParcels[0].address,
+      legalStatus: ParcelLegalStatus.AVAILABLE,
+      surveyDocumentNumber: input.decisionNumber,
+      ownerName: input.ownerName || sourceParcels[0].ownerName,
+      ownerCitizenId: input.ownerCitizenId || sourceParcels[0].ownerCitizenId,
+      verticesVN2000: input.verticesVN2000 || sourceParcels[0].verticesVN2000,
+      boundaryGeojson: sourceParcels[0].boundaryGeojson,
+      declaredByOfficerId: input.officerId,
+      mergedFromParcelIds: sourceParcels.map((p) => p.id),
+      mergedFromNationalCodes: sourceParcels.map((p) => p.nationalCode),
+      isHistorical: false,
+      auditHash: mergedAuditHash,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Đóng trạng thái lịch sử của các thửa đất cũ (QTD-02)
+    for (const p of sourceParcels) {
+      p.legalStatus = ParcelLegalStatus.HISTORICAL;
+      p.isHistorical = true;
+      p.updatedAt = now;
+    }
+
+    this.parcelsStore.unshift(mergedParcel);
+
+    this.logger.log(
+      `Đã hợp ${sourceParcels.length} thửa (${sourceParcels.map((p) => p.nationalCode).join(', ')}) thành thửa mới '${newNationalCode}' theo QĐ '${input.decisionNumber}'.`,
+    );
+
+    return {
+      success: true,
+      sourceParcels,
+      mergedParcel,
+      auditHash: mergedAuditHash,
+      message: `Hợp ${sourceParcels.length} thửa đất thành thửa mới '${newNationalCode}' thành công. Toàn bộ thửa đất tiền thân đã chuyển sang trạng thái lịch sử.`,
+    };
+  }
+
+  /**
+   * Truy xuất cây gia phả biến động của thửa đất (Lineage DAG) (DCS-02-CN-003)
+   */
+  async getParcelLineage(idOrCode: string): Promise<ParcelLineageResponse> {
+    const target = this.parcelsStore.find(
+      (p) => p.id === idOrCode || p.nationalCode === idOrCode,
+    );
+    if (!target) {
+      throw new NotFoundException(`Không tìm thấy thửa đất có ID hoặc Mã định danh: ${idOrCode}`);
+    }
+
+    // Tìm các thửa cha / thửa tiền thân
+    const parents: ParcelItem[] = [];
+    if (target.parentParcelId) {
+      const p = this.parcelsStore.find((item) => item.id === target.parentParcelId);
+      if (p) parents.push(p);
+    }
+    if (target.mergedFromParcelIds && target.mergedFromParcelIds.length > 0) {
+      for (const mId of target.mergedFromParcelIds) {
+        const mp = this.parcelsStore.find((item) => item.id === mId);
+        if (mp && !parents.some((x) => x.id === mp.id)) parents.push(mp);
+      }
+    }
+
+    // Tìm các thửa con (nếu thửa target đã bị tách hoặc gộp)
+    const children = this.parcelsStore.filter(
+      (item) =>
+        item.parentParcelId === target.id ||
+        (item.mergedFromParcelIds && item.mergedFromParcelIds.includes(target.id)),
+    );
+
+    // Xây dựng danh sách node phả hệ
+    const lineageNodes: ParcelLineageNode[] = [];
+
+    // Node thửa cha / tiền thân
+    for (const p of parents) {
+      lineageNodes.push({
+        parcelId: p.id,
+        nationalCode: p.nationalCode,
+        sheetNumber: p.sheetNumber,
+        parcelNumber: p.parcelNumber,
+        area: p.area,
+        purposeCode: p.purposeCode,
+        legalStatus: p.legalStatus,
+        isCurrent: false,
+        relationship: target.mergedFromParcelIds ? 'MERGED_SOURCE' : 'PARENT',
+        fluctuationType: target.mergedFromParcelIds ? FluctuationType.MERGE : FluctuationType.SUBDIVISION,
+        decisionNumber: target.surveyDocumentNumber,
+        timestamp: p.createdAt,
+      });
+    }
+
+    // Node thửa hiện tại
+    lineageNodes.push({
+      parcelId: target.id,
+      nationalCode: target.nationalCode,
+      sheetNumber: target.sheetNumber,
+      parcelNumber: target.parcelNumber,
+      area: target.area,
+      purposeCode: target.purposeCode,
+      legalStatus: target.legalStatus,
+      isCurrent: true,
+      relationship: 'CURRENT',
+      decisionNumber: target.surveyDocumentNumber,
+      timestamp: target.createdAt,
+    });
+
+    // Node thửa con
+    for (const c of children) {
+      lineageNodes.push({
+        parcelId: c.id,
+        nationalCode: c.nationalCode,
+        sheetNumber: c.sheetNumber,
+        parcelNumber: c.parcelNumber,
+        area: c.area,
+        purposeCode: c.purposeCode,
+        legalStatus: c.legalStatus,
+        isCurrent: false,
+        relationship: 'CHILD',
+        fluctuationType: c.mergedFromParcelIds ? FluctuationType.MERGE : FluctuationType.SUBDIVISION,
+        decisionNumber: c.surveyDocumentNumber,
+        timestamp: c.createdAt,
+      });
+    }
+
+    return {
+      parcelId: target.id,
+      nationalCode: target.nationalCode,
+      currentParcel: target,
+      parents,
+      children,
+      lineageNodes,
+      totalGenerations: (parents.length > 0 ? 1 : 0) + 1 + (children.length > 0 ? 1 : 0),
     };
   }
 }

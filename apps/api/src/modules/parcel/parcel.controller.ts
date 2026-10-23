@@ -9,6 +9,10 @@ import {
   GenerateNationalCodeSchema,
   ValidateNationalCodeInput,
   ValidateNationalCodeSchema,
+  SubdivideParcelInput,
+  SubdivideParcelSchema,
+  MergeParcelsInput,
+  MergeParcelsSchema,
   ParcelLegalStatus,
   UserRole,
 } from '@diachinhso/shared';
@@ -86,5 +90,33 @@ export class ParcelController {
   @ApiOperation({ summary: 'Cập nhật trạng thái pháp lý của thửa đất' })
   async updateStatus(@Param('id') id: string, @Body('status') status: ParcelLegalStatus) {
     return this.parcelService.updateLegalStatus(id, status);
+  }
+
+  @Post(':id/subdivide')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Tách thửa đất và thiết lập quan hệ phả hệ cha-con (DCS-02-CN-003)' })
+  @ApiResponse({ status: 200, description: 'Tách thửa thành công, thửa gốc chuyển HISTORICAL' })
+  async subdivideParcel(
+    @Param('id') id: string,
+    @Body() body: Omit<SubdivideParcelInput, 'parentParcelId'>,
+  ) {
+    const validated = SubdivideParcelSchema.parse({ ...body, parentParcelId: id });
+    return this.parcelService.subdivideParcel(validated);
+  }
+
+  @Post('merge')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Hợp các thửa đất liền kề thành thửa mới (DCS-02-CN-003)' })
+  @ApiResponse({ status: 200, description: 'Hợp thửa thành công, các thửa cũ chuyển HISTORICAL' })
+  async mergeParcels(@Body() body: MergeParcelsInput) {
+    const validated = MergeParcelsSchema.parse(body);
+    return this.parcelService.mergeParcels(validated);
+  }
+
+  @Get(':id/lineage')
+  @ApiOperation({ summary: 'Truy xuất cây gia phả biến động của thửa đất (Lineage DAG) (DCS-02-CN-003)' })
+  @ApiResponse({ status: 200, description: 'Cây phả hệ biến động thửa đất' })
+  async getLineage(@Param('id') id: string) {
+    return this.parcelService.getParcelLineage(id);
   }
 }
