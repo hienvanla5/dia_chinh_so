@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { Layers, UserCheck, Shield, Stamp, LockKeyhole, UserX, KeyRound, FileSignature, Building2, ShieldAlert } from 'lucide-react';
+import { Layers, UserCheck, Shield, Stamp, LockKeyhole, UserX, KeyRound, FileSignature, Building2, ShieldAlert, MapPin } from 'lucide-react';
 import { NavItem } from './NavItem';
 
 const mainNavigation = [
@@ -65,6 +65,12 @@ const mainNavigation = [
     label: 'Giám sát & Dị thường',
     description: 'Sổ cái kiểm toán & SOC Alert',
     icon: ShieldAlert,
+  },
+  {
+    href: '/parcels',
+    label: 'Quản lý Thửa đất',
+    description: 'Khai báo & Thuộc tính thửa',
+    icon: MapPin,
   },
 ];
 
