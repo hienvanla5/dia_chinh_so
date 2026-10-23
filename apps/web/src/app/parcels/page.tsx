@@ -26,6 +26,12 @@ import {
   Check,
   X,
   Sprout,
+  Clock,
+  Calendar,
+  Bell,
+  Phone,
+  Send,
+  AlertOctagon,
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -67,6 +73,12 @@ interface ParcelDisplay {
   originDecisionNumber?: string;
   originDecisionDate?: string;
   financialStatus?: string;
+  termType?: string;
+  termStartDate?: string;
+  termDurationYears?: number;
+  termExpiryDate?: string;
+  expiryWarningStatus?: string;
+  lastExpiryNotifiedAt?: string;
 }
 
 export default function ParcelsPage() {
@@ -90,6 +102,7 @@ export default function ParcelsPage() {
       ownerName: 'Trần Văn Hoàng',
       ownerCitizenId: '001090123456',
       auditHash: 'a710296e8c4b92f7d1a5e30894b1592c68f1234567890abcdef1234567890abc1',
+      termType: 'STABLE_LONG_TERM',
       createdAt: '2026-10-15T08:00:00.000Z',
     },
     {
@@ -110,6 +123,7 @@ export default function ParcelsPage() {
       ownerName: 'Lê Thị Thu',
       ownerCitizenId: '001092654321',
       auditHash: 'b821397f9d5c03a8e2b6f2603d9a234567890bcdef1234567890abcdef123456',
+      termType: 'STABLE_LONG_TERM',
       createdAt: '2026-10-16T09:30:00.000Z',
     },
     {
@@ -229,6 +243,28 @@ export default function ParcelsPage() {
 
   // Modal Thẩm định đất nông nghiệp (QTD-26)
   const [isAgriModalOpen, setIsAgriModalOpen] = useState(false);
+  // State Quản lý thời hạn sử dụng đất và cảnh báo sắp hết hạn (DCS-02-CN-005)
+  const [isTermModalOpen, setIsTermModalOpen] = useState(false);
+  const [selectedTermParcel, setSelectedTermParcel] = useState<ParcelDisplay | null>(null);
+  const [termType, setTermType] = useState<'STABLE_LONG_TERM' | 'DEFINITE'>('DEFINITE');
+  const [termStartDate, setTermStartDate] = useState('');
+  const [termDurationYears, setTermDurationYears] = useState('50');
+  const [termExpiryDate, setTermExpiryDate] = useState('');
+  const [termNotes, setTermNotes] = useState('');
+  const [termSaveLoading, setTermSaveLoading] = useState(false);
+  const [termSuccessMessage, setTermSuccessMessage] = useState<string | null>(null);
+
+  // State Modal Danh sách cảnh báo sắp hết hạn (DCS-02-CN-005)
+  const [isExpiringListModalOpen, setIsExpiringListModalOpen] = useState(false);
+
+  // State Modal gửi thông báo cảnh báo chủ sở hữu (DCS-02-CN-005, QTD-27)
+  const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
+  const [selectedNotifyParcel, setSelectedNotifyParcel] = useState<ParcelDisplay | null>(null);
+  const [notifySms, setNotifySms] = useState(true);
+  const [notifyAppPush, setNotifyAppPush] = useState(true);
+  const [isNotifying, setIsNotifying] = useState(false);
+  const [notifySuccessMsg, setNotifySuccessMsg] = useState<string | null>(null);
+
   const [agriArea1, setAgriArea1] = useState('600');
   const [agriArea2, setAgriArea2] = useState('700');
   const [agriCheckResult, setAgriCheckResult] = useState<{
@@ -282,6 +318,108 @@ export default function ParcelsPage() {
   };
 
   // Thẩm định đất nông nghiệp chống manh mún (QTD-26)
+  
+  // Handlers Quản lý thời hạn sử dụng đất (DCS-02-CN-005)
+  const handleOpenTermModal = (parcel: ParcelDisplay) => {
+    setSelectedTermParcel(parcel);
+    setTermType((parcel.termType as any) || 'DEFINITE');
+    setTermStartDate(parcel.termStartDate || '2020-01-01');
+    setTermDurationYears(parcel.termDurationYears ? String(parcel.termDurationYears) : '50');
+    setTermExpiryDate(parcel.termExpiryDate || '2070-01-01');
+    setTermNotes('');
+    setTermSuccessMessage(null);
+    setIsTermModalOpen(true);
+  };
+
+  const handleCalculateExpiry = () => {
+    if (termStartDate && termDurationYears) {
+      const start = new Date(termStartDate);
+      if (!isNaN(start.getTime())) {
+        const exp = new Date(start);
+        exp.setFullYear(exp.getFullYear() + parseInt(termDurationYears, 10));
+        setTermExpiryDate(exp.toISOString().split('T')[0]);
+      }
+    }
+  };
+
+  const handleSaveTerm = () => {
+    if (!selectedTermParcel) return;
+    setTermSaveLoading(true);
+
+    try {
+      let expiry = termExpiryDate;
+      let status = 'VALID';
+      if (termType === 'STABLE_LONG_TERM') {
+        expiry = '';
+        status = 'VALID';
+      } else {
+        if (!expiry && termStartDate && termDurationYears) {
+          const start = new Date(termStartDate);
+          const exp = new Date(start);
+          exp.setFullYear(exp.getFullYear() + parseInt(termDurationYears, 10));
+          expiry = exp.toISOString().split('T')[0];
+        }
+        if (expiry) {
+          const expTime = new Date(expiry).getTime();
+          const days = Math.ceil((expTime - new Date().getTime()) / (1000 * 60 * 60 * 24));
+          if (days <= 0) status = 'EXPIRED';
+          else if (days <= 90) status = 'CRITICAL_3M';
+          else if (days <= 180) status = 'EXPIRING_SOON_6M';
+          else status = 'VALID';
+        }
+      }
+
+      setParcels(prev =>
+        prev.map(p => {
+          if (p.id === selectedTermParcel.id) {
+            return {
+              ...p,
+              termType,
+              termStartDate: termType === 'DEFINITE' ? termStartDate : undefined,
+              termDurationYears: termType === 'DEFINITE' ? parseInt(termDurationYears, 10) : undefined,
+              termExpiryDate: termType === 'DEFINITE' ? expiry : undefined,
+              expiryWarningStatus: status,
+            };
+          }
+          return p;
+        })
+      );
+
+      setTermSuccessMessage(`Cập nhật thời hạn sử dụng đất thành công. Trạng thái: ${status === 'VALID' ? 'Còn hạn' : status === 'CRITICAL_3M' ? 'Khẩn cấp (< 90 ngày)' : status === 'EXPIRING_SOON_6M' ? 'Cảnh báo (< 6 tháng)' : 'Đã quá hạn'}`);
+      setTimeout(() => {
+        setIsTermModalOpen(false);
+      }, 1200);
+    } finally {
+      setTermSaveLoading(false);
+    }
+  };
+
+  const handleOpenNotifyModal = (parcel: ParcelDisplay) => {
+    setSelectedNotifyParcel(parcel);
+    setNotifySms(true);
+    setNotifyAppPush(true);
+    setNotifySuccessMsg(null);
+    setIsNotifyModalOpen(true);
+  };
+
+  const handleSendNotification = () => {
+    if (!selectedNotifyParcel) return;
+    setIsNotifying(true);
+    setTimeout(() => {
+      const now = new Date().toISOString();
+      setParcels(prev =>
+        prev.map(p => (p.id === selectedNotifyParcel.id ? { ...p, lastExpiryNotifiedAt: now } : p))
+      );
+      setNotifySuccessMsg(
+        `Đã phát thông báo cảnh báo thời hạn thành công qua ${[notifySms ? 'Tin nhắn SMS' : null, notifyAppPush ? 'Ứng dụng di động' : null].filter(Boolean).join(' & ')} tới chủ sở hữu '${selectedNotifyParcel.ownerName || 'Chủ sử dụng đất'}'`
+      );
+      setIsNotifying(false);
+      setTimeout(() => {
+        setIsNotifyModalOpen(false);
+      }, 1500);
+    }, 600);
+  };
+
   const handleCheckAgriSubdivision = () => {
     const a1 = parseFloat(agriArea1);
     const a2 = parseFloat(agriArea2);
@@ -811,6 +949,13 @@ export default function ParcelsPage() {
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
+          <Button variant="outline" onClick={() => setIsExpiringListModalOpen(true)} className="border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100">
+            <Clock className="w-4 h-4 mr-1.5 text-amber-600" />
+            Cảnh báo hết hạn (6 tháng)
+            <span className="ml-1.5 px-1.5 py-0.5 text-xs font-bold rounded-full bg-amber-600 text-white">
+              {parcels.filter(p => p.termType === 'DEFINITE' && (p.expiryWarningStatus === 'CRITICAL_3M' || p.expiryWarningStatus === 'EXPIRING_SOON_6M' || p.expiryWarningStatus === 'EXPIRED')).length}
+            </span>
+          </Button>
           <Button variant="outline" onClick={() => setIsAgriModalOpen(true)}>
             <Sprout className="w-4 h-4 mr-1.5" />
             Đất nông nghiệp
@@ -1958,6 +2103,353 @@ export default function ParcelsPage() {
             <div className="flex justify-end pt-3 border-t border-slate-200">
               <Button variant="outline" size="sm" onClick={() => setIsAgriModalOpen(false)}>
                 Đóng
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+    
+      {/* Modal Quản lý Thời hạn Sử dụng Đất (DCS-02-CN-005) */}
+      {isTermModalOpen && selectedTermParcel && (
+        <Modal
+          isOpen={isTermModalOpen}
+          onClose={() => setIsTermModalOpen(false)}
+          title="Quản lý Thời hạn Sử dụng Đất"
+        >
+          <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-slate-500">Mã thửa đất:</span>
+                <span className="font-bold font-mono text-slate-900">{selectedTermParcel.nationalCode}</span>
+              </div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-slate-500">Vị trí:</span>
+                <span className="font-semibold text-slate-800">Tờ {selectedTermParcel.sheetNumber}, Thửa {selectedTermParcel.parcelNumber} ({selectedTermParcel.communeName})</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Chủ sử dụng:</span>
+                <span className="font-semibold text-slate-800">{selectedTermParcel.ownerName || 'Chưa định danh'}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Loại hình thời hạn sử dụng đất:
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTermType('STABLE_LONG_TERM')}
+                  className={`p-3 text-left rounded-lg border text-xs transition-all ${
+                    termType === 'STABLE_LONG_TERM'
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold ring-1 ring-emerald-500'
+                      : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <div className="font-bold">Ổn định lâu dài</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">Đất ở tại đô thị (ODT), đất ở nông thôn (ONT)...</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTermType('DEFINITE')}
+                  className={`p-3 text-left rounded-lg border text-xs transition-all ${
+                    termType === 'DEFINITE'
+                      ? 'border-primary-600 bg-primary-50 text-primary-950 font-bold ring-1 ring-primary-500'
+                      : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <div className="font-bold">Có thời hạn xác định</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">Đất nông nghiệp (50 năm), thương mại dịch vụ (50 năm)...</div>
+                </button>
+              </div>
+            </div>
+
+            {termType === 'DEFINITE' && (
+              <div className="space-y-3 p-3.5 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Ngày bắt đầu giao/thuê đất:
+                    </label>
+                    <Input
+                      type="date"
+                      value={termStartDate}
+                      onChange={e => {
+                        setTermStartDate(e.target.value);
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Thời hạn giao đất (Số năm):
+                    </label>
+                    <Input
+                      type="number"
+                      value={termDurationYears}
+                      onChange={e => {
+                        setTermDurationYears(e.target.value);
+                      }}
+                      placeholder="Ví dụ: 50"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-1">
+                  <Button variant="outline" size="sm" onClick={handleCalculateExpiry}>
+                    <Clock className="w-3.5 h-3.5 mr-1" />
+                    Tự động tính ngày hết hạn
+                  </Button>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Ngày hết hạn sử dụng đất (YYYY-MM-DD):
+                  </label>
+                  <Input
+                    type="date"
+                    value={termExpiryDate}
+                    onChange={e => setTermExpiryDate(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Ghi chú / Quyết định gia hạn:
+              </label>
+              <Input
+                value={termNotes}
+                onChange={e => setTermNotes(e.target.value)}
+                placeholder="Số quyết định, điều khoản cam kết..."
+              />
+            </div>
+
+            {termSuccessMessage && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>{termSuccessMessage}</span>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <Button variant="outline" size="sm" onClick={() => setIsTermModalOpen(false)}>
+                Hủy bỏ
+              </Button>
+              <Button variant="primary" size="sm" onClick={handleSaveTerm} isLoading={termSaveLoading}>
+                <Check className="w-4 h-4 mr-1.5" />
+                Lưu cập nhật thời hạn
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Danh Sách Thửa Đất Sắp Hết Hạn Sử Dụng (DCS-02-CN-005, QTD-27) */}
+      {isExpiringListModalOpen && (
+        <Modal
+          isOpen={isExpiringListModalOpen}
+          onClose={() => setIsExpiringListModalOpen(false)}
+          title="Danh Sách Thửa Đất Sắp Hết Hạn Sử Dụng (Trong Vòng 6 Tháng)"
+        >
+          <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
+            {/* Tóm tắt cảnh báo 3 cấp độ */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-center">
+                <div className="text-xs font-bold text-rose-800">Nguy cấp (&lt; 90 ngày)</div>
+                <div className="text-xl font-extrabold text-rose-900 mt-1">
+                  {parcels.filter(p => p.termType === 'DEFINITE' && p.expiryWarningStatus === 'CRITICAL_3M').length}
+                </div>
+                <div className="text-[11px] text-rose-600 mt-0.5">Cần nộp hồ sơ gia hạn ngay</div>
+              </div>
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                <div className="text-xs font-bold text-amber-800">Cảnh báo (&lt; 180 ngày)</div>
+                <div className="text-xl font-extrabold text-amber-900 mt-1">
+                  {parcels.filter(p => p.termType === 'DEFINITE' && p.expiryWarningStatus === 'EXPIRING_SOON_6M').length}
+                </div>
+                <div className="text-[11px] text-amber-600 mt-0.5">Trước mốc 06 tháng</div>
+              </div>
+              <div className="p-3 bg-slate-100 border border-slate-200 rounded-lg text-center">
+                <div className="text-xs font-bold text-slate-800">Đã hết hạn</div>
+                <div className="text-xl font-extrabold text-slate-900 mt-1">
+                  {parcels.filter(p => p.termType === 'DEFINITE' && p.expiryWarningStatus === 'EXPIRED').length}
+                </div>
+                <div className="text-[11px] text-slate-600 mt-0.5">Thuộc diện xem xét xử lý</div>
+              </div>
+            </div>
+
+            {/* Khuyến nghị pháp lý Luật Đất đai 2024 Điều 172 */}
+            <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-950 space-y-1">
+              <div className="font-bold flex items-center gap-1.5 text-blue-900">
+                <FileText className="w-4 h-4 text-blue-600" />
+                <span>Căn cứ Điều 172 Luật Đất đai 2024 về Trình tự gia hạn thời hạn sử dụng đất</span>
+              </div>
+              <p className="leading-relaxed text-blue-900">
+                Người sử dụng đất có nhu cầu tiếp tục sử dụng đất phải nộp hồ sơ xin gia hạn chậm nhất là <strong>06 tháng</strong> trước khi hết thời hạn sử dụng đất. Quá thời hạn này mà không nộp hồ sơ, Nhà nước sẽ tiến hành thủ tục thu hồi đất theo luật định.
+              </p>
+            </div>
+
+            {/* Bảng danh sách các thửa đất cần gia hạn */}
+            <div className="border border-slate-200 rounded-lg overflow-hidden">
+              <table className="min-w-full divide-y divide-slate-200 text-xs">
+                <thead className="bg-slate-50 font-bold text-slate-700">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Mã thửa</th>
+                    <th className="px-3 py-2 text-left">Chủ sử dụng</th>
+                    <th className="px-3 py-2 text-left">Hạn sử dụng</th>
+                    <th className="px-3 py-2 text-left">Trạng thái</th>
+                    <th className="px-3 py-2 text-right">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {parcels
+                    .filter(p => p.termType === 'DEFINITE' && (p.expiryWarningStatus === 'CRITICAL_3M' || p.expiryWarningStatus === 'EXPIRING_SOON_6M' || p.expiryWarningStatus === 'EXPIRED'))
+                    .map(p => (
+                      <tr key={p.id} className="hover:bg-slate-50">
+                        <td className="px-3 py-2 font-mono font-bold text-slate-900">
+                          {p.nationalCode}
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="font-semibold text-slate-900">{p.ownerName || 'Chưa định danh'}</div>
+                          <div className="text-[11px] text-slate-500 font-mono">0987654321</div>
+                        </td>
+                        <td className="px-3 py-2 font-mono font-bold text-slate-800">
+                          {p.termExpiryDate}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {p.expiryWarningStatus === 'EXPIRED' && (
+                            <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-800">
+                              Đã quá hạn
+                            </span>
+                          )}
+                          {p.expiryWarningStatus === 'CRITICAL_3M' && (
+                            <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                              Khẩn cấp (&lt; 90 ngày)
+                            </span>
+                          )}
+                          {p.expiryWarningStatus === 'EXPIRING_SOON_6M' && (
+                            <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              Sắp hết hạn (&lt; 6 tháng)
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right whitespace-nowrap">
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => {
+                              setIsExpiringListModalOpen(false);
+                              handleOpenNotifyModal(p);
+                            }}
+                          >
+                            <Bell className="w-3.5 h-3.5 mr-1" />
+                            Gửi cảnh báo
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-200">
+              <Button variant="outline" size="sm" onClick={() => setIsExpiringListModalOpen(false)}>
+                Đóng
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Phát Thông Báo Cảnh Báo Cho Chủ Sở Hữu (DCS-02-CN-005, QTD-27) */}
+      {isNotifyModalOpen && selectedNotifyParcel && (
+        <Modal
+          isOpen={isNotifyModalOpen}
+          onClose={() => setIsNotifyModalOpen(false)}
+          title="Gửi Cảnh Báo Hết Hạn Sử Dụng Đất Cho Chủ Sở Hữu"
+        >
+          <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Chủ sử dụng đất:</span>
+                <span className="font-bold text-slate-900">{selectedNotifyParcel.ownerName || 'Chưa định danh'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Số điện thoại nhận tin:</span>
+                <span className="font-mono font-bold text-primary-950">0987654321</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Thửa đất:</span>
+                <span className="font-mono font-semibold text-slate-800">{selectedNotifyParcel.nationalCode}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Ngày hết hạn sử dụng:</span>
+                <span className="font-mono font-bold text-rose-700">{selectedNotifyParcel.termExpiryDate}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Kênh phát thông báo tức thời:
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex items-center gap-2 p-2.5 bg-white border border-slate-200 rounded-lg text-xs cursor-pointer hover:bg-slate-50">
+                  <input
+                    type="checkbox"
+                    checked={notifySms}
+                    onChange={e => setNotifySms(e.target.checked)}
+                    className="rounded text-primary-600 focus:ring-primary-500"
+                  />
+                  <div>
+                    <div className="font-bold text-slate-800">Tin nhắn SMS</div>
+                    <div className="text-[11px] text-slate-500">Gửi trực tiếp đến số điện thoại</div>
+                  </div>
+                </label>
+                <label className="flex items-center gap-2 p-2.5 bg-white border border-slate-200 rounded-lg text-xs cursor-pointer hover:bg-slate-50">
+                  <input
+                    type="checkbox"
+                    checked={notifyAppPush}
+                    onChange={e => setNotifyAppPush(e.target.checked)}
+                    className="rounded text-primary-600 focus:ring-primary-500"
+                  />
+                  <div>
+                    <div className="font-bold text-slate-800">Ứng dụng di động</div>
+                    <div className="text-[11px] text-slate-500">Thông báo đẩy Địa Chính Số</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Xem trước nội dung thông báo:
+              </label>
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-950 font-mono leading-relaxed">
+                [ĐỊA CHÍNH SỐ] Kính gửi ông/bà {selectedNotifyParcel.ownerName || 'Chủ sử dụng đất'}, thửa đất số {selectedNotifyParcel.parcelNumber}, tờ BĐ số {selectedNotifyParcel.sheetNumber} (Mã định danh: {selectedNotifyParcel.nationalCode}) tại {selectedNotifyParcel.communeName} sẽ hết hạn sử dụng vào ngày {selectedNotifyParcel.termExpiryDate}. Căn cứ Điều 172 Luật Đất đai 2024, đề nghị ông/bà nộp hồ sơ xin gia hạn trước ít nhất 06 tháng tại Chi nhánh Văn phòng Đăng ký Đất đai.
+              </div>
+            </div>
+
+            {notifySuccessMsg && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>{notifySuccessMsg}</span>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <Button variant="outline" size="sm" onClick={() => setIsNotifyModalOpen(false)}>
+                Hủy bỏ
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSendNotification}
+                isLoading={isNotifying}
+                disabled={!notifySms && !notifyAppPush}
+              >
+                <Send className="w-4 h-4 mr-1.5" />
+                Phát thông báo ngay
               </Button>
             </div>
           </div>
