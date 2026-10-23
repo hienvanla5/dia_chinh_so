@@ -11,6 +11,8 @@ import {
   DeclareNewParcelInput,
   LandOriginType,
   LandUseTermType,
+  PropertyOnLandType,
+  ConstructionGrade,
   ExpiryWarningStatus,
 } from '@diachinhso/shared';
 
@@ -1006,6 +1008,229 @@ describe('ParcelService [DCS-02-CN-005] Quản lý thời hạn sử dụng đ�
 
       expect(res.auditHash).toBeDefined();
       expect(res.auditHash).toHaveLength(64);
+    });
+  });
+});
+
+
+describe('ParcelService [DCS-02-CN-006] Quản lý tài sản gắn liền với đất trên thửa', () => {
+  let service: ParcelService;
+
+  beforeEach(() => {
+    service = new ParcelService();
+  });
+
+  describe('DCS-02-CN-006-TC-01: Luồng thành công', () => {
+    it('phải đăng ký tài sản nhà ở riêng lẻ gắn liền với đất thành công', async () => {
+      const res = await service.createPropertyOnLand({
+        parcelId: 'PARCEL-HN-001',
+        assetType: PropertyOnLandType.INDIVIDUAL_HOUSE,
+        name: 'Nhà ở riêng lẻ 2 tầng mái thái',
+        constructionArea: 90.0,
+        floorArea: 180.0,
+        structure: 'Khung bê tông cốt thép, mái ngói',
+        grade: ConstructionGrade.GRADE_3,
+        floorsCount: 2,
+        completionYear: 2023,
+        ownershipTerm: 'Lâu dài',
+        completionCertificateNumber: 'GP-HC-2023/045/SXD-HN',
+        completionCertificateDate: '2023-08-15',
+        ownerName: 'Trần Văn Hoàng',
+        ownerCitizenId: '001090123456',
+        officerId: 'CB-HN-001',
+        officerCommuneCode: '01001',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.property).toBeDefined();
+      expect(res.property.id).toMatch(/^PROP-/);
+      expect(res.property.name).toBe('Nhà ở riêng lẻ 2 tầng mái thái');
+      expect(res.property.status).toBe('ACTIVE');
+      expect(res.auditHash).toHaveLength(64);
+    });
+
+    it('phải ghi nhận đồng sở hữu vợ chồng theo QTD-25 Luật Đất đai 2024', async () => {
+      const res = await service.createPropertyOnLand({
+        parcelId: 'PARCEL-HN-001',
+        assetType: PropertyOnLandType.INDIVIDUAL_HOUSE,
+        name: 'Biệt thự phố song lập',
+        constructionArea: 100.0,
+        floorArea: 300.0,
+        structure: 'Bê tông cốt thép toàn khối',
+        grade: ConstructionGrade.GRADE_2,
+        floorsCount: 3,
+        ownerName: 'Trần Văn Hoàng',
+        ownerCitizenId: '001090123456',
+        isJointSpouseOwnership: true,
+        spouseName: 'Vũ Thị Mai',
+        spouseCitizenId: '001192556677',
+        officerId: 'ADMIN',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.property.isJointSpouseOwnership).toBe(true);
+      expect(res.property.spouseName).toBe('Vũ Thị Mai');
+      expect(res.property.spouseCitizenId).toBe('001192556677');
+    });
+
+    it('phải lấy được danh sách tài sản gắn liền với đất theo ID thửa đất', async () => {
+      // PARCEL-HN-001 đã có tài sản PROP-HN-001 trong dữ liệu mẫu
+      const res = await service.getPropertiesByParcelId('PARCEL-HN-001');
+
+      expect(res.total).toBeGreaterThanOrEqual(1);
+      expect(res.parcelId).toBe('PARCEL-HN-001');
+      expect(res.properties.length).toBe(res.total);
+      expect(res.properties[0].id).toBe('PROP-HN-001');
+    });
+
+    it('phải lấy được chi tiết tài sản theo propertyId', async () => {
+      const prop = await service.getPropertyById('PROP-HN-001');
+      expect(prop).toBeDefined();
+      expect(prop.id).toBe('PROP-HN-001');
+      expect(prop.parcelId).toBe('PARCEL-HN-001');
+    });
+
+    it('phải ghi nhận phá dỡ / xóa tài sản thành công và chuyển trạng thái DEMOLISHED', async () => {
+      const res = await service.deletePropertyOnLand('PARCEL-HN-001', 'PROP-HN-001', 'ADMIN');
+      expect(res.success).toBe(true);
+      expect(res.auditHash).toHaveLength(64);
+
+      const prop = await service.getPropertyById('PROP-HN-001');
+      expect(prop.status).toBe('DEMOLISHED');
+    });
+  });
+
+  describe('DCS-02-CN-006-TC-02: Dữ liệu không hợp lệ', () => {
+    it('phải từ chối nếu diện tích xây dựng vượt quá diện tích thửa đất', async () => {
+      // PARCEL-HN-001 diện tích 125.8 m2, nhập 150 m2
+      await expect(
+        service.createPropertyOnLand({
+          parcelId: 'PARCEL-HN-001',
+          assetType: PropertyOnLandType.INDIVIDUAL_HOUSE,
+          name: 'Công trình vượt diện tích',
+          constructionArea: 150.0,
+          floorArea: 300.0,
+          structure: 'Bê tông cốt thép',
+          grade: ConstructionGrade.GRADE_3,
+          ownerName: 'Trần Văn Hoàng',
+          ownerCitizenId: '001090123456',
+          officerId: 'ADMIN',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('phải từ chối nếu đánh dấu đồng sở hữu vợ chồng nhưng thiếu thông tin người phối ngẫu (QTD-25)', async () => {
+      await expect(
+        service.createPropertyOnLand({
+          parcelId: 'PARCEL-HN-001',
+          assetType: PropertyOnLandType.INDIVIDUAL_HOUSE,
+          name: 'Nhà ở gia đình',
+          constructionArea: 80.0,
+          floorArea: 160.0,
+          structure: 'Gạch',
+          grade: ConstructionGrade.GRADE_4,
+          ownerName: 'Trần Văn Hoàng',
+          ownerCitizenId: '001090123456',
+          isJointSpouseOwnership: true,
+          // Thiếu spouseName và spouseCitizenId
+          officerId: 'ADMIN',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('phải từ chối nếu số CCCD vợ/chồng trùng với CCCD của chủ sở hữu', async () => {
+      await expect(
+        service.createPropertyOnLand({
+          parcelId: 'PARCEL-HN-001',
+          assetType: PropertyOnLandType.INDIVIDUAL_HOUSE,
+          name: 'Nhà ở gia đình',
+          constructionArea: 80.0,
+          floorArea: 160.0,
+          structure: 'Gạch',
+          grade: ConstructionGrade.GRADE_4,
+          ownerName: 'Trần Văn Hoàng',
+          ownerCitizenId: '001090123456',
+          isJointSpouseOwnership: true,
+          spouseName: 'Vũ Thị Mai',
+          spouseCitizenId: '001090123456', // Trùng
+          officerId: 'ADMIN',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('phải báo lỗi không tìm thấy khi ID thửa đất không tồn tại', async () => {
+      await expect(
+        service.createPropertyOnLand({
+          parcelId: 'PARCEL-KHONG-TON-TAI',
+          assetType: PropertyOnLandType.INDIVIDUAL_HOUSE,
+          name: 'Nhà không có đất',
+          constructionArea: 50.0,
+          floorArea: 100.0,
+          structure: 'Gạch',
+          grade: ConstructionGrade.GRADE_4,
+          ownerName: 'Nguyễn Văn A',
+          ownerCitizenId: '001090123456',
+          officerId: 'ADMIN',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('DCS-02-CN-006-TC-03: Ràng buộc nghiệp vụ (QTD-16, QTD-25, Lock)', () => {
+    it('phải từ chối khi cán bộ ngoài địa bàn vi phạm thẩm quyền địa giới hành chính (QTD-16)', async () => {
+      await expect(
+        service.createPropertyOnLand({
+          parcelId: 'PARCEL-HN-001', // communeCode: '01001'
+          assetType: PropertyOnLandType.INDIVIDUAL_HOUSE,
+          name: 'Nhà ở',
+          constructionArea: 60.0,
+          floorArea: 120.0,
+          structure: 'Bê tông',
+          grade: ConstructionGrade.GRADE_3,
+          ownerName: 'Trần Văn Hoàng',
+          ownerCitizenId: '001090123456',
+          officerId: 'CB-COMMUNE-999',
+          officerCommuneCode: '79001', // Không khớp 01001
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('phải từ chối đăng ký tài sản khi thửa đất đang bị khóa giao dịch', async () => {
+      await expect(
+        service.createPropertyOnLand({
+          parcelId: 'PARCEL-HN-002', // Trạng thái LOCKED
+          assetType: PropertyOnLandType.INDIVIDUAL_HOUSE,
+          name: 'Nhà ở trên đất khóa',
+          constructionArea: 50.0,
+          floorArea: 100.0,
+          structure: 'Bê tông',
+          grade: ConstructionGrade.GRADE_3,
+          ownerName: 'Lê Thị Thu',
+          ownerCitizenId: '001092654321',
+          officerId: 'ADMIN',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('DCS-02-CN-006-TC-04: Kiểm toán & Toàn vẹn (AC-04)', () => {
+    it('phải gắn mã băm SHA-256 bất biến khi tạo tài sản', async () => {
+      const res = await service.createPropertyOnLand({
+        parcelId: 'PARCEL-HN-001',
+        assetType: PropertyOnLandType.INDIVIDUAL_HOUSE,
+        name: 'Nhà ở kiểm toán',
+        constructionArea: 70.0,
+        floorArea: 140.0,
+        structure: 'Bê tông',
+        grade: ConstructionGrade.GRADE_3,
+        ownerName: 'Trần Văn Hoàng',
+        ownerCitizenId: '001090123456',
+        officerId: 'ADMIN',
+      });
+
+      expect(res.auditHash).toBeDefined();
+      expect(res.auditHash).toHaveLength(64);
+      expect(res.property.auditHash).toBe(res.auditHash);
     });
   });
 });
