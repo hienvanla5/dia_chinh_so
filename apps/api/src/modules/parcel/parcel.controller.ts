@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, Patch, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query, Patch, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { ParcelService } from './parcel.service';
 import {
@@ -13,6 +13,10 @@ import {
   SubdivideParcelSchema,
   MergeParcelsInput,
   MergeParcelsSchema,
+  UpdateLandOriginInput,
+  UpdateLandOriginSchema,
+  ValidateAgriculturalSubdivisionInput,
+  ValidateAgriculturalSubdivisionSchema,
   ParcelLegalStatus,
   UserRole,
 } from '@diachinhso/shared';
@@ -118,5 +122,29 @@ export class ParcelController {
   @ApiResponse({ status: 200, description: 'Cây phả hệ biến động thửa đất' })
   async getLineage(@Param('id') id: string) {
     return this.parcelService.getParcelLineage(id);
+  }
+
+  @Put(':id/origin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cập nhật nguồn gốc sử dụng đất theo Luật Đất đai 2024 (DCS-02-CN-004)' })
+  @ApiResponse({ status: 200, description: 'Cập nhật nguồn gốc sử dụng đất thành công' })
+  async updateOrigin(
+    @Param('id') id: string,
+    @Body() body: Omit<UpdateLandOriginInput, 'parcelId'>,
+  ) {
+    const validated = UpdateLandOriginSchema.parse({ ...body, parcelId: id });
+    return this.parcelService.updateLandOrigin(validated);
+  }
+
+  @Post(':id/validate-agricultural-subdivision')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Thẩm định điều kiện tách thửa đất nông nghiệp (DCS-02-CN-004, QTD-26)' })
+  @ApiResponse({ status: 200, description: 'Kết quả thẩm định hạn mức canh tác đất nông nghiệp' })
+  async validateAgriSubdivision(
+    @Param('id') id: string,
+    @Body() body: Omit<ValidateAgriculturalSubdivisionInput, 'parcelId'>,
+  ) {
+    const validated = ValidateAgriculturalSubdivisionSchema.parse({ ...body, parcelId: id });
+    return this.parcelService.validateAgriculturalSubdivision(validated);
   }
 }

@@ -22,6 +22,12 @@ import {
   ParcelItem,
   ParcelLegalStatus,
   LandPurposeCode,
+  LandOriginType,
+  LandOriginRights,
+  UpdateLandOriginInput,
+  UpdateLandOriginResponse,
+  ValidateAgriculturalSubdivisionInput,
+  ValidateAgriculturalSubdivisionResponse,
   SubdivideParcelInput,
   SubdivideParcelResponse,
   MergeParcelsInput,
@@ -921,6 +927,186 @@ export class ParcelService {
       children,
       lineageNodes,
       totalGenerations: (parents.length > 0 ? 1 : 0) + 1 + (children.length > 0 ? 1 : 0),
+    };
+  }
+
+  /**
+   * Cập nhật nguồn gốc sử dụng đất theo Luật Đất đai 2024 (DCS-02-CN-004)
+   */
+  async updateLandOrigin(input: UpdateLandOriginInput): Promise<UpdateLandOriginResponse> {
+    const parcel = this.parcelsStore.find((p) => p.id === input.parcelId);
+    if (!parcel) {
+      throw new NotFoundException(`Không tìm thấy thửa đất có ID: ${input.parcelId}`);
+    }
+
+    if (parcel.legalStatus === ParcelLegalStatus.HISTORICAL || parcel.legalStatus === ParcelLegalStatus.REVOKED) {
+      throw new BadRequestException(`Thửa đất '${parcel.nationalCode}' đã chuyển vào lịch sử, không thể cập nhật nguồn gốc sử dụng đất!`);
+    }
+
+    if (
+      parcel.legalStatus === ParcelLegalStatus.LOCKED ||
+      parcel.legalStatus === ParcelLegalStatus.DISPUTED ||
+      parcel.legalStatus === ParcelLegalStatus.FROZEN
+    ) {
+      throw new ForbiddenException(`Thửa đất '${parcel.nationalCode}' đang bị khóa hoặc tranh chấp (${parcel.legalStatus}), không thể cập nhật nguồn gốc sử dụng đất!`);
+    }
+
+    // Kiểm tra thẩm quyền địa bàn (QTD-16)
+    if (
+      input.officerCommuneCode &&
+      input.officerCommuneCode !== parcel.communeCode &&
+      input.officerId !== 'ADMIN'
+    ) {
+      throw new ForbiddenException(
+        `Cán bộ không có thẩm quyền trên địa bàn xã '${parcel.communeCode}'. Thẩm quyền được phân công: '${input.officerCommuneCode}'.`,
+      );
+    }
+
+    const originNameMap: Record<LandOriginType, string> = {
+      [LandOriginType.ALLOCATED_WITH_FEE]: 'Nhà nước giao đất có thu tiền sử dụng đất',
+      [LandOriginType.ALLOCATED_WITHOUT_FEE]: 'Nhà nước giao đất không thu tiền sử dụng đất',
+      [LandOriginType.LEASED_LUMP_SUM]: 'Nhà nước cho thuê đất thu tiền một lần cho cả thời gian thuê',
+      [LandOriginType.LEASED_ANNUAL]: 'Nhà nước cho thuê đất thu tiền thuê đất hàng năm',
+      [LandOriginType.RECOGNIZED_WITH_FEE]: 'Công nhận QSDĐ như giao đất có thu tiền sử dụng đất',
+      [LandOriginType.RECOGNIZED_WITHOUT_FEE]: 'Công nhận QSDĐ như giao đất không thu tiền sử dụng đất',
+      [LandOriginType.TRANSFERRED]: 'Nhận chuyển nhượng quyền sử dụng đất hợp pháp',
+      [LandOriginType.INHERITED_OR_DONATED]: 'Nhận thừa kế, tặng cho quyền sử dụng đất',
+    };
+
+    const legalRightsMap: Record<LandOriginType, LandOriginRights> = {
+      [LandOriginType.ALLOCATED_WITH_FEE]: {
+        canTransfer: true,
+        canMortgage: true,
+        canSublease: true,
+        canDonate: true,
+        description: 'Được chuyển nhượng, tặng cho, thừa kế, thế chấp tại các TCTD và cho thuê lại quyền sử dụng đất theo quy định.',
+      },
+      [LandOriginType.ALLOCATED_WITHOUT_FEE]: {
+        canTransfer: false,
+        canMortgage: false,
+        canSublease: false,
+        canDonate: false,
+        description: 'Không được chuyển nhượng, tặng cho, cho thuê, thế chấp quyền sử dụng đất; bắt buộc sử dụng đúng mục đích được giao.',
+      },
+      [LandOriginType.LEASED_LUMP_SUM]: {
+        canTransfer: true,
+        canMortgage: true,
+        canSublease: true,
+        canDonate: true,
+        description: 'Được chuyển nhượng, thế chấp, cho thuê lại quyền sử dụng đất và tài sản gắn liền trong thời hạn thuê đất.',
+      },
+      [LandOriginType.LEASED_ANNUAL]: {
+        canTransfer: false,
+        canMortgage: false,
+        canSublease: false,
+        canDonate: false,
+        description: 'Chỉ được bán, thế chấp tài sản thuộc sở hữu gắn liền với đất và quyền thuê trong hợp đồng; KHÔNG được chuyển nhượng quyền sử dụng đất.',
+      },
+      [LandOriginType.RECOGNIZED_WITH_FEE]: {
+        canTransfer: true,
+        canMortgage: true,
+        canSublease: true,
+        canDonate: true,
+        description: 'Đầy đủ quyền năng của người sử dụng đất sau khi hoàn thành nghĩa vụ tài chính với ngân sách nhà nước.',
+      },
+      [LandOriginType.RECOGNIZED_WITHOUT_FEE]: {
+        canTransfer: true,
+        canMortgage: true,
+        canSublease: false,
+        canDonate: true,
+        description: 'Được cấp Giấy chứng nhận, được chuyển đổi, chuyển nhượng, thừa kế, tặng cho trong hạn mức công nhận của hộ gia đình, cá nhân.',
+      },
+      [LandOriginType.TRANSFERRED]: {
+        canTransfer: true,
+        canMortgage: true,
+        canSublease: true,
+        canDonate: true,
+        description: 'Kế thừa toàn bộ quyền và nghĩa vụ hợp pháp từ chủ sử dụng đất trước theo hợp đồng công chứng.',
+      },
+      [LandOriginType.INHERITED_OR_DONATED]: {
+        canTransfer: true,
+        canMortgage: true,
+        canSublease: true,
+        canDonate: true,
+        description: 'Quyền sử dụng đất hợp pháp được xác lập qua văn bản thừa kế hoặc tặng cho đã hoàn tất đăng ký biến động.',
+      },
+    };
+
+    const originName = originNameMap[input.originType];
+    const legalRights = legalRightsMap[input.originType];
+    const now = new Date().toISOString();
+
+    const auditHash = createHash('sha256')
+      .update(`ORIGIN|${parcel.id}|${input.originType}|${input.decisionNumber}|${now}`)
+      .digest('hex');
+
+    parcel.originType = input.originType;
+    parcel.originName = originName;
+    parcel.originDecisionNumber = input.decisionNumber;
+    parcel.originDecisionDate = input.decisionDate;
+    parcel.financialStatus = input.financialStatus || 'PAID';
+    parcel.updatedAt = now;
+
+    this.logger.log(
+      `Đã cập nhật nguồn gốc sử dụng đất cho thửa '${parcel.nationalCode}': ${originName} (QĐ: ${input.decisionNumber}, Audit: ${auditHash})`,
+    );
+
+    return {
+      success: true,
+      parcel,
+      originType: input.originType,
+      originName,
+      legalRights,
+      auditHash,
+      message: `Cập nhật nguồn gốc sử dụng đất '${originName}' thành công theo quy chuẩn Luật Đất đai 2024.`,
+    };
+  }
+
+  /**
+   * Thẩm định điều kiện tách thửa đất nông nghiệp chống manh mún đất đai (DCS-02-CN-004, QTD-26)
+   */
+  async validateAgriculturalSubdivision(
+    input: ValidateAgriculturalSubdivisionInput,
+  ): Promise<ValidateAgriculturalSubdivisionResponse> {
+    const parcel = this.parcelsStore.find((p) => p.id === input.parcelId);
+    if (!parcel) {
+      throw new NotFoundException(`Không tìm thấy thửa đất có ID: ${input.parcelId}`);
+    }
+
+    // Kiểm tra nhóm đất: bắt buộc phải là đất nông nghiệp
+    const agriculturalCodes = [
+      LandPurposeCode.LUC,
+      LandPurposeCode.LUK,
+      LandPurposeCode.CLN,
+      LandPurposeCode.HNK,
+      LandPurposeCode.RSX,
+      LandPurposeCode.RPH,
+    ];
+
+    if (!agriculturalCodes.includes(parcel.purposeCode)) {
+      throw new BadRequestException(
+        `Thửa đất mang mục đích '${parcel.purposeCode}' không thuộc nhóm đất nông nghiệp. Quy định QTD-26 chỉ áp dụng cho đất nông nghiệp.`,
+      );
+    }
+
+    const minCultivationArea = input.minCultivationArea || 500; // 500m2 chống manh mún
+    const ineligibleAreas = input.newParcelsArea.filter((area) => area < minCultivationArea);
+
+    if (ineligibleAreas.length > 0) {
+      return {
+        isEligible: false,
+        minCultivationArea,
+        ineligibleAreas,
+        errorReason: `Vi phạm quy định không tách thửa đất nông nghiệp dưới hạn mức canh tác tối thiểu (QTD-26): Có thửa hình thành diện tích ${ineligibleAreas.join(', ')}m² nhỏ hơn hạn mức tối thiểu ${minCultivationArea}m².`,
+        message: 'Từ chối hồ sơ tách thửa đất nông nghiệp do không đảm bảo hạn mức canh tác tối thiểu theo Luật Đất đai 2024.',
+      };
+    }
+
+    return {
+      isEligible: true,
+      minCultivationArea,
+      ineligibleAreas: [],
+      message: 'Hồ sơ tách thửa đất nông nghiệp đủ điều kiện hạn mức canh tác tối thiểu theo quy định của Luật Đất đai 2024.',
     };
   }
 }
