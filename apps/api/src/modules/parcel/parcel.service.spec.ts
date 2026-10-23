@@ -1234,3 +1234,121 @@ describe('ParcelService [DCS-02-CN-006] Quản lý tài sản gắn liền với
     });
   });
 });
+
+
+describe('ParcelService [DCS-02-CN-009] Hiển thị lược sử biến động thửa đất dạng cây gia phả', () => {
+  let service: ParcelService;
+
+  beforeEach(() => {
+    service = new ParcelService();
+  });
+
+  describe('DCS-02-CN-009-TC-01: Luồng thành công - Lấy cây phả hệ đầy đủ', () => {
+    it('phải trích xuất được đồ thị cây gia phả biến động (nodes, edges, generations, timeline) cho thửa đất tách', async () => {
+      // 1. Thực hiện tách thửa PARCEL-HN-001 (125.8 m2) thành 2 thửa con (62.9 m2 mỗi thửa)
+      const subRes = await service.subdivideParcel({
+        parentParcelId: 'PARCEL-HN-001',
+        decisionNumber: 'QĐ-TÁCH-2026/01/UBND',
+        officerId: 'CB-VPDK-001',
+        officerCommuneCode: '01001',
+        newParcels: [
+          {
+            parcelNumber: 451,
+            area: 62.9,
+            ownerName: 'Trần Văn Hoàng (Nhánh A)',
+            ownerCitizenId: '001090123456',
+          },
+          {
+            parcelNumber: 452,
+            area: 62.9,
+            ownerName: 'Trần Thị Mai (Nhánh B)',
+            ownerCitizenId: '001090654321',
+          },
+        ],
+      });
+
+      const child451 = subRes.childParcels.find((p) => p.parcelNumber === 451);
+      expect(child451).toBeDefined();
+
+      const tree = await service.getPedigreeTree(child451!.id);
+
+      expect(tree).toBeDefined();
+      expect(tree.parcelId).toBe(child451!.id);
+      expect(tree.rootNodeId).toBe('PARCEL-HN-001');
+      expect(tree.totalGenerations).toBe(2);
+      expect(tree.totalNodes).toBeGreaterThanOrEqual(3);
+      expect(tree.edges.length).toBeGreaterThanOrEqual(2);
+      expect(tree.timeline.length).toBeGreaterThanOrEqual(2);
+      expect(tree.auditHash).toHaveLength(64);
+
+      // Kiểm tra nút CURRENT
+      const currentNode = tree.nodes.find((n) => n.id === child451!.id);
+      expect(currentNode).toBeDefined();
+      expect(currentNode?.role).toBe('CURRENT');
+      expect(currentNode?.generation).toBe(1);
+
+      // Kiểm tra nút ROOT
+      const rootNode = tree.nodes.find((n) => n.id === 'PARCEL-HN-001');
+      expect(rootNode).toBeDefined();
+      expect(rootNode?.role).toBe('ROOT');
+      expect(rootNode?.generation).toBe(0);
+      expect(rootNode?.legalStatus).toBe(ParcelLegalStatus.HISTORICAL);
+    });
+
+    it('phải trích xuất được cây gia phả cho thửa đất đơn lẻ chưa biến động', async () => {
+      const tree = await service.getPedigreeTree('PARCEL-HN-002');
+
+      expect(tree).toBeDefined();
+      expect(tree.totalGenerations).toBe(1);
+      expect(tree.totalNodes).toBe(1);
+      expect(tree.nodes[0].role).toBe('CURRENT');
+      expect(tree.timeline.length).toBe(1);
+      expect(tree.timeline[0].eventType).toBe('INITIAL_REGISTRATION');
+    });
+  });
+
+  describe('DCS-02-CN-009-TC-02: Dữ liệu không hợp lệ & Validation', () => {
+    it('phải ném NotFoundException khi tra cứu ID hoặc Mã định danh không tồn tại', async () => {
+      await expect(service.getPedigreeTree('PARCEL-UNKNOWN-999')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('DCS-02-CN-009-TC-03: Ràng buộc nghiệp vụ QTD-02 (Bất biến lịch sử CSDL)', () => {
+    it('thửa đất gốc sau biến động phải giữ nguyên trong cây với trạng thái HISTORICAL không bị xóa', async () => {
+      // Tách thửa trước để PARCEL-HN-001 chuyển sang HISTORICAL
+      await service.subdivideParcel({
+        parentParcelId: 'PARCEL-HN-001',
+        decisionNumber: 'QĐ-TÁCH-2026/02/UBND',
+        officerId: 'CB-VPDK-001',
+        officerCommuneCode: '01001',
+        newParcels: [
+          { parcelNumber: 451, area: 62.9, ownerName: 'Nhánh A', ownerCitizenId: '001090123456' },
+          { parcelNumber: 452, area: 62.9, ownerName: 'Nhánh B', ownerCitizenId: '001090654321' },
+        ],
+      });
+
+      const tree = await service.getPedigreeTree('PARCEL-HN-001');
+
+      expect(tree).toBeDefined();
+      const node = tree.nodes.find((n) => n.id === 'PARCEL-HN-001');
+      expect(node).toBeDefined();
+      expect(node?.legalStatus).toBe(ParcelLegalStatus.HISTORICAL);
+    });
+  });
+
+  describe('DCS-02-CN-009-TC-04: Toàn vẹn & Mã băm kiểm toán SHA-256', () => {
+    it('mỗi nút trong cây và toàn bộ đồ thị phải có mã băm SHA-256 xác thực', async () => {
+      const tree = await service.getPedigreeTree('PARCEL-HN-001');
+
+      expect(tree.auditHash).toMatch(/^[a-f0-9]{64}$/);
+      for (const node of tree.nodes) {
+        expect(node.auditHash).toMatch(/^[a-f0-9]{64}$/);
+      }
+      for (const evt of tree.timeline) {
+        expect(evt.auditHash).toMatch(/^[a-f0-9]{64}$/);
+      }
+    });
+  });
+});
