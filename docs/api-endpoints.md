@@ -2259,3 +2259,86 @@ sequenceDiagram
 - **Mã lỗi**:
   - `400 Bad Request`: Ghi chú phương án xử lý dưới 5 ký tự.
   - `404 Not Found`: Không tìm thấy mã báo cáo sai lệch reportId.
+
+
+---
+
+## 24. Nhóm API Hiển Thị Lược Sử Biến Động Thửa Đất Dạng Cây Gia Phả (Pedigree Tree Lineage) [DCS-02-CN-009]
+
+### 24.1. [DCS-02-CN-009] Truy xuất đồ thị cây gia phả biến động thửa đất chi tiết qua các thời kỳ (QTD-02)
+- **Method**: `GET`
+- **Path**: `/api/v1/parcels/:id/pedigree-tree`
+- **Yêu cầu quyền (RBAC)**: `LAND_REGISTRAR`, `COMMUNE_OFFICER`, `NOTARY_BANK`, `LAND_USER`, `INSPECTOR`, `ADMIN`
+- **Query Params**:
+  - `maxDepth` (number, tùy chọn, mặc định: 5): Độ sâu thế hệ duyệt cây
+  - `includeTimeline` (boolean, tùy chọn, mặc định: true): Bao gồm dòng thời gian biến động pháp lý
+- **Response `200 OK`**:
+  ```json
+  {
+    "parcelId": "PARCEL-HN-001",
+    "nationalCode": "01001-0012-0045",
+    "rootNodeId": "PARCEL-HN-001",
+    "totalGenerations": 2,
+    "totalNodes": 3,
+    "nodes": [
+      {
+        "id": "PARCEL-HN-001",
+        "nationalCode": "01001-0012-0045",
+        "sheetNumber": 12,
+        "parcelNumber": 45,
+        "area": 125.8,
+        "purposeCode": "ODT",
+        "ownerName": "Trần Văn Hoàng",
+        "legalStatus": "HISTORICAL",
+        "generation": 0,
+        "role": "ROOT",
+        "fluctuationType": "Đăng ký ban đầu",
+        "decisionNumber": "HỒ SƠ TRÍCH ĐO SỐ 12/2026/VPĐKĐĐ",
+        "decisionDate": "2026-10-15",
+        "auditHash": "e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2"
+      },
+      {
+        "id": "PARCEL-SUB-01",
+        "nationalCode": "01001-0012-0451",
+        "sheetNumber": 12,
+        "parcelNumber": 451,
+        "area": 62.9,
+        "purposeCode": "ODT",
+        "ownerName": "Trần Văn Hoàng (Nhánh A)",
+        "legalStatus": "AVAILABLE",
+        "generation": 1,
+        "role": "CHILD",
+        "fluctuationType": "Tách thửa đất",
+        "decisionNumber": "QĐ-TÁCH-2026/01/UBND",
+        "decisionDate": "2026-10-23",
+        "auditHash": "f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3"
+      }
+    ],
+    "edges": [
+      {
+        "source": "PARCEL-HN-001",
+        "target": "PARCEL-SUB-01",
+        "relationship": "SUBDIVIDED_TO",
+        "decisionNumber": "QĐ-TÁCH-2026/01/UBND",
+        "transferredArea": 62.9
+      }
+    ],
+    "timeline": [
+      {
+        "eventId": "EVT-REG-PARCEL-HN-001",
+        "timestamp": "2026-10-15T08:00:00.000Z",
+        "eventType": "INITIAL_REGISTRATION",
+        "eventTitle": "Đăng ký xác lập thửa đất ban đầu [01001-0012-0045]",
+        "description": "Thửa đất 01001-0012-0045 diện tích 125.8 m² được cấp GCN lần đầu.",
+        "decisionNumber": "HỒ SƠ TRÍCH ĐO SỐ 12/2026/VPĐKĐĐ",
+        "involvedParcelCodes": ["01001-0012-0045"],
+        "officerName": "Cán bộ thụ lý ban đầu",
+        "auditHash": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+      }
+    ],
+    "auditHash": "567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234",
+    "generatedAt": "2026-10-23T09:05:00.000Z"
+  }
+  ```
+- **Mã lỗi**:
+  - `404 Not Found`: Không tìm thấy thửa đất có ID hoặc Mã định danh yêu cầu.
