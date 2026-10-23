@@ -10,9 +10,9 @@
 | Chỉ số | Số lượng | Tỷ lệ (%) | Ghi chú |
 |---|---|---|---|
 | **Tổng số User Stories** | **114** | **100%** | Toàn bộ 114 User Stories được số hóa tại `user_stories/` |
-| **Đã hoàn thành (Done)** | **12** | **10.5%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
+| **Đã hoàn thành (Done)** | **13** | **11.4%** | Đã hoàn thành 100% Epic DCS-01 và khởi động Epic DCS-02 |
 | **Đang thực hiện (In Progress)** | **0** | **0.0%** | Không có Story nào đang dở dang |
-| **Chưa thực hiện (Backlog)** | **102** | **89.5%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
+| **Chưa thực hiện (Backlog)** | **101** | **88.6%** | Sẵn sàng triển khai theo thứ tự ưu tiên |
 
 - **User Story hoàn thành gần nhất**: [`DCS-02-CN-001`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-001.md) - Khai báo thông tin thuộc tính thửa đất mới.
 - **User Story đề xuất tiếp theo (Next Immediate Story)**: [`DCS-02-CN-002`](file:///E:/personal_project/DIACHINHSO/user_stories/DCS-02-CN-002.md) - Sinh Mã định danh thửa đất quốc gia duy nhất.
@@ -300,3 +300,12 @@ flowchart TD
   - `apps/web`: Route `/parcels` bổ sung Modal Công cụ Mã định danh quốc gia với 2 tab: Sinh mã định danh tự động và Thẩm tra & Đối soát mã.
   - `tests`: 20 unit tests PASS bao phủ toàn diện 4 tiêu chí chấp nhận TC-01, TC-02, TC-03, TC-04.
 - **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#17-nhóm-api-sinh--thẩm-định-mã-định-danh-thửa-đất-quốc-gia-dcs-02-cn-002).
+
+### 3.13. [DCS-02-CN-003] Quản lý vòng đời thửa đất: Tách thửa và hợp thửa
+- **Persona**: Văn phòng Đăng ký Đất đai, Cán bộ Địa chính xã/phường
+- **Kiến trúc triển khai**:
+  - `packages/shared`: Bổ sung trạng thái `HISTORICAL`, trường quan hệ phả hệ vào `ParcelItem` (`parentParcelId`, `parentNationalCode`, `mergedFromParcelIds`, `mergedFromNationalCodes`, `childParcelIds`, `isHistorical`), schema `SubdivideParcelSchema`, `MergeParcelsSchema`.
+  - `apps/api`: Xử lý nghiệp vụ `subdivideParcel`, `mergeParcels`, `getParcelLineage` tuân thủ nghiêm ngặt tính bất biến lịch sử (QTD-02), diện tích tối thiểu tách thửa $ge 30m^2$ (QTD-08), cấm hợp thửa khác mục đích sử dụng (QTD-31) và kiểm soát thẩm quyền địa giới (QTD-16).
+  - `apps/web`: Route `/parcels` bổ sung tính năng Tách thửa, Hợp thửa và Modal hiển thị cây gia phả biến động (Lineage) dạng đồ thị trực quan.
+  - `tests`: 32 unit tests PASS bao phủ trọn vẹn 4 tiêu chí chấp nhận TC-01, TC-02, TC-03, TC-04.
+- **Tài liệu API**: Đã ghi nhận tại [`docs/api-endpoints.md`](file:///E:/personal_project/DIACHINHSO/docs/api-endpoints.md#18-nhóm-api-quản-lý-vòng-đời-thửa-đất-tách-thửa--hợp-thửa-dcs-02-cn-003).
