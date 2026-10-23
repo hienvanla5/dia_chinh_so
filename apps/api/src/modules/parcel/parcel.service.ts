@@ -35,6 +35,12 @@ import {
   ExpiringParcelItem,
   NotifyExpiryInput,
   NotifyExpiryResponse,
+  PropertyOnLandType,
+  ConstructionGrade,
+  PropertyOnLandItem,
+  CreatePropertyOnLandInput,
+  CreatePropertyOnLandResponse,
+  GetParcelPropertiesResponse,
   ValidateAgriculturalSubdivisionInput,
   ValidateAgriculturalSubdivisionResponse,
   SubdivideParcelInput,
@@ -52,6 +58,7 @@ export class ParcelService {
 
   // Bộ nhớ đệm danh sách thửa đất trong CSDL Địa chính số
   private parcelsStore: ParcelItem[] = [];
+  private propertiesStore: PropertyOnLandItem[] = [];
 
   constructor(@Optional() @Inject(DRIZZLE) private readonly db?: DrizzleDB) {
     this.seedInitialParcels();
@@ -238,6 +245,35 @@ export class ParcelService {
     ];
 
     this.parcelsStore = initialSeed;
+
+    this.propertiesStore = [
+      {
+        id: 'PROP-HN-001',
+        parcelId: 'PARCEL-HN-001',
+        parcelNationalCode: '01001-0012-0045',
+        assetType: PropertyOnLandType.INDIVIDUAL_HOUSE,
+        name: 'Nhà ở riêng lẻ 3 tầng mái bê tông cốt thép',
+        constructionArea: 85.0,
+        floorArea: 255.0,
+        structure: 'Khung cột bê tông cốt thép, tường gạch chịu lực',
+        grade: ConstructionGrade.GRADE_3,
+        floorsCount: 3,
+        completionYear: 2022,
+        ownershipTerm: 'Lâu dài',
+        completionCertificateNumber: 'GP-HC-2022/105/SXD-HN',
+        completionCertificateDate: '2022-11-20',
+        ownerName: 'Trần Văn Hoàng',
+        ownerCitizenId: '001090123456',
+        isJointSpouseOwnership: true,
+        spouseName: 'Vũ Thị Mai',
+        spouseCitizenId: '001192556677',
+        status: 'ACTIVE',
+        auditHash: 'e5b7a192c4d8e30f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f',
+        createdAt: '2026-10-16T10:00:00.000Z',
+        updatedAt: '2026-10-16T10:00:00.000Z',
+      },
+    ];
+
   }
 
   /**
@@ -1419,6 +1455,158 @@ export class ParcelService {
       auditHash,
       notifiedAt: now,
       message: `Đã phát thông báo cảnh báo hết hạn sử dụng đất thành công qua các kênh: ${channels.join(', ')}.`,
+    };
+  }
+
+
+  /**
+   * Đăng ký tài sản gắn liền với đất trên thửa đất (DCS-02-CN-006, QTD-01, QTD-25)
+   */
+  async createPropertyOnLand(input: CreatePropertyOnLandInput): Promise<CreatePropertyOnLandResponse> {
+    const parcel = this.parcelsStore.find((p) => p.id === input.parcelId);
+    if (!parcel) {
+      throw new NotFoundException(`Không tìm thấy thửa đất có ID: ${input.parcelId}`);
+    }
+
+    // Kiểm tra thẩm quyền địa giới hành chính (QTD-16)
+    if (input.officerCommuneCode && input.officerCommuneCode !== parcel.communeCode && input.officerId !== 'ADMIN') {
+      throw new ForbiddenException(
+        `Từ chối thực hiện (QTD-16): Cán bộ không có thẩm quyền địa giới đối với xã/phường ${parcel.communeCode}`,
+      );
+    }
+
+    // Ràng buộc trạng thái thửa đất (AC-03, QTD-27)
+    if (parcel.legalStatus === ParcelLegalStatus.LOCKED || parcel.legalStatus === ParcelLegalStatus.DISPUTED) {
+      throw new BadRequestException('Thao tác bị từ chối: Thửa đất đang trong tình trạng bị khóa giao dịch hoặc có tranh chấp');
+    }
+
+    if (parcel.isHistorical) {
+      throw new BadRequestException('Thao tác bị từ chối: Không được đăng ký tài sản trên thửa đất đã chuyển vào lịch sử');
+    }
+
+    // Ràng buộc diện tích xây dựng không được vượt quá diện tích thửa đất
+    if (input.constructionArea > parcel.area) {
+      throw new BadRequestException(
+        `Diện tích xây dựng (${input.constructionArea} m²) vượt quá diện tích của thửa đất (${parcel.area} m²)`,
+      );
+    }
+
+    // Ràng buộc đồng sở hữu vợ chồng theo Luật Đất đai 2024 (QTD-25)
+    if (input.isJointSpouseOwnership) {
+      if (!input.spouseName || !input.spouseCitizenId) {
+        throw new BadRequestException(
+          'Theo quy chuẩn QTD-25 Luật Đất đai 2024, xác lập đồng sở hữu vợ chồng bắt buộc phải có đầy đủ thông tin họ tên và số CCCD người phối ngẫu',
+        );
+      }
+      if (input.spouseCitizenId === input.ownerCitizenId) {
+        throw new BadRequestException('Số CCCD của vợ/chồng không được trùng với số CCCD của chủ sở hữu');
+      }
+    }
+
+    const now = new Date().toISOString();
+    const newId = `PROP-${parcel.provinceCode.replace('TINH_', '')}-${String(this.propertiesStore.length + 1).padStart(3, '0')}`;
+
+    // Tính mã băm SHA-256 bảo đảm toàn vẹn tài sản (AC-04)
+    const auditPayload = `PROPERTY:${newId}:${parcel.id}:${parcel.nationalCode}:${input.assetType}:${input.constructionArea}:${input.ownerCitizenId}:${input.officerId}:${now}`;
+    const auditHash = createHash('sha256').update(auditPayload).digest('hex');
+
+    const newProperty: PropertyOnLandItem = {
+      id: newId,
+      parcelId: parcel.id,
+      parcelNationalCode: parcel.nationalCode,
+      assetType: input.assetType,
+      name: input.name,
+      constructionArea: input.constructionArea,
+      floorArea: input.floorArea,
+      structure: input.structure,
+      grade: input.grade,
+      floorsCount: input.floorsCount,
+      completionYear: input.completionYear,
+      ownershipTerm: input.ownershipTerm || 'Lâu dài',
+      completionCertificateNumber: input.completionCertificateNumber,
+      completionCertificateDate: input.completionCertificateDate,
+      ownerName: input.ownerName,
+      ownerCitizenId: input.ownerCitizenId,
+      isJointSpouseOwnership: !!input.isJointSpouseOwnership,
+      spouseName: input.spouseName,
+      spouseCitizenId: input.spouseCitizenId,
+      status: 'ACTIVE',
+      auditHash,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.propertiesStore.push(newProperty);
+
+    this.logger.log(
+      `Đã đăng ký tài sản gắn liền với đất '${newProperty.name}' (${newId}) trên thửa '${parcel.nationalCode}' (Chủ: ${input.ownerName}, Audit: ${auditHash})`,
+    );
+
+    return {
+      success: true,
+      property: newProperty,
+      auditHash,
+      message: `Đăng ký tài sản gắn liền với đất '${newProperty.name}' thành công trên thửa đất ${parcel.nationalCode}.`,
+    };
+  }
+
+  /**
+   * Lấy danh sách tài sản gắn liền với đất của một thửa đất (DCS-02-CN-006)
+   */
+  async getPropertiesByParcelId(parcelId: string): Promise<GetParcelPropertiesResponse> {
+    const parcel = this.parcelsStore.find((p) => p.id === parcelId);
+    if (!parcel) {
+      throw new NotFoundException(`Không tìm thấy thửa đất có ID: ${parcelId}`);
+    }
+
+    const properties = this.propertiesStore.filter((prop) => prop.parcelId === parcelId);
+
+    return {
+      total: properties.length,
+      parcelId: parcel.id,
+      parcelNationalCode: parcel.nationalCode,
+      properties,
+    };
+  }
+
+  /**
+   * Lấy chi tiết tài sản gắn liền với đất (DCS-02-CN-006)
+   */
+  async getPropertyById(propertyId: string): Promise<PropertyOnLandItem> {
+    const property = this.propertiesStore.find((p) => p.id === propertyId);
+    if (!property) {
+      throw new NotFoundException(`Không tìm thấy tài sản gắn liền với đất có ID: ${propertyId}`);
+    }
+    return property;
+  }
+
+  /**
+   * Ghi nhận phá dỡ / xóa tài sản gắn liền với đất (DCS-02-CN-006)
+   */
+  async deletePropertyOnLand(
+    parcelId: string,
+    propertyId: string,
+    officerId: string,
+  ): Promise<{ success: boolean; message: string; auditHash: string }> {
+    const property = this.propertiesStore.find((p) => p.id === propertyId && p.parcelId === parcelId);
+    if (!property) {
+      throw new NotFoundException(`Không tìm thấy tài sản có ID '${propertyId}' trên thửa đất '${parcelId}'`);
+    }
+
+    const now = new Date().toISOString();
+    property.status = 'DEMOLISHED';
+    property.updatedAt = now;
+
+    const auditPayload = `PROPERTY_DELETE:${property.id}:${parcelId}:${officerId}:${now}`;
+    const auditHash = createHash('sha256').update(auditPayload).digest('hex');
+    property.auditHash = auditHash;
+
+    this.logger.log(`Đã ghi nhận phá dỡ tài sản '${property.name}' (${propertyId}) trên thửa '${parcelId}' (Audit: ${auditHash})`);
+
+    return {
+      success: true,
+      message: `Đã ghi nhận phá dỡ tài sản '${property.name}' thành công.`,
+      auditHash,
     };
   }
 

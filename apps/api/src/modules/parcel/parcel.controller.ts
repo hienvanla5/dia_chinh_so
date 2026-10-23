@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, Query, Patch, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query, Patch, Delete, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { ParcelService } from './parcel.service';
 import {
@@ -21,6 +21,8 @@ import {
   GetExpiringParcelsQuerySchema,
   NotifyExpiryInput,
   NotifyExpirySchema,
+  CreatePropertyOnLandInput,
+  CreatePropertyOnLandSchema,
   ValidateAgriculturalSubdivisionInput,
   ValidateAgriculturalSubdivisionSchema,
   ParcelLegalStatus,
@@ -65,6 +67,13 @@ export class ParcelController {
   async getExpiringParcels(@Query() query: GetExpiringParcelsQueryInput) {
     const validated = GetExpiringParcelsQuerySchema.parse(query);
     return this.parcelService.getExpiringParcels(validated);
+  }
+
+  @Get('properties/:propertyId')
+  @ApiOperation({ summary: 'Lấy chi tiết tài sản gắn liền với đất (DCS-02-CN-006)' })
+  @ApiResponse({ status: 200, description: 'Chi tiết tài sản gắn liền với đất' })
+  async getPropertyById(@Param('propertyId') propertyId: string) {
+    return this.parcelService.getPropertyById(propertyId);
   }
 
   @Get(':id')
@@ -185,6 +194,38 @@ export class ParcelController {
   ) {
     const validated = NotifyExpirySchema.parse({ ...body, parcelId: id });
     return this.parcelService.notifyExpiry(validated);
+  }
+
+
+  @Get(':id/properties')
+  @ApiOperation({ summary: 'Lấy danh sách tài sản gắn liền với đất của thửa đất (DCS-02-CN-006)' })
+  @ApiResponse({ status: 200, description: 'Danh sách tài sản gắn liền với đất' })
+  async getProperties(@Param('id') id: string) {
+    return this.parcelService.getPropertiesByParcelId(id);
+  }
+
+  @Post(':id/properties')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Đăng ký tài sản gắn liền với đất trên thửa (DCS-02-CN-006, QTD-25)' })
+  @ApiResponse({ status: 201, description: 'Đăng ký tài sản gắn liền với đất thành công' })
+  async createProperty(
+    @Param('id') id: string,
+    @Body() body: Omit<CreatePropertyOnLandInput, 'parcelId'>,
+  ) {
+    const validated = CreatePropertyOnLandSchema.parse({ ...body, parcelId: id });
+    return this.parcelService.createPropertyOnLand(validated);
+  }
+
+  @Delete(':id/properties/:propertyId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Ghi nhận phá dỡ / xóa tài sản gắn liền với đất (DCS-02-CN-006)' })
+  @ApiResponse({ status: 200, description: 'Ghi nhận phá dỡ tài sản thành công' })
+  async deleteProperty(
+    @Param('id') id: string,
+    @Param('propertyId') propertyId: string,
+    @Query('officerId') officerId?: string,
+  ) {
+    return this.parcelService.deletePropertyOnLand(id, propertyId, officerId || 'ADMIN');
   }
 
 }
