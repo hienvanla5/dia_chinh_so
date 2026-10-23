@@ -1,3 +1,4 @@
+import { LandOriginType } from '../types';
 import { z } from 'zod';
 import { UserRole, ParcelLegalStatus, LandPurposeCode, FluctuationType, DossierStatus, AdministrativeLevel, JurisdictionAction, DigitalSignatureProvider, SignatureStandard, OcspCertificateStatus, SessionStatus, SensitiveOperationType, OfficerAccountStatus, DeactivationReasonType, DelegationScope, DelegationStatus, EnterpriseStaffPermission } from '../types';
 
@@ -440,3 +441,30 @@ export const MergeParcelsSchema = z.object({
 export type SubdivideChildParcelInput = z.infer<typeof SubdivideChildParcelSchema>;
 export type SubdivideParcelInput = z.infer<typeof SubdivideParcelSchema>;
 export type MergeParcelsInput = z.infer<typeof MergeParcelsSchema>;
+
+// ==========================================
+// Schemas Quản lý nguồn gốc sử dụng đất (DCS-02-CN-004)
+// ==========================================
+
+export const UpdateLandOriginSchema = z.object({
+  parcelId: z.string().min(1, 'ID thửa đất không được để trống'),
+  originType: z.nativeEnum(LandOriginType, {
+    errorMap: () => ({ message: 'Loại nguồn gốc sử dụng đất không hợp lệ theo Luật Đất đai 2024' }),
+  }),
+  decisionNumber: z.string().min(3, 'Số quyết định giao/thuê đất tối thiểu 3 ký tự'),
+  decisionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày quyết định phải theo định dạng YYYY-MM-DD'),
+  grantingAuthority: z.string().min(3, 'Cơ quan ban hành quyết định tối thiểu 3 ký tự'),
+  financialStatus: z.enum(['PAID', 'EXEMPTED', 'ANNUAL_PAYMENT', 'DEFERRED']).optional(),
+  officerId: z.string().min(1, 'Mã cán bộ thực hiện không được để trống'),
+  officerCommuneCode: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const ValidateAgriculturalSubdivisionSchema = z.object({
+  parcelId: z.string().min(1, 'ID thửa đất không được để trống'),
+  newParcelsArea: z.array(z.number().positive('Diện tích thửa đất phải là số dương')).min(2, 'Yêu cầu tối thiểu 2 thửa con'),
+  minCultivationArea: z.number().positive().optional(),
+});
+
+export type UpdateLandOriginInput = z.infer<typeof UpdateLandOriginSchema>;
+export type ValidateAgriculturalSubdivisionInput = z.infer<typeof ValidateAgriculturalSubdivisionSchema>;

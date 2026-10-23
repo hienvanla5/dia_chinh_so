@@ -46,6 +46,18 @@ export enum LandPurposeCode {
   DNL = 'DNL', // Đất năng lượng
 }
 
+
+export enum LandOriginType {
+  ALLOCATED_WITH_FEE = 'ALLOCATED_WITH_FEE',         // Nhà nước giao đất có thu tiền sử dụng đất
+  ALLOCATED_WITHOUT_FEE = 'ALLOCATED_WITHOUT_FEE',   // Nhà nước giao đất không thu tiền sử dụng đất
+  LEASED_LUMP_SUM = 'LEASED_LUMP_SUM',               // Nhà nước cho thuê đất thu tiền một lần cho cả thời gian thuê
+  LEASED_ANNUAL = 'LEASED_ANNUAL',                   // Nhà nước cho thuê đất thu tiền thuê đất hàng năm
+  RECOGNIZED_WITH_FEE = 'RECOGNIZED_WITH_FEE',       // Công nhận QSDĐ như giao đất có thu tiền sử dụng đất
+  RECOGNIZED_WITHOUT_FEE = 'RECOGNIZED_WITHOUT_FEE', // Công nhận QSDĐ như giao đất không thu tiền sử dụng đất
+  TRANSFERRED = 'TRANSFERRED',                       // Nhận chuyển nhượng quyền sử dụng đất hợp pháp
+  INHERITED_OR_DONATED = 'INHERITED_OR_DONATED',     // Nhận thừa kế, tặng cho quyền sử dụng đất
+}
+
 // Loại biến động đất đai
 export enum FluctuationType {
   TRANSFER = 'TRANSFER',                 // Chuyển nhượng
@@ -155,6 +167,7 @@ export interface CitizenVerifyOtpRequest {
 
 export interface CitizenAuthResponse {
   accessToken: string;
+  expiresIn?: number;
   user: {
     id: string;
     citizenId: string;
@@ -162,13 +175,7 @@ export interface CitizenAuthResponse {
     phoneNumber?: string;
     role: UserRole;
   };
-  auditHash: string;
-  parentParcelId?: string;           // ID thửa đất cha (nếu do tách thửa)
-  parentNationalCode?: string;       // Mã thửa cha (nếu do tách thửa)
-  mergedFromParcelIds?: string[];    // Danh sách ID thửa đất tiền thân (nếu do hợp thửa)
-  mergedFromNationalCodes?: string[];// Danh sách Mã thửa tiền thân (nếu do hợp thửa)
-  childParcelIds?: string[];         // Danh sách ID các thửa con đã tách
-  isHistorical?: boolean;            // Cờ đánh dấu thửa đất đã chuyển vào lịch sử (QTD-02) // Mã băm SHA-256 nhật ký kiểm toán bất biến
+  auditHash: string; // Mã băm SHA-256 nhật ký kiểm toán bất biến
   walletSummary?: {
     parcelCount: number;
     certificateCount: number;
@@ -978,6 +985,11 @@ export interface ParcelItem {
   mergedFromNationalCodes?: string[];// Danh sách Mã thửa tiền thân (nếu do hợp thửa)
   childParcelIds?: string[];         // Danh sách ID các thửa con đã tách
   isHistorical?: boolean;            // Cờ đánh dấu thửa đất đã chuyển vào lịch sử (QTD-02)
+  originType?: LandOriginType;       // Nguồn gốc sử dụng đất theo Luật Đất đai 2024
+  originName?: string;               // Tên hiển thị nguồn gốc đất
+  originDecisionNumber?: string;     // Số quyết định giao/thuê/công nhận
+  originDecisionDate?: string;       // Ngày quyết định
+  financialStatus?: string;          // Tình trạng nghĩa vụ tài chính
   createdAt: string;
   updatedAt: string;
 }
@@ -1116,4 +1128,49 @@ export interface ParcelLineageResponse {
   children: ParcelItem[];
   lineageNodes: ParcelLineageNode[];
   totalGenerations: number;
+}
+
+
+export interface LandOriginRights {
+  canTransfer: boolean;          // Quyền chuyển nhượng QSDĐ
+  canMortgage: boolean;          // Quyền thế chấp QSDĐ
+  canSublease: boolean;          // Quyền cho thuê, cho thuê lại QSDĐ
+  canDonate: boolean;            // Quyền tặng cho QSDĐ
+  description: string;           // Diễn giải chính sách pháp lý theo Luật Đất đai 2024
+}
+
+export interface UpdateLandOriginRequest {
+  parcelId: string;
+  originType: LandOriginType;
+  decisionNumber: string;        // Số quyết định giao/thuê/công nhận đất
+  decisionDate: string;          // Ngày ban hành quyết định (YYYY-MM-DD)
+  grantingAuthority: string;     // Cơ quan ban hành (UBND cấp Tỉnh / Huyện / TP)
+  financialStatus?: 'PAID' | 'EXEMPTED' | 'ANNUAL_PAYMENT' | 'DEFERRED'; // Tình trạng nghĩa vụ tài chính
+  officerId: string;
+  officerCommuneCode?: string;
+  notes?: string;
+}
+
+export interface UpdateLandOriginResponse {
+  success: boolean;
+  parcel: ParcelItem;
+  originType: LandOriginType;
+  originName: string;
+  legalRights: LandOriginRights;
+  auditHash: string;
+  message: string;
+}
+
+export interface ValidateAgriculturalSubdivisionRequest {
+  parcelId: string;
+  newParcelsArea: number[];      // Danh sách diện tích các thửa nông nghiệp dự kiến tách
+  minCultivationArea?: number;   // Hạn mức canh tác tối thiểu (mặc định 500m2 theo QTD-26)
+}
+
+export interface ValidateAgriculturalSubdivisionResponse {
+  isEligible: boolean;
+  minCultivationArea: number;
+  ineligibleAreas: number[];
+  errorReason?: string;
+  message: string;
 }
