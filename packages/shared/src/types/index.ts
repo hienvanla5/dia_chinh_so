@@ -16,6 +16,7 @@ export enum ParcelLegalStatus {
   DISPUTED = 'DISPUTED',       // Đang có tranh chấp ranh giới / thụ lý hòa giải
   FROZEN = 'FROZEN',           // Bị phong tỏa do lệnh Tòa án / Thi hành án kê biên
   REVOKED = 'REVOKED',         // Đã thu hồi / chuyển vào lịch sử sau khi tách/hợp thửa
+  PENDING_APPRAISAL = 'PENDING_APPRAISAL', // Chờ Chi nhánh VPĐKĐĐ thẩm định thuộc tính
 }
 
 // Phân loại nhóm đất theo Luật Đất đai 2024
@@ -78,7 +79,7 @@ export enum TransactionLockStatus {
 
 // Cấu trúc tọa độ đỉnh ranh giới VN-2000
 export interface VertexVN2000 {
-  pointIndex: number;
+  pointIndex?: number;
   x: number; // Tọa độ X (Bắc - mét)
   y: number; // Tọa độ Y (Đông - mét)
 }
@@ -917,5 +918,60 @@ export interface VerifyAuditChainResponse {
   totalLogs: number;
   brokenLogId?: string;
   latestHash: string;
+  message: string;
+}
+
+
+// ==========================================
+// Khai báo thông tin thuộc tính thửa đất mới (DCS-02-CN-001)
+// ==========================================
+
+export interface DeclareNewParcelRequest {
+  communeCode: string;          // Mã xã/phường (ví dụ "01001" - Phường Điện Biên)
+  communeName?: string;         // Tên xã/phường
+  provinceCode: string;         // Mã tỉnh/thành phố (ví dụ "TINH_HN")
+  provinceName?: string;        // Tên tỉnh/thành phố
+  sheetNumber: number;          // Số tờ bản đồ (> 0)
+  parcelNumber: number;         // Số thửa đất (> 0)
+  area: number;                 // Diện tích m2 (> 0)
+  purposeCode: LandPurposeCode; // Mã mục đích sử dụng đất
+  address: string;              // Địa chỉ thửa đất
+  verticesVN2000: VertexVN2000[]; // Tọa độ đỉnh VN-2000 (tối thiểu 3 đỉnh)
+  surveyDocumentNumber: string; // Số hiệu văn bản đo đạc / trích đo địa chính
+  ownerName?: string;           // Tên chủ sử dụng đất sơ bộ
+  ownerCitizenId?: string;      // Số CCCD chủ sử dụng đất (12 số)
+  officerId: string;            // Mã định danh cán bộ khai báo
+  officerCommuneCode: string;   // Mã xã thuộc thẩm quyền quản lý của cán bộ (QTD-16)
+  notes?: string;
+}
+
+export interface ParcelItem {
+  id: string;
+  nationalCode: string;         // Mã định danh thửa đất quốc gia (QTD-01: ví dụ 01001-0012-0045)
+  communeCode: string;
+  communeName: string;
+  provinceCode: string;
+  provinceName: string;
+  sheetNumber: number;
+  parcelNumber: number;
+  area: number;
+  purposeCode: LandPurposeCode;
+  address: string;
+  legalStatus: ParcelLegalStatus;
+  surveyDocumentNumber: string;
+  ownerName?: string;
+  ownerCitizenId?: string;
+  verticesVN2000: VertexVN2000[];
+  boundaryGeojson: any;
+  declaredByOfficerId: string;
+  auditHash: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DeclareNewParcelResponse {
+  success: boolean;
+  parcel: ParcelItem;
+  auditHash: string;
   message: string;
 }

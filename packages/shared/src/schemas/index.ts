@@ -333,3 +333,34 @@ export type QueryAuthAuditLogsInput = z.infer<typeof QueryAuthAuditLogsSchema>;
 export type QueryAnomalyAlertsInput = z.infer<typeof QueryAnomalyAlertsSchema>;
 export type ResolveAnomalyAlertInput = z.infer<typeof ResolveAnomalyAlertSchema>;
 export type SimulateAuthEventInput = z.infer<typeof SimulateAuthEventSchema>;
+
+
+// ==========================================
+// Schemas Khai báo thông tin thuộc tính thửa đất mới (DCS-02-CN-001)
+// ==========================================
+
+export const DeclareNewParcelSchema = z.object({
+  communeCode: z.string().min(1, 'Mã đơn vị hành chính cấp xã không được để trống'),
+  communeName: z.string().optional(),
+  provinceCode: z.string().min(1, 'Mã tỉnh/thành phố không được để trống'),
+  provinceName: z.string().optional(),
+  sheetNumber: z.number().int().positive('Số tờ bản đồ phải là số nguyên dương lớn hơn 0'),
+  parcelNumber: z.number().int().positive('Số thửa đất phải là số nguyên dương lớn hơn 0'),
+  area: z.number().positive('Diện tích thửa đất phải là số thực lớn hơn 0'),
+  purposeCode: z.nativeEnum(LandPurposeCode, { errorMap: () => ({ message: 'Mã mục đích sử dụng đất không hợp lệ theo Luật Đất đai 2024' }) }),
+  address: z.string().min(5, 'Địa chỉ thửa đất tối thiểu 5 ký tự'),
+  verticesVN2000: z.array(
+    z.object({
+      x: z.number().positive('Tọa độ X (Bắc) VN-2000 phải là số dương hợp lệ'),
+      y: z.number().positive('Tọa độ Y (Đông) VN-2000 phải là số dương hợp lệ'),
+    })
+  ).min(3, 'Thửa đất phải có tối thiểu 3 đỉnh tọa độ để tạo thành ranh giới khép kín'),
+  surveyDocumentNumber: z.string().min(3, 'Số hiệu hồ sơ đo đạc / trích đo địa chính tối thiểu 3 ký tự'),
+  ownerName: z.string().optional(),
+  ownerCitizenId: z.string().regex(/^\d{12}$/, 'Số CCCD chủ sử dụng đất phải gồm đúng 12 chữ số').optional().or(z.literal('')),
+  officerId: z.string().min(1, 'Mã cán bộ thực hiện không được để trống'),
+  officerCommuneCode: z.string().min(1, 'Mã xã của cán bộ không được để trống'),
+  notes: z.string().optional(),
+});
+
+export type DeclareNewParcelInput = z.infer<typeof DeclareNewParcelSchema>;
