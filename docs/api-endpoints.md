@@ -1497,3 +1497,84 @@ sequenceDiagram
   - `status` (string, tùy chọn): `AVAILABLE`, `PENDING_APPRAISAL`, `LOCKED`, `DISPUTED`, `MORTGAGED`, `FROZEN`, `REVOKED`
   - `search` (string, tùy chọn): Từ khóa tìm kiếm theo mã thửa, địa chỉ, tên chủ sử dụng
 - **Response `200 OK`**: Danh sách thửa đất kèm tọa độ đỉnh VN-2000, trạng thái pháp lý và mã băm SHA-256.
+
+
+---
+
+## 17. Nhóm API Sinh & Thẩm Định Mã Định Danh Thửa Đất Quốc Gia [DCS-02-CN-002]
+
+### 17.1. [DCS-02-CN-002] Sinh Mã định danh thửa đất quốc gia duy nhất
+- **Method**: `POST`
+- **Path**: `/api/v1/parcels/generate-code`
+- **Yêu cầu quyền (RBAC)**: `COMMUNE_OFFICER`, `LAND_REGISTRAR`, `ADMIN` (QTD-01)
+- **Request Body**:
+  ```json
+  {
+    "communeCode": "01001",
+    "provinceCode": "TINH_HN",
+    "sheetNumber": 15,
+    "parcelNumber": 88,
+    "subdivisionBranch": "00",
+    "centroidX": 2325505.5,
+    "centroidY": 589215.2
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "nationalCode": "01001-0015-00088-00",
+    "shortCode": "01001-0015-0088",
+    "spatialUid": "VN-3405-01001-X2325506-Y589215",
+    "components": {
+      "provinceCode": "01",
+      "communeCode": "01001",
+      "sheetNumber": 15,
+      "parcelNumber": 88,
+      "branchSuffix": "00",
+      "checksum": "7"
+    },
+    "qrCodePayload": "DCS:VN:01001-0015-00088-00:VN-3405-01001-X2325506-Y589215:CS7",
+    "isUnique": true,
+    "auditHash": "d2e3f4a567890abcdef1234567890abcdef1234567890abcdef1234567890abc1",
+    "message": "Mã định danh thửa đất quốc gia đã được sinh tự động thành công và đảm bảo tính duy nhất toàn quốc."
+  }
+  ```
+- **Mã lỗi**:
+  - `400 Bad Request`: Số tờ $\le 0$ hoặc số thửa $\le 0$, hoặc mã xã không hợp lệ.
+
+### 17.2. [DCS-02-CN-002] Thẩm tra tính hợp lệ & đối soát Mã định danh thửa đất
+- **Method**: `POST`
+- **Path**: `/api/v1/parcels/validate-code`
+- **Quyền truy cập**: Mọi vai trò hoặc Hệ thống liên thông
+- **Request Body**:
+  ```json
+  {
+    "code": "01001-0015-00088-00"
+  }
+  ```
+- **Response `200 OK` (Hợp chuẩn)**:
+  ```json
+  {
+    "isValid": true,
+    "normalizedCode": "01001-0015-00088-00",
+    "components": {
+      "provinceCode": "01",
+      "communeCode": "01001",
+      "sheetNumber": 15,
+      "parcelNumber": 88,
+      "branchSuffix": "00",
+      "checksum": "PASS"
+    },
+    "isRegisteredInDatabase": true,
+    "message": "Mã định danh thửa đất hợp lệ và đã được xác lập trong CSDL Địa chính Quốc gia."
+  }
+  ```
+- **Response `200 OK` (Không hợp chuẩn)**:
+  ```json
+  {
+    "isValid": false,
+    "isRegisteredInDatabase": false,
+    "errorReason": "Định dạng mã không đúng quy chuẩn quốc gia: [MãXã]-[SốTờ]-[SốThửa]",
+    "message": "Mã định danh thửa đất sai quy chuẩn cấu trúc"
+  }
+  ```
