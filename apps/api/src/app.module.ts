@@ -20,6 +20,7 @@ import { DelegationModule } from './modules/delegation/delegation.module';
 import { EnterpriseIdpModule } from './modules/enterprise-idp/enterprise-idp.module';
 import { AuthAuditModule } from './modules/auth-audit/auth-audit.module';
 import { NationalSyncModule } from './modules/national-sync/national-sync.module';
+import { ReconciliationModule } from './modules/reconciliation/reconciliation.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { NationalSyncModule } from './modules/national-sync/national-sync.module
     EnterpriseIdpModule,
     AuthAuditModule,
     NationalSyncModule,
+    ReconciliationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
